@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import { db } from '../lib/db'
+import WorkoutHistory from './WorkoutHistory'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -142,19 +143,33 @@ export default function WGHub({ onSignOut }) {
   const [logs,     setLogs    ] = useState({})
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [plan,     setPlan    ] = useState(null)
+  const [stravaConnection, setStravaConnection] = useState(null)
   const [ready,    setReady   ] = useState(false)
 
   useEffect(() => {
+    // Check for Strava callback result in URL
+    const params = new URLSearchParams(window.location.search)
+    const stravaStatus = params.get('strava')
+    if (stravaStatus) {
+      // Clean the URL without reloading
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
     ;(async () => {
       try {
-        const [logsData, settingsData, planData] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
+          db.loadStravaConnection(),
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
         setPlan(planData || getDefaultPlan())
+        setStravaConnection(stravaConn)
+
+        // If just connected from Strava OAuth, switch to history tab
+        if (stravaStatus === 'connected') setView('history')
       } catch (e) {
         console.error('Initial load failed:', e)
         setPlan(getDefaultPlan())
@@ -183,7 +198,7 @@ export default function WGHub({ onSignOut }) {
           <span style={{fontFamily:'var(--font-head)',fontSize:24,letterSpacing:1}}>HUB</span>
           <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:4}}>PERFORMANCE</span>
         </div>
-        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'LOG DATA'},{k:'plan',l:'TRAINING PLAN'},{k:'settings',l:'SETTINGS'}].map(({k,l})=>(
+        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'LOG DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'settings',l:'SETTINGS'}].map(({k,l})=>(
           <button key={k} onClick={()=>setView(k)} style={{background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-mono)',fontSize:11,letterSpacing:'1.5px',color:view===k?'var(--accent)':'var(--muted)',paddingBottom:2,borderBottom:`2px solid ${view===k?'var(--accent)':'transparent'}`,transition:'color 0.15s',whiteSpace:'nowrap'}}>{l}</button>
         ))}
         <button onClick={()=>setView('tv')} style={{background:view==='tv'?'var(--accent)':'var(--s2)',color:view==='tv'?'var(--bg)':'var(--muted)',border:'1px solid var(--border2)',borderRadius:7,padding:'5px 13px',fontFamily:'var(--font-mono)',fontSize:10,cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>TV MODE</button>
@@ -210,8 +225,9 @@ export default function WGHub({ onSignOut }) {
           </div>
         ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} setView={setView}/>
          :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan}/>
+         :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
          :view==='plan'?     <TrainingPlan plan={plan} savePlan={savePlan}/>
-         :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings}/>
+         :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
          :                   <TVMode logs={logs} settings={settings} plan={plan} setView={setView}/>
         }
       </div>
@@ -688,7 +704,7 @@ function EditDayCard({ day, di, updateSession, deleteSession, addSession, moveSe
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
-function SettingsPage({ settings, saveSettings }) {
+function SettingsPage({ settings, saveSettings, stravaConnection, onStravaConnectionChange }) {
   const [local, setLocal]=useState(()=>JSON.parse(JSON.stringify(settings)))
   const [saved, setSaved]=useState(false)
   const setVal=(key,val)=>setLocal(p=>({...p,[key]:{...p[key],value:parseFloat(val)||val}}))
@@ -721,6 +737,9 @@ function SettingsPage({ settings, saveSettings }) {
         </div>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        {/* Strava connection */}
+        <StravaConnectionCard stravaConnection={stravaConnection} onDisconnect={async()=>{ await fetch('/api/strava/disconnect',{method:'POST'}); onStravaConnectionChange?.(); }}/>
+
         {GROUPS.map(({title,accent,keys})=>(
           <div key={title} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden'}}>
             <div style={{padding:'13px 20px',borderBottom:'1px solid var(--border)',borderLeft:`3px solid ${accent}`}}><span style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'2px',color:accent}}>{title}</span></div>
@@ -824,6 +843,96 @@ function TVMode({ logs, settings, plan, setView }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── STRAVA CONNECTION CARD ───────────────────────────────────────────────────
+function StravaConnectionCard({ stravaConnection, onDisconnect }) {
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect Strava? Your synced activities will remain in the database.')) return
+    setDisconnecting(true)
+    await onDisconnect()
+    setDisconnecting(false)
+  }
+
+  const timeAgo = (iso) => {
+    if (!iso) return 'Never'
+    const diff  = Date.now() - new Date(iso).getTime()
+    const hours = Math.floor(diff / 3600000)
+    const days  = Math.floor(hours / 24)
+    if (hours < 1)  return 'Just now'
+    if (hours < 24) return `${hours}h ago`
+    return `${days}d ago`
+  }
+
+  return (
+    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden'}}>
+      <div style={{padding:'13px 20px',borderBottom:'1px solid var(--border)',borderLeft:'3px solid #fc4c02',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'2px',color:'#fc4c02'}}>STRAVA</span>
+        {stravaConnection
+          ? <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--accent)',background:'var(--accent-dim)',padding:'3px 10px',borderRadius:5}}>CONNECTED</span>
+          : <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',background:'var(--s3)',padding:'3px 10px',borderRadius:5}}>NOT CONNECTED</span>
+        }
+      </div>
+      <div style={{padding:20}}>
+        {stravaConnection ? (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'center'}}>
+            <div>
+              <div style={{fontFamily:'var(--font-head)',fontSize:26,marginBottom:4}}>{stravaConnection.athlete_name}</div>
+              {stravaConnection.athlete_city && <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)'}}>{stravaConnection.athlete_city}, {stravaConnection.athlete_country}</div>}
+              <div style={{display:'flex',gap:20,marginTop:14}}>
+                {[
+                  {l:'ACTIVITIES', v:stravaConnection.activity_count||'—'},
+                  {l:'LAST SYNC',  v:timeAgo(stravaConnection.last_synced_at)},
+                  {l:'CONNECTED',  v:timeAgo(stravaConnection.connected_at)},
+                ].map(({l,v})=>(
+                  <div key={l}>
+                    <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1,marginBottom:3}}>{l}</div>
+                    <div style={{fontFamily:'var(--font-mono)',fontSize:13,color:'var(--text)'}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'flex-start'}}>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>
+                Your Strava account is connected. Activities sync to the History page automatically. Custom names and session types you set are always preserved.
+              </div>
+              <button onClick={handleDisconnect} disabled={disconnecting} style={{
+                background:'none',border:'1px solid rgba(255,107,107,0.4)',borderRadius:7,
+                color:'var(--red)',fontFamily:'var(--font-mono)',fontSize:11,
+                padding:'8px 16px',cursor:'pointer',letterSpacing:1,
+              }}>{disconnecting ? 'DISCONNECTING...' : 'DISCONNECT STRAVA'}</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:14,color:'var(--text)',marginBottom:8,fontWeight:500}}>Connect your Strava account</div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.65,marginBottom:16}}>
+                Sync all your activities automatically. Activities appear in the History page where you can rename them, change their type, and add notes. Your Strava data is never modified.
+              </div>
+              <a href="/api/strava/connect" style={{
+                display:'inline-block',
+                background:'#fc4c02',color:'#fff',textDecoration:'none',
+                borderRadius:8,padding:'10px 24px',
+                fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,letterSpacing:1,
+              }}>🔗 CONNECT STRAVA</a>
+            </div>
+            <div style={{background:'var(--s2)',borderRadius:'var(--r)',padding:'16px 20px'}}>
+              <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#fc4c02',letterSpacing:1,marginBottom:10}}>WHAT GETS SYNCED</div>
+              {['All runs, rides, swims and gym sessions','Activity name, type, distance, duration, pace','Heart rate data where available','Elevation gain','Syncs new activities incrementally (fast)'].map(item=>(
+                <div key={item} style={{display:'flex',gap:8,marginBottom:6}}>
+                  <span style={{color:'var(--accent)',flexShrink:0}}>✓</span>
+                  <span style={{fontSize:13,color:'var(--muted)'}}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
