@@ -76,12 +76,16 @@ const DEFAULT_SETTINGS = {
 
 const todayStr   = () => new Date().toISOString().split('T')[0]
 const fmtDate    = (d) => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})
+const fmtDateShort = (d) => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})   // "4 May"
+const fmtDateMMM   = (d) => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{month:'short',year:'2-digit'}) // "May 26"
 const getDayName = (d) => new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'})
+// Smart formatter: for 30D use "4 May", for 90D/1Y use "May 26"
+const smartDateFmt = (period) => (d) => period==='7D'?fmtDateShort(d.replace ? d : d):period==='30D'?fmtDateShort(d):fmtDateMMM(d)
 const mkEmpty    = () => ({
   nutrition:{calories:'',protein:'',carbs:''},
   sleep:{sleepScore:'',recoveryScore:'',hoursSlept:'',bedTime:''},
-  exercise:{running:{on:false,distance:'',duration:'',notes:''},functional:{on:false,exercises:DEFAULT_FUNC()},gym:{on:false,types:[]},yoga:{on:false,duration:''}},
-  body:{rhr:'',hrv:'',weight:''},
+  exercise:{runs:[{distance:'',duration:'',notes:''}],functional:{on:false,exercises:DEFAULT_FUNC()},gym:{on:false,types:[]},yoga:{on:false,duration:''}},
+  body:{rhr:'',hrv:'',weight:'',weightTime:''},
 })
 const TT = {background:'#131722',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontFamily:'var(--font-mono)',fontSize:12,color:'#e8edf5',padding:'8px 12px'}
 
@@ -97,6 +101,20 @@ const CSS_VARS = `
     --font-body:'DM Sans',system-ui,sans-serif;
     --r:10px; --r-lg:14px;
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  /* ── Mobile layout ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    nav { padding: 0 12px !important; gap: 8px !important; overflow-x: auto; }
+    nav::-webkit-scrollbar { display: none; }
+    .mobile-hide { display: none !important; }
+    .mobile-stack { grid-template-columns: 1fr !important; }
+    .mobile-2col { grid-template-columns: 1fr 1fr !important; }
+    .mobile-full { padding: 14px 16px !important; max-width: 100% !important; }
+    input, select, textarea { font-size: 16px !important; } /* prevent iOS zoom */
+  }
 `
 
 // ─── TARGET STATUS HELPER ─────────────────────────────────────────────────────
@@ -110,7 +128,7 @@ function targetStatus(actual, def) {
   }
   const pct=def.lowerIsBetter?Math.min(100,(t/a)*100):Math.min(100,(a/t)*100)
   const met=def.lowerIsBetter?a<=t:a>=t
-  return {color:met?'#00e676':pct>=80?'#ff9f40':'#ff6b6b',pct,status:met?'on target':`${Math.round(pct)}% of target`}
+  return {color:met?'#00e676':pct>=85?'#ff9f40':'#ff6b6b',pct,status:met?'on target':`${Math.round(pct)}% of target`}
 }
 
 function calcRecords(logs, activities = []) {
@@ -120,7 +138,10 @@ function calcRecords(logs, activities = []) {
 
   // ── From manual daily logs (sleep, body, manual runs)
   Object.entries(logs).forEach(([date,log])=>{
-    const km=parseFloat(log?.exercise?.running?.distance)||0
+    // Support both new runs[] array and legacy running{} shape
+    const km = log?.exercise?.runs
+      ? log.exercise.runs.reduce((s,r)=>s+(parseFloat(r.distance)||0),0)
+      : parseFloat(log?.exercise?.running?.distance)||0
     if(km>longestRun){longestRun=km;lrD=date}
     const sl=parseFloat(log?.sleep?.sleepScore)||0; if(sl>bestSleep){bestSleep=sl;bsD=date}
     const hrv=parseFloat(log?.body?.hrv)||0; if(hrv>bestHrv){bestHrv=hrv;bhD=date}
@@ -205,9 +226,34 @@ export default function WGHub({ onSignOut }) {
   const todayRunSession  = todayPlan?.sessions?.find(s=>s.type==='run')
   const todayIsRest      = todayPlan?.sessions?.some(s=>s.type==='rest')
 
+  const [workoutPopup, setWorkoutPopup] = useState(false)
+
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',fontFamily:'var(--font-body)'}}>
       <style>{CSS_VARS}</style>
+
+      {/* ── TODAY'S WORKOUTS POPUP ── */}
+      {workoutPopup&&todayPlan&&(
+        <div onClick={()=>setWorkoutPopup(false)} style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'flex-start',justifyContent:'flex-end',padding:'70px 24px 0'}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'var(--s1)',border:'1px solid var(--border2)',borderRadius:'var(--r-lg)',padding:20,minWidth:320,maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+              <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:todayPlan.accent,letterSpacing:'1.5px',fontWeight:600}}>TODAY'S WORKOUTS · {todayPlan.day.toUpperCase()}</div>
+              <button onClick={()=>setWorkoutPopup(false)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:18,lineHeight:1}}>×</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {todayPlan.sessions.map(s=>{
+                const color=typeColor(s.type), lines=s.details.split('\n').filter(Boolean)
+                return (
+                  <div key={s.id} style={{background:'var(--s2)',borderLeft:`3px solid ${color}`,borderRadius:8,padding:'10px 14px'}}>
+                    <div style={{fontFamily:'var(--font-mono)',fontSize:9,color,letterSpacing:'1.5px',marginBottom:6,fontWeight:600}}>{typeLabel(s.type).toUpperCase()}</div>
+                    {lines.map((line,i)=><div key={i} style={{fontSize:12,color:'var(--text)',marginBottom:i<lines.length-1?3:0}}>{lines.length>1?'• '+line:line}</div>)}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── NAV ── */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:200,background:'rgba(7,9,15,0.95)',backdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)',height:60,display:'flex',alignItems:'center',padding:'0 24px',gap:22}}>
@@ -216,22 +262,22 @@ export default function WGHub({ onSignOut }) {
           <span style={{fontFamily:'var(--font-head)',fontSize:24,letterSpacing:1}}>HUB</span>
           <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:4}}>PERFORMANCE</span>
         </div>
-        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'LOG DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'settings',l:'SETTINGS'}].map(({k,l})=>(
+        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'DAILY DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'planner',l:'PLANNER'}].map(({k,l})=>(
           <button key={k} onClick={()=>setView(k)} style={{background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-mono)',fontSize:11,letterSpacing:'1.5px',color:view===k?'var(--accent)':'var(--muted)',paddingBottom:2,borderBottom:`2px solid ${view===k?'var(--accent)':'transparent'}`,transition:'color 0.15s',whiteSpace:'nowrap'}}>{l}</button>
         ))}
         <button onClick={()=>setView('tv')} style={{background:view==='tv'?'var(--accent)':'var(--s2)',color:view==='tv'?'var(--bg)':'var(--muted)',border:'1px solid var(--border2)',borderRadius:7,padding:'5px 13px',fontFamily:'var(--font-mono)',fontSize:10,cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>TV MODE</button>
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:16,flexShrink:0}}>
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
           <div style={{textAlign:'right'}}>
             <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--accent)'}}>{new Date().toLocaleDateString('en-US',{weekday:'long'}).toUpperCase()}</div>
             <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
           </div>
           {todayPlan&&(
-            <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:7,padding:'5px 12px',flexShrink:0}}>
-              <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>TODAY</div>
-              <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:todayPlan.accent}}>{todayIsRest?'REST DAY':todayRunSession?todayRunSession.details.split('·')[0].trim():'Training Day'}</div>
-            </div>
+            <button onClick={()=>setWorkoutPopup(p=>!p)} style={{background:workoutPopup?`${todayPlan.accent}22`:'var(--s2)',border:`1px solid ${workoutPopup?todayPlan.accent+'55':'var(--border)'}`,borderRadius:7,padding:'5px 14px',fontFamily:'var(--font-mono)',fontSize:10,color:workoutPopup?todayPlan.accent:'var(--muted)',cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>
+              TODAY'S WORKOUTS {workoutPopup?'▲':'▼'}
+            </button>
           )}
           <button onClick={onSignOut} style={{background:'none',border:'1px solid var(--border)',borderRadius:7,padding:'5px 12px',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',cursor:'pointer',letterSpacing:1,whiteSpace:'nowrap'}}>SIGN OUT</button>
+          <button onClick={()=>setView('settings')} title='Settings' style={{background:view==='settings'?'var(--accent-dim)':'none',border:`1px solid ${view==='settings'?'var(--accent)':'var(--border)'}`,borderRadius:7,padding:'5px 9px',cursor:'pointer',color:view==='settings'?'var(--accent)':'var(--muted)',fontSize:16,lineHeight:1,display:'flex',alignItems:'center'}}>⚙</button>
         </div>
       </nav>
 
@@ -242,11 +288,12 @@ export default function WGHub({ onSignOut }) {
             <span style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>Loading training data...</span>
           </div>
         ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} activities={activities} setView={setView}/>
-         :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan}/>
-         :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
+         :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities}/>
+         :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); const a=await db.loadActivities(); setActivities(a); }}/>
          :view==='plan'?     <TrainingPlan plan={plan} savePlan={savePlan}/>
+         :view==='planner'?  <PlannerPage/>
          :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
-         :                   <TVMode logs={logs} settings={settings} plan={plan} setView={setView}/>
+         :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} setView={setView}/>
         }
       </div>
     </div>
@@ -274,7 +321,10 @@ function Dashboard({ logs, settings, activities, setView }) {
 
   const getKmForDate = (date) => {
     if(stravaKmByDate[date]) return stravaKmByDate[date]
-    return parseFloat(logs[date]?.exercise?.running?.distance) || 0
+    // Support both new runs[] array and legacy running{} shape
+    const log = logs[date]
+    if(log?.exercise?.runs) return log.exercise.runs.reduce((s,r)=>s+(parseFloat(r.distance)||0),0)
+    return parseFloat(log?.exercise?.running?.distance) || 0
   }
 
   const weekStart=new Date()
@@ -299,14 +349,15 @@ function Dashboard({ logs, settings, activities, setView }) {
   // X-axis tick interval — keeps labels readable at any period length
   const xInterval = period==='7D'?0:period==='30D'?4:period==='90D'?14:60
   const periodLabel = period==='7D'?'Last 7 days':period==='30D'?'Last 30 days':period==='90D'?'Last 90 days':'Last year'
+  const sfmt = (d) => period==='7D'?fmtDateShort(d):period==='30D'?fmtDateShort(d):fmtDateMMM(d)
 
   // Include ALL dates in the period (null for missing) so the X-axis always spans the full range
-  const weightData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
-  const sleepData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null}))
-  const hrvData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null}))
+  const weightData=days.map(d=>({date:sfmt(d),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
+  const sleepData=days.map(d=>({date:sfmt(d),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null}))
+  const hrvData=days.map(d=>({date:sfmt(d),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null}))
 
   // Weekly KM chart — merge all date sources
-  const wkMap={}
+  const wkMap={}, elevMap={}
   const allChartDates = [...new Set([...days, ...Object.keys(stravaKmByDate).filter(d => days.includes(d))])]
   allChartDates.forEach(d=>{
     const km = getKmForDate(d)
@@ -314,7 +365,15 @@ function Dashboard({ logs, settings, activities, setView }) {
     const dt=new Date(d+'T00:00:00'); const mon=new Date(dt); mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1)); const k=mon.toISOString().split('T')[0]
     wkMap[k]=(wkMap[k]||0)+km
   })
-  const kmData=Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([k,km])=>({week:`${new Date(k+'T00:00:00').getDate()}/${new Date(k+'T00:00:00').getMonth()+1}`,km:Math.round(km*10)/10,target:settings.weeklyKm?.value||null}))
+  // Elevation per week from Strava
+  activities.filter(a=>(a.custom_type||a.strava_type)==='run'&&days.includes((a.start_date||'').split('T')[0])).forEach(a=>{
+    const elev = a.data?.total_elevation_gain||0; if(!elev) return
+    const date=(a.start_date||'').split('T')[0]; const dt=new Date(date+'T00:00:00'); const mon=new Date(dt); mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1)); const k=mon.toISOString().split('T')[0]
+    elevMap[k]=(elevMap[k]||0)+Math.round(elev)
+  })
+  const wkLabel=(k)=>{ const d=new Date(k+'T00:00:00'); return `${d.getDate()}/${d.getMonth()+1}` }
+  const kmData=Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([k,km])=>({week:wkLabel(k),km:Math.round(km*10)/10,target:settings.weeklyKm?.value||null}))
+  const elevData=Object.entries({...wkMap,...elevMap}).reduce((acc,[k])=>{ if(!acc.find(x=>x.week===wkLabel(k))) acc.push({week:wkLabel(k),elev:elevMap[k]||0}); return acc },[]).sort((a,b)=>a.week.localeCompare(b.week))
 
   const cal=parseFloat(tl?.nutrition?.calories)||0, pro=parseFloat(tl?.nutrition?.protein)||0, carb=parseFloat(tl?.nutrition?.carbs)||0
   const hasData=Object.keys(logs).length>0
@@ -331,7 +390,7 @@ function Dashboard({ logs, settings, activities, setView }) {
   ].map(s=>({...s,ts:targetStatus(s.v,settings[s.tKey])}))
 
   const weeklyTs=targetStatus(thisWeekKm,settings.weeklyKm)
-  const ChartEmpty=()=><div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No data logged yet for this period</div>
+  const ChartEmpty=({msg})=><div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12,textAlign:'center',padding:'0 20px'}}>{msg||'No data logged yet for this period'}</div>
 
   return (
     <div style={{padding:'24px 28px',maxWidth:1440,margin:'0 auto'}} className='fade'>
@@ -434,6 +493,11 @@ function Dashboard({ logs, settings, activities, setView }) {
             <ChartCard title='WEEKLY RUNNING KM' sub={`${periodLabel} · km per week${settings.weeklyKm?.value?` · target ${settings.weeklyKm.value}km`:''}`}>
               {kmData.length>0?(<ResponsiveContainer width='100%' height={200}><BarChart data={kmData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='km'/><Tooltip contentStyle={TT}/>{settings.weeklyKm?.value&&<Bar dataKey='target' fill='rgba(0,230,118,0.12)' radius={[3,3,0,0]} name='Target'/>}<Bar dataKey='km' fill='#00e676' radius={[5,5,0,0]} name='km'/></BarChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
+            <ChartCard title='ELEVATION GAIN' sub={`${periodLabel} · total metres climbed per week from Strava`}>
+              {elevData.some(r=>r.elev>0)?(<ResponsiveContainer width='100%' height={200}><BarChart data={elevData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='m'/><Tooltip contentStyle={TT} formatter={v=>[`${v}m`,'Elevation']}/><Bar dataKey='elev' fill='#a5d6a7' radius={[5,5,0,0]} name='Elevation (m)'/></BarChart></ResponsiveContainer>):<ChartEmpty msg='No elevation data — requires Strava runs with GPS'/>}
+            </ChartCard>
+            <NutritionChart logs={logs} days={days} settings={settings} xInterval={xInterval} periodLabel={periodLabel}/>
+            <GymChart logs={logs} days={days} activities={activities} periodLabel={periodLabel}/>
             <ChartCard title='WEIGHT TREND' sub={`${periodLabel} · bodyweight in kilograms`}>
               {weightData.some(r=>r.weight)?(<ResponsiveContainer width='100%' height={200}><AreaChart data={weightData} margin={{top:4,right:8,left:-12,bottom:0}}><defs><linearGradient id='wGrad' x1='0' y1='0' x2='0' y2='1'><stop offset='5%' stopColor='#40a9ff' stopOpacity={0.25}/><stop offset='95%' stopColor='#40a9ff' stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis domain={['dataMin - 1','dataMax + 1']} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='kg'/><Tooltip contentStyle={TT}/><Area type='monotone' dataKey='weight' stroke='#40a9ff' strokeWidth={2} fill='url(#wGrad)' dot={false} connectNulls={false} name='Weight (kg)'/></AreaChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
@@ -443,8 +507,6 @@ function Dashboard({ logs, settings, activities, setView }) {
             <ChartCard title='HRV & RESTING HEART RATE' sub={`${periodLabel} · recovery indicators`}>
               {hrvData.some(r=>r.hrv||r.rhr)?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} connectNulls={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} connectNulls={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
-            <NutritionChart logs={logs} days={days} settings={settings} xInterval={xInterval} periodLabel={periodLabel}/>
-            <GymChart logs={logs} days={days} activities={activities} periodLabel={periodLabel}/>
           </div>
           <RecentHistory logs={logs} settings={settings} setView={setView}/>
         </>
@@ -463,7 +525,7 @@ function NutritionChart({ logs, days, settings, xInterval, periodLabel }) {
 
   // Include all dates (null for missing) so X-axis always spans the full period
   const data = days.map(d => ({
-    date:     fmtDate(d).split(' ').slice(0,2).join(' '),
+    date:     periodLabel?.includes('7')?fmtDateShort(d):fmtDateMMM(d),
     calories: parseFloat(logs[d]?.nutrition?.calories) || null,
     protein:  parseFloat(logs[d]?.nutrition?.protein)  || null,
     carbs:    parseFloat(logs[d]?.nutrition?.carbs)    || null,
@@ -640,7 +702,7 @@ function RecentHistory({ logs, settings, setView }) {
       <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>RECENT LOG HISTORY</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>Last {entries.length} entries · click any row to edit</div></div>
         <div style={{display:'flex',alignItems:'center',gap:12,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
-          {[['#00e676','On target'],['#ff9f40','Within 20%'],['#ff6b6b','Off target']].map(([c,l])=>(
+          {[['#00e676','On target'],['#ff9f40','Within 15%'],['#ff6b6b','Off target']].map(([c,l])=>(
             <span key={l} style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:8,height:8,borderRadius:2,background:c,display:'inline-block'}}/>{l}</span>
           ))}
         </div>
@@ -654,7 +716,7 @@ function RecentHistory({ logs, settings, setView }) {
               return (
                 <tr key={date} onClick={()=>setView('log')} style={{background:isToday?'rgba(0,230,118,0.04)':'transparent',cursor:'pointer',transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='var(--s2)'} onMouseLeave={e=>e.currentTarget.style.background=isToday?'rgba(0,230,118,0.04)':'transparent'}>
                   <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:isToday?'var(--accent)':'var(--text)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{fmtDate(date)}{isToday&&<span style={{marginLeft:6,fontSize:9,color:'var(--accent)'}}>TODAY</span>}</td>
-                  {cell(l?.exercise?.running?.distance,'km','weeklyKm')}
+                  {cell(l?.exercise?.runs?.reduce((s,r)=>s+(parseFloat(r.distance)||0),0)||l?.exercise?.running?.distance,'km','weeklyKm')}
                   {cell(l?.body?.weight,'kg','weightTarget')}
                   {cell(l?.sleep?.sleepScore,'/100','sleepScore')}
                   {cell(l?.sleep?.recoveryScore,'/100','recoveryScore')}
@@ -674,12 +736,41 @@ function RecentHistory({ logs, settings, setView }) {
 }
 
 // ─── LOG DATA ─────────────────────────────────────────────────────────────────
-function LogData({ logs, saveLog, settings, plan }) {
+function LogData({ logs, saveLog, settings, plan, activities }) {
   const [date, setDate] = useState(todayStr())
   const [form, setForm] = useState(mkEmpty())
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-  useEffect(()=>{ setForm(logs[date]?JSON.parse(JSON.stringify(logs[date])):mkEmpty()); setSaved(false) },[date,logs])
+
+  // Migrate old data shape (single running→runs array) + Strava auto-populate
+  useEffect(()=>{
+    const base = logs[date] ? JSON.parse(JSON.stringify(logs[date])) : mkEmpty()
+    // Migrate legacy shape
+    if(base.exercise?.running && !base.exercise?.runs) {
+      base.exercise.runs = base.exercise.running.on
+        ? [{distance:base.exercise.running.distance||'',duration:base.exercise.running.duration||'',notes:base.exercise.running.notes||''}]
+        : [{distance:'',duration:'',notes:''}]
+      delete base.exercise.running
+    }
+    if(!base.exercise.runs) base.exercise.runs = [{distance:'',duration:'',notes:''}]
+    if(!base.body.weightTime) base.body.weightTime = ''
+
+    // Auto-populate from Strava activities for this date if no manual data yet
+    const dayActivities = (activities||[]).filter(a=>(a.start_date||'').split('T')[0]===date)
+    if(dayActivities.length && !logs[date]) {
+      const runs = dayActivities.filter(a=>(a.custom_type||a.strava_type)==='run')
+      if(runs.length) {
+        base.exercise.runs = runs.map(a=>({
+          distance: a.data?.distance ? (a.data.distance/1000).toFixed(2) : '',
+          duration: a.data?.moving_time ? (() => { const s=a.data.moving_time; const h=Math.floor(s/3600); const m=Math.floor((s%3600)/60); return h>0?`${h}:${m.toString().padStart(2,'0')}`:`${m}:${(s%60).toString().padStart(2,'0')}` })() : '',
+          notes: a.custom_name || a.data?.name || '',
+          fromStrava: true,
+        }))
+      }
+    }
+    setForm(base)
+    setSaved(false)
+  },[date,logs])
 
   const setN=(sec,f,v)=>setForm(p=>({...p,[sec]:{...p[sec],[f]:v}}))
   const setEx=(type,f,v)=>setForm(p=>({...p,exercise:{...p.exercise,[type]:{...p.exercise[type],[f]:v}}}))
@@ -687,6 +778,11 @@ function LogData({ logs, saveLog, settings, plan }) {
   const addFuncEx=()=>setForm(p=>({...p,exercise:{...p.exercise,functional:{...p.exercise.functional,exercises:[...p.exercise.functional.exercises,{exercise:'',reps:''}]}}}))
   const removeFuncEx=i=>setForm(p=>({...p,exercise:{...p.exercise,functional:{...p.exercise.functional,exercises:p.exercise.functional.exercises.filter((_,idx)=>idx!==i)}}}))
   const toggleGym=t=>setForm(p=>{ const types=p.exercise.gym.types.includes(t)?p.exercise.gym.types.filter(x=>x!==t):[...p.exercise.gym.types,t]; return {...p,exercise:{...p.exercise,gym:{...p.exercise.gym,types}}} })
+  const setRun=(i,f,v)=>setForm(p=>{ const runs=[...(p.exercise.runs||[])]; runs[i]={...runs[i],[f]:v}; return {...p,exercise:{...p.exercise,runs}} })
+  const addRun=()=>setForm(p=>({...p,exercise:{...p.exercise,runs:[...(p.exercise.runs||[]),{distance:'',duration:'',notes:''}]}}))
+  const removeRun=i=>setForm(p=>({...p,exercise:{...p.exercise,runs:p.exercise.runs.filter((_,idx)=>idx!==i)}}))
+  const hasRuns=form.exercise.runs?.some(r=>r.distance||r.duration)
+
   const handleSave=async()=>{ setSaving(true); await saveLog(date,form); setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),3000) }
 
   const isExisting=!!logs[date]
@@ -723,10 +819,11 @@ function LogData({ logs, saveLog, settings, plan }) {
 
       <div style={{display:'flex',flexDirection:'column',gap:14}}>
         <LogSection title='BODY DATA' accent='var(--accent)'>
-          <Row cols={3}>
+          <Row cols={4}>
             <FF label='RESTING HEART RATE (bpm)' ts={ts(form.body.rhr,'rhr')}><input type='number' placeholder='52' value={form.body.rhr} onChange={e=>setN('body','rhr',e.target.value)}/></FF>
             <FF label='HRV' ts={ts(form.body.hrv,'hrv')}><input type='number' placeholder='78' value={form.body.hrv} onChange={e=>setN('body','hrv',e.target.value)}/></FF>
             <FF label='WEIGHT (kg)' ts={ts(form.body.weight,'weightTarget')}><input type='number' placeholder='75.5' step='0.1' value={form.body.weight} onChange={e=>setN('body','weight',e.target.value)}/></FF>
+            <FF label='WEIGHT TIME'><input type='time' value={form.body.weightTime||''} onChange={e=>setN('body','weightTime',e.target.value)}/></FF>
           </Row>
         </LogSection>
         <LogSection title='SLEEP' accent='var(--purple)'>
@@ -746,13 +843,25 @@ function LogData({ logs, saveLog, settings, plan }) {
         </LogSection>
         <LogSection title='EXERCISE' accent='var(--blue)'>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            <ExBlock checked={form.exercise.running.on} toggle={()=>setEx('running','on',!form.exercise.running.on)} label='RUNNING' accent='var(--accent)'>
-              <Row cols={3}>
-                <FF label='DISTANCE (km)'><input type='number' placeholder='15.0' step='0.1' value={form.exercise.running.distance} onChange={e=>setEx('running','distance',e.target.value)}/></FF>
-                <FF label='DURATION (h:mm)'><input type='text' placeholder='1:45' value={form.exercise.running.duration} onChange={e=>setEx('running','duration',e.target.value)}/></FF>
-                <FF label='NOTES / ZONE'><input type='text' placeholder='Zone 2 · 150–160bpm' value={form.exercise.running.notes} onChange={e=>setEx('running','notes',e.target.value)}/></FF>
-              </Row>
-            </ExBlock>
+            {/* ── RUNNING — multiple sessions ── */}
+            <div style={{background:'var(--s2)',borderRadius:10,border:`1px solid ${hasRuns?'rgba(0,230,118,0.3)':'var(--border)'}`,overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:hasRuns?'rgba(0,230,118,0.05)':'transparent',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,letterSpacing:1,color:hasRuns?'var(--accent)':'var(--muted)'}}>RUNNING</span>
+                <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:'auto'}}>{form.exercise.runs?.length||1} SESSION{(form.exercise.runs?.length||1)>1?'S':''}</span>
+              </div>
+              <div style={{padding:16,display:'flex',flexDirection:'column',gap:12}}>
+                {(form.exercise.runs||[{distance:'',duration:'',notes:''}]).map((run,i)=>(
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr 32px',gap:10,alignItems:'end'}}>
+                    <FF label={`DISTANCE (km)${run.fromStrava?' · from Strava':''}`}><input type='number' placeholder='15.0' step='0.1' value={run.distance} onChange={e=>setRun(i,'distance',e.target.value)} style={{borderColor:run.fromStrava?'rgba(252,76,2,0.4)':''}}/></FF>
+                    <FF label='DURATION (h:mm)'><input type='text' placeholder='1:45' value={run.duration} onChange={e=>setRun(i,'duration',e.target.value)}/></FF>
+                    <FF label='NOTES / ZONE'><input type='text' placeholder='Zone 2 · 150–160bpm' value={run.notes} onChange={e=>setRun(i,'notes',e.target.value)}/></FF>
+                    {i>0&&<button onClick={()=>removeRun(i)} style={{background:'rgba(255,107,107,0.1)',border:'1px solid rgba(255,107,107,0.3)',borderRadius:7,color:'var(--red)',cursor:'pointer',fontSize:14,height:38,alignSelf:'end'}}>×</button>}
+                    {i===0&&<div/>}
+                  </div>
+                ))}
+                <button onClick={addRun} style={{background:'none',border:'1px dashed var(--border2)',borderRadius:7,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:11,padding:'9px',cursor:'pointer',textAlign:'left'}}>+ ADD SECOND RUN</button>
+              </div>
+            </div>
             <ExBlock checked={form.exercise.functional.on} toggle={()=>setEx('functional','on',!form.exercise.functional.on)} label='FUNCTIONAL TRAINING' accent='var(--orange)'>
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 100px 32px',gap:8,marginBottom:2}}>
@@ -828,12 +937,23 @@ function TrainingPlan({ plan, savePlan }) {
 
       {!editing&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:20}}>
-          {[{l:'RUNNING TARGET',v:'~100km',c:'var(--accent)'},{l:'FUNCTIONAL SESSIONS',v:'6 days',c:'var(--orange)'},{l:'GYM SESSIONS',v:'6 types',c:'var(--purple)'},{l:'YOGA SESSIONS',v:'6 days',c:'var(--blue)'}].map(({l,v,c})=>(
-            <div key={l} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'16px 20px'}}>
-              <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:6}}>{l}</div>
-              <div style={{fontFamily:'var(--font-head)',fontSize:28,color:c}}>{v}</div>
-            </div>
-          ))}
+          {(()=>{
+            const totalKm = plan.reduce((s,day)=>{ const runs=day.sessions.filter(s=>s.type==='run'); return s+runs.reduce((a,r)=>{ const m=r.details.match(/(\d+)km/); return a+(m?parseInt(m[1]):0) },0) },0)
+            const funcDays = plan.filter(d=>d.sessions.some(s=>s.type==='functional')).length
+            const gymTypes = [...new Set(plan.flatMap(d=>d.sessions.filter(s=>s.type==='gym').map(s=>s.details.split('–')[0].split('/')[0].trim())))]
+            const yogaDays = plan.filter(d=>d.sessions.some(s=>s.type==='yoga')).length
+            return [
+              {l:'WEEKLY RUNNING TARGET', v:totalKm>0?`~${totalKm}km`:'—', c:'var(--accent)'},
+              {l:'FUNCTIONAL SESSIONS',   v:`${funcDays} day${funcDays!==1?'s':''}`, c:'var(--orange)'},
+              {l:'GYM SESSION TYPES',     v:`${gymTypes.length} type${gymTypes.length!==1?'s':''}`, c:'var(--purple)'},
+              {l:'YOGA SESSIONS',         v:`${yogaDays} day${yogaDays!==1?'s':''}`, c:'var(--blue)'},
+            ].map(({l,v,c})=>(
+              <div key={l} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'16px 20px'}}>
+                <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:6}}>{l}</div>
+                <div style={{fontFamily:'var(--font-head)',fontSize:28,color:c}}>{v}</div>
+              </div>
+            ))
+          })()}
         </div>
       )}
 
@@ -957,7 +1077,7 @@ function SettingsPage({ settings, saveSettings, stravaConnection, onStravaConnec
         <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--accent)',letterSpacing:1,marginBottom:6}}>HOW TARGETS WORK</div>
         <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.65}}>Every stat on the dashboard and log form is compared against your targets in real time.
           <span style={{color:'#00e676',fontFamily:'var(--font-mono)',fontSize:11,marginLeft:8}}>■ Green</span> = on target ·
-          <span style={{color:'#ff9f40',fontFamily:'var(--font-mono)',fontSize:11,marginLeft:6}}>■ Amber</span> = within 20% ·
+          <span style={{color:'#ff9f40',fontFamily:'var(--font-mono)',fontSize:11,marginLeft:6}}>■ Amber</span> = within 15% ·
           <span style={{color:'#ff6b6b',fontFamily:'var(--font-mono)',fontSize:11,marginLeft:6}}>■ Red</span> = off target.
         </div>
       </div>
@@ -994,42 +1114,73 @@ function SettingsPage({ settings, saveSettings, stravaConnection, onStravaConnec
 }
 
 // ─── TV MODE ──────────────────────────────────────────────────────────────────
-function TVMode({ logs, settings, plan, setView }) {
+function TVMode({ logs, settings, plan, activities, setView }) {
   const [,setTick]=useState(0)
+  const [tvPeriod, setTvPeriod]=useState('week')
   useEffect(()=>{ const id=setInterval(()=>setTick(t=>t+1),30000); return()=>clearInterval(id) },[])
   const today=todayStr(), tl=logs[today], now=new Date()
   const planDayIndex=now.getDay()===0?6:now.getDay()-1
   const todayPlan=plan?.[planDayIndex]
-  const last14=Array.from({length:14},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(13-i)); return d.toISOString().split('T')[0] })
-  const wkKm=last14.reduce((s,d)=>s+(parseFloat(logs[d]?.exercise?.running?.distance)||0),0)
+
+  // Period days
+  const nDays = tvPeriod==='week'?7:tvPeriod==='month'?30:tvPeriod==='6month'?180:365
+  const periodDays = Array.from({length:nDays},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(nDays-1-i)); return d.toISOString().split('T')[0] })
+
+  // Strava KM for period
+  const stravaKmByDate={}
+  ;(activities||[]).forEach(a=>{ const type=a.custom_type||a.strava_type; if(type!=='run') return; const km=(a.data?.distance||0)/1000; if(!km) return; const date=(a.start_date||'').split('T')[0]; stravaKmByDate[date]=(stravaKmByDate[date]||0)+km })
+  const getKm=d=>stravaKmByDate[d]||parseFloat(logs[d]?.exercise?.runs?.[0]?.distance||logs[d]?.exercise?.running?.distance)||0
+  const periodKm = periodDays.reduce((s,d)=>s+getKm(d),0)
+
   let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(logs[d.toISOString().split('T')[0]]) streak++; else break }
+
+  // Averages for the selected period
+  const loggedDays = periodDays.filter(d=>logs[d])
+  const avg=(key,sub)=>{ const vals=loggedDays.map(d=>parseFloat(logs[d]?.[key]?.[sub])).filter(v=>!isNaN(v)&&v>0); return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:null }
+
   const tvStats=[
-    {label:'WEIGHT',    v:tl?.body?.weight,        unit:'kg',   color:'#00e676',tKey:'weightTarget'},
-    {label:'HRV',       v:tl?.body?.hrv,            unit:'',     color:'#40a9ff',tKey:'hrv'},
-    {label:'RESTING HR',v:tl?.body?.rhr,            unit:'bpm',  color:'#ff9f40',tKey:'rhr'},
-    {label:'SLEEP',     v:tl?.sleep?.sleepScore,    unit:'/100', color:'#b388ff',tKey:'sleepScore'},
-    {label:'RECOVERY',  v:tl?.sleep?.recoveryScore, unit:'/100', color:'#00e676',tKey:'recoveryScore'},
-    {label:'HRS SLEPT', v:tl?.sleep?.hoursSlept,    unit:'h',    color:'#40a9ff',tKey:'hoursSlept'},
-  ].map(s=>({...s,ts:targetStatus(s.v,settings[s.tKey])}))
+    {label:'WEIGHT',    v:tl?.body?.weight,        avg:avg('body','weight'),        unit:'kg',   color:'#00e676',tKey:'weightTarget'},
+    {label:'HRV',       v:tl?.body?.hrv,            avg:avg('body','hrv'),           unit:'',     color:'#40a9ff',tKey:'hrv'},
+    {label:'RESTING HR',v:tl?.body?.rhr,            avg:avg('body','rhr'),           unit:'bpm',  color:'#ff9f40',tKey:'rhr'},
+    {label:'SLEEP',     v:tl?.sleep?.sleepScore,    avg:avg('sleep','sleepScore'),   unit:'/100', color:'#b388ff',tKey:'sleepScore'},
+    {label:'RECOVERY',  v:tl?.sleep?.recoveryScore, avg:avg('sleep','recoveryScore'),unit:'/100', color:'#00e676',tKey:'recoveryScore'},
+    {label:'HRS SLEPT', v:tl?.sleep?.hoursSlept,    avg:avg('sleep','hoursSlept'),   unit:'h',    color:'#40a9ff',tKey:'hoursSlept'},
+  ].map(s=>({ ...s, ts:targetStatus(s.v,settings[s.tKey]), avgTs:targetStatus(s.avg,settings[s.tKey]) }))
+
+  const periodLabel = tvPeriod==='week'?'7 DAYS':tvPeriod==='month'?'30 DAYS':tvPeriod==='6month'?'6 MONTHS':'1 YEAR'
 
   return (
     <div style={{minHeight:'calc(100vh - 60px)',background:'var(--bg)',padding:'28px 36px',display:'flex',flexDirection:'column',gap:18}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div><div style={{fontFamily:'var(--font-head)',fontSize:48,letterSpacing:3,lineHeight:1}}><span style={{color:'var(--accent)'}}>WG</span> HUB</div><div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:4}}>PERFORMANCE DASHBOARD · AUTO-REFRESHES EVERY 30s</div></div>
+        <div style={{display:'flex',gap:8}}>
+          {[{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'6month',l:'6M'},{k:'1year',l:'1Y'}].map(({k,l})=>(
+            <button key={k} onClick={()=>setTvPeriod(k)} style={{background:tvPeriod===k?'var(--accent)':'var(--s2)',color:tvPeriod===k?'var(--bg)':'var(--muted)',border:`1px solid ${tvPeriod===k?'var(--accent)':'var(--border)'}`,borderRadius:7,padding:'6px 16px',fontFamily:'var(--font-mono)',fontSize:11,cursor:'pointer',letterSpacing:1}}>{l}</button>
+          ))}
+        </div>
         <div style={{textAlign:'right'}}><div style={{fontFamily:'var(--font-head)',fontSize:52,color:'var(--accent)',lineHeight:1}}>{now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div><div style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)',marginTop:4}}>{now.toLocaleDateString('en-US',{weekday:'long'}).toUpperCase()} · {now.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase()}</div></div>
         <button onClick={()=>setView('dashboard')} style={{background:'var(--s2)',border:'1px solid var(--border2)',borderRadius:8,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:11,padding:'8px 18px',cursor:'pointer',letterSpacing:1}}>← EXIT TV</button>
       </div>
+
+      {/* Today's values + period averages */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:12}}>
-        {tvStats.map(({label,v,unit,color,ts})=>(
-          <div key={label} style={{background:'var(--s1)',border:`1px solid ${ts?ts.color+'44':'var(--border)'}`,borderRadius:'var(--r-lg)',padding:'22px 16px',textAlign:'center',position:'relative',overflow:'hidden'}}>
+        {tvStats.map(({label,v,avg:avgV,unit,color,ts,avgTs})=>(
+          <div key={label} style={{background:'var(--s1)',border:`1px solid ${ts?ts.color+'44':'var(--border)'}`,borderRadius:'var(--r-lg)',padding:'18px 14px',textAlign:'center',position:'relative',overflow:'hidden'}}>
             {ts&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:4,background:'var(--s3)'}}><div style={{height:'100%',width:`${ts.pct}%`,background:ts.color,borderRadius:2}}/></div>}
-            <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:10}}>{label}</div>
-            <div style={{fontFamily:'var(--font-head)',fontSize:44,color:ts?ts.color:(v?color:'var(--muted2)'),lineHeight:1}}>{v||'—'}</div>
-            <div style={{fontFamily:'var(--font-mono)',fontSize:12,color:ts?ts.color:color,opacity:0.6,marginTop:4}}>{v?unit:''}</div>
-            {ts&&<div style={{fontFamily:'var(--font-mono)',fontSize:9,color:ts.color,marginTop:6}}>{ts.status}</div>}
+            <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:6}}>{label}</div>
+            <div style={{fontFamily:'var(--font-head)',fontSize:40,color:ts?ts.color:(v?color:'var(--muted2)'),lineHeight:1}}>{v||'—'}</div>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:ts?ts.color:color,opacity:0.6,marginTop:2}}>{v?`TODAY ${unit}`:''}</div>
+            {avgV&&(
+              <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid var(--border)'}}>
+                <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>AVG {periodLabel}</div>
+                <div style={{fontFamily:'var(--font-head)',fontSize:24,color:avgTs?avgTs.color:color,lineHeight:1.2}}>{avgV}<span style={{fontFamily:'var(--font-mono)',fontSize:10,opacity:0.6}}>{unit}</span></div>
+                {avgTs&&<div style={{fontFamily:'var(--font-mono)',fontSize:8,color:avgTs.color,marginTop:2}}>{avgTs.status}</div>}
+              </div>
+            )}
           </div>
         ))}
       </div>
+
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr',gap:14}}>
         <div style={{background:'var(--s1)',border:`1px solid ${streak>0?'rgba(0,230,118,0.35)':'var(--border)'}`,borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
           <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>LOGGING STREAK</div>
@@ -1037,8 +1188,8 @@ function TVMode({ logs, settings, plan, setView }) {
           <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:6}}>consecutive days</div>
         </div>
         <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>KM LAST 14 DAYS</div>
-          <div style={{fontFamily:'var(--font-head)',fontSize:72,color:'var(--blue)',lineHeight:1}}>{wkKm.toFixed(1)}</div>
+          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>KM · {periodLabel}</div>
+          <div style={{fontFamily:'var(--font-head)',fontSize:72,color:'var(--blue)',lineHeight:1}}>{periodKm.toFixed(1)}</div>
           <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:6}}>kilometres run</div>
         </div>
         {todayPlan&&(
@@ -1157,6 +1308,30 @@ function StravaConnectionCard({ stravaConnection, onDisconnect }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── PLANNER PAGE ─────────────────────────────────────────────────────────────
+function PlannerPage() {
+  return (
+    <div style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}} className='fade'>
+      <h1 style={{fontFamily:'var(--font-head)',fontSize:38,letterSpacing:2,lineHeight:1,marginBottom:8}}>PLANNER <span style={{color:'var(--accent)'}}>& ORGANISER</span></h1>
+      <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',letterSpacing:1,marginBottom:32}}>Calendar, appointments, to-do lists and journal — coming soon.</p>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
+        {[
+          {title:'CALENDAR',      icon:'📅', desc:'View and manage appointments, races, and training events across weeks and months.', color:'var(--accent)'},
+          {title:'TO-DO LIST',    icon:'✅', desc:'Track tasks, goals and action items. Synced to TV mode display.', color:'var(--blue)'},
+          {title:'JOURNAL',       icon:'📓', desc:'Daily notes, reflections, and training observations.', color:'var(--orange)'},
+        ].map(({title,icon,desc,color})=>(
+          <div key={title} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'28px 24px',display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:32}}>{icon}</div>
+            <div style={{fontFamily:'var(--font-head)',fontSize:26,color,letterSpacing:1}}>{title}</div>
+            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>{desc}</div>
+            <div style={{marginTop:'auto',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted2)',letterSpacing:1,borderTop:'1px solid var(--border)',paddingTop:14}}>COMING SOON</div>
+          </div>
+        ))}
       </div>
     </div>
   )
