@@ -437,7 +437,7 @@ function Dashboard({ logs, settings, activities, setView }) {
               {hrvData.length>0?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
             <NutritionChart logs={logs} days={days} settings={settings}/>
-            <GymChart logs={logs} days={days}/>
+            <GymChart logs={logs} days={days} activities={activities}/>
           </div>
           <RecentHistory logs={logs} settings={settings} setView={setView}/>
         </>
@@ -513,45 +513,81 @@ function NutritionChart({ logs, days, settings }) {
   )
 }
 
-// ─── GYM SESSIONS CHART ───────────────────────────────────────────────────────
-function GymChart({ logs, days }) {
-  const GYM_COLORS = {
+// ─── GYM & YOGA SESSIONS CHART ───────────────────────────────────────────────
+function GymChart({ logs, days, activities }) {
+  const SESSION_COLORS = {
     'Bicep / Shoulders': '#40a9ff',
     'Chest / Triceps':   '#b388ff',
     'Core Training':     '#ff9f40',
     'Back':              '#00e676',
     'Legs':              '#ff6b6b',
+    'Weight Training':   '#ffd666',  // Strava generic gym sessions
+    'Yoga':              '#80deea',  // teal for yoga
   }
-  const GYM_KEYS = Object.keys(GYM_COLORS)
+  const ALL_KEYS = Object.keys(SESSION_COLORS)
+
+  const wkKey = (date) => {
+    const dt=new Date(date+'T00:00:00'); const mon=new Date(dt)
+    mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1))
+    return [mon.toISOString().split('T')[0], `${mon.getDate()}/${mon.getMonth()+1}`]
+  }
 
   const wkMap = {}
+
+  // ── From manual daily logs (typed gym sessions + yoga)
   days.forEach(d => {
     const l = logs[d]
-    if(!l?.exercise?.gym?.on || !l.exercise.gym.types?.length) return
-    const dt=new Date(d+'T00:00:00'); const mon=new Date(dt)
-    mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1))
-    const k=mon.toISOString().split('T')[0]
-    if(!wkMap[k]) wkMap[k]={week:`${mon.getDate()}/${mon.getMonth()+1}`,total:0}
-    l.exercise.gym.types.forEach(type=>{ wkMap[k][type]=(wkMap[k][type]||0)+1; wkMap[k].total++ })
+    const [k, weekLabel] = wkKey(d)
+    if(!wkMap[k]) wkMap[k] = { week: weekLabel }
+
+    if(l?.exercise?.gym?.on && l.exercise.gym.types?.length) {
+      l.exercise.gym.types.forEach(type => { wkMap[k][type]=(wkMap[k][type]||0)+1 })
+    }
+    if(l?.exercise?.yoga?.on) {
+      wkMap[k]['Yoga']=(wkMap[k]['Yoga']||0)+1
+    }
+  })
+
+  // ── From Strava activities (supplement — skipped if manual log covers that day)
+  ;(activities||[]).forEach(a => {
+    const type = a.custom_type || a.strava_type
+    if(type !== 'gym' && type !== 'yoga') return
+    const date = (a.start_date||'').split('T')[0]
+    if(!date) return
+
+    // Only use Strava data if no manual entry already covers this session type
+    const l = logs[date]
+    if(type==='gym'  && l?.exercise?.gym?.on)  return
+    if(type==='yoga' && l?.exercise?.yoga?.on) return
+
+    const [k, weekLabel] = wkKey(date)
+    if(!wkMap[k]) wkMap[k] = { week: weekLabel }
+
+    if(type==='gym')  wkMap[k]['Weight Training']=(wkMap[k]['Weight Training']||0)+1
+    if(type==='yoga') wkMap[k]['Yoga']=(wkMap[k]['Yoga']||0)+1
   })
 
   const data = Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v)
-  const totalSessions = days.reduce((s,d)=>s+(logs[d]?.exercise?.gym?.on?1:0),0)
 
-  // Tally each type across the period
+  // Totals per type across the period
   const typeTotals = {}
-  GYM_KEYS.forEach(k=>{ typeTotals[k]=days.reduce((s,d)=>s+(logs[d]?.exercise?.gym?.types?.includes(k)?1:0),0) })
+  ALL_KEYS.forEach(k => {
+    typeTotals[k] = data.reduce((s,w) => s+(w[k]||0), 0)
+  })
+
+  const totalSessions = ALL_KEYS.reduce((s,k) => s+typeTotals[k], 0)
+  const activeKeys    = ALL_KEYS.filter(k => typeTotals[k] > 0)
 
   return (
-    <ChartCard title='GYM SESSIONS' sub={`${totalSessions} session${totalSessions!==1?'s':''} in period · stacked by type`}>
+    <ChartCard title='GYM & YOGA SESSIONS' sub={`${totalSessions} session${totalSessions!==1?'s':''} in period · manual logs + Strava`}>
       {data.length>0?(
         <>
           <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:14}}>
-            {GYM_KEYS.filter(k=>typeTotals[k]>0).map(k=>(
+            {activeKeys.map(k=>(
               <span key={k} style={{display:'flex',alignItems:'center',gap:5,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
-                <span style={{width:8,height:8,borderRadius:2,background:GYM_COLORS[k],display:'inline-block'}}/>
+                <span style={{width:8,height:8,borderRadius:2,background:SESSION_COLORS[k],display:'inline-block'}}/>
                 {k}
-                <span style={{color:GYM_COLORS[k],fontWeight:600}}>×{typeTotals[k]}</span>
+                <span style={{color:SESSION_COLORS[k],fontWeight:600}}>×{typeTotals[k]}</span>
               </span>
             ))}
           </div>
@@ -561,15 +597,18 @@ function GymChart({ logs, days }) {
               <XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
               <YAxis allowDecimals={false} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
               <Tooltip contentStyle={TT} cursor={{fill:'rgba(255,255,255,0.04)'}}/>
-              {GYM_KEYS.map((k,i)=>(
-                <Bar key={k} dataKey={k} stackId='g' fill={GYM_COLORS[k]} name={k}
-                  radius={i===GYM_KEYS.length-1?[4,4,0,0]:[0,0,0,0]}/>
+              {activeKeys.map((k,i)=>(
+                <Bar key={k} dataKey={k} stackId='g' fill={SESSION_COLORS[k]} name={k}
+                  radius={i===activeKeys.length-1?[4,4,0,0]:[0,0,0,0]}/>
               ))}
             </BarChart>
           </ResponsiveContainer>
         </>
       ):(
-        <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No gym sessions logged yet</div>
+        <div style={{height:200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>
+          <span>No gym or yoga sessions found</span>
+          <span style={{fontSize:10,color:'var(--muted2)'}}>Log sessions manually or sync Strava activities</span>
+        </div>
       )}
     </ChartCard>
   )
