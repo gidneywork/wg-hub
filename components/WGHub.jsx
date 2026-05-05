@@ -113,10 +113,12 @@ function targetStatus(actual, def) {
   return {color:met?'#00e676':pct>=80?'#ff9f40':'#ff6b6b',pct,status:met?'on target':`${Math.round(pct)}% of target`}
 }
 
-function calcRecords(logs) {
+function calcRecords(logs, activities = []) {
   let longestRun=0,bestSleep=0,bestHrv=0,lowestRhr=999,heaviestWeek=0,bestRecovery=0
   let lrD='',bsD='',bhD='',lrhrD='',brD=''
   const wkKm={}
+
+  // ── From manual daily logs (sleep, body, manual runs)
   Object.entries(logs).forEach(([date,log])=>{
     const km=parseFloat(log?.exercise?.running?.distance)||0
     if(km>longestRun){longestRun=km;lrD=date}
@@ -126,6 +128,25 @@ function calcRecords(logs) {
     const rec=parseFloat(log?.sleep?.recoveryScore)||0; if(rec>bestRecovery){bestRecovery=rec;brD=date}
     if(km){const dt=new Date(date+'T00:00:00');const mon=new Date(dt);mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1));const k=mon.toISOString().split('T')[0];wkKm[k]=(wkKm[k]||0)+km}
   })
+
+  // ── From Strava activities (running distance takes priority)
+  activities.forEach(a=>{
+    const type = a.custom_type || a.strava_type || 'custom'
+    if(type !== 'run') return
+    const km = (a.data?.distance || 0) / 1000
+    if(!km) return
+    const date = (a.start_date || '').split('T')[0]
+    if(!date) return
+    // Only use Strava distance if it's longer than any manually logged run on that day
+    // This avoids double-counting when both exist
+    const logKm = parseFloat(logs[date]?.exercise?.running?.distance) || 0
+    const effectiveKm = Math.max(km, logKm)
+    if(effectiveKm > longestRun){ longestRun = Math.round(effectiveKm * 100) / 100; lrD = date }
+    const dt=new Date(date+'T00:00:00'); const mon=new Date(dt); mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1)); const k=mon.toISOString().split('T')[0]
+    // Replace the manual log entry for that date with Strava if Strava is higher
+    if(!wkKm[k] || effectiveKm > logKm) wkKm[k]=(wkKm[k]||0)+(effectiveKm-logKm)
+  })
+
   Object.values(wkKm).forEach(km=>{if(km>heaviestWeek)heaviestWeek=km})
   return [
     {label:'LONGEST RUN',   value:longestRun>0?`${longestRun}km`:'—',                color:'#00e676',date:lrD},
@@ -144,31 +165,28 @@ export default function WGHub({ onSignOut }) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [plan,     setPlan    ] = useState(null)
   const [stravaConnection, setStravaConnection] = useState(null)
+  const [activities, setActivities] = useState([])
   const [ready,    setReady   ] = useState(false)
 
   useEffect(() => {
-    // Check for Strava callback result in URL
     const params = new URLSearchParams(window.location.search)
     const stravaStatus = params.get('strava')
-    if (stravaStatus) {
-      // Clean the URL without reloading
-      window.history.replaceState({}, '', window.location.pathname)
-    }
+    if (stravaStatus) window.history.replaceState({}, '', window.location.pathname)
 
     ;(async () => {
       try {
-        const [logsData, settingsData, planData, stravaConn] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn, activitiesData] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
           db.loadStravaConnection(),
+          db.loadActivities(),
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
         setPlan(planData || getDefaultPlan())
         setStravaConnection(stravaConn)
-
-        // If just connected from Strava OAuth, switch to history tab
+        setActivities(activitiesData || [])
         if (stravaStatus === 'connected') setView('history')
       } catch (e) {
         console.error('Initial load failed:', e)
@@ -223,7 +241,7 @@ export default function WGHub({ onSignOut }) {
             <div style={{width:20,height:20,border:'2px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
             <span style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>Loading training data...</span>
           </div>
-        ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} setView={setView}/>
+        ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} activities={activities} setView={setView}/>
          :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan}/>
          :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
          :view==='plan'?     <TrainingPlan plan={plan} savePlan={savePlan}/>
@@ -236,31 +254,59 @@ export default function WGHub({ onSignOut }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ logs, settings, setView }) {
+function Dashboard({ logs, settings, activities, setView }) {
   const [period, setPeriod] = useState('7D')
   const nDays=period==='7D'?7:period==='30D'?30:period==='90D'?90:365
   const days=Array.from({length:nDays},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(nDays-1-i)); return d.toISOString().split('T')[0] })
   const today=todayStr(), tl=logs[today]
 
-  const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-(weekStart.getDay()===0?6:weekStart.getDay()-1))
-  const thisWeekKm=Object.keys(logs).filter(d=>new Date(d+'T00:00:00')>=weekStart).reduce((s,d)=>s+(parseFloat(logs[d]?.exercise?.running?.distance)||0),0)
+  // ── Merged KM lookup: Strava takes priority over manual log for a given date
+  const stravaKmByDate = {}
+  activities.forEach(a => {
+    const type = a.custom_type || a.strava_type || 'custom'
+    if(type !== 'run') return
+    const km = (a.data?.distance || 0) / 1000
+    if(!km) return
+    const date = (a.start_date || '').split('T')[0]
+    if(!date) return
+    stravaKmByDate[date] = (stravaKmByDate[date] || 0) + km
+  })
 
-  const totalKm=days.reduce((s,d)=>s+(parseFloat(logs[d]?.exercise?.running?.distance)||0),0)
+  const getKmForDate = (date) => {
+    if(stravaKmByDate[date]) return stravaKmByDate[date]
+    return parseFloat(logs[date]?.exercise?.running?.distance) || 0
+  }
+
+  const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-(weekStart.getDay()===0?6:weekStart.getDay()-1))
+  const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate)])]
+  const thisWeekKm = allDates
+    .filter(d => new Date(d+'T00:00:00') >= weekStart)
+    .reduce((s,d) => s + getKmForDate(d), 0)
+
+  const totalKm=days.reduce((s,d)=>s+getKmForDate(d),0)
   const logsCount=days.filter(d=>logs[d]).length
   const sleepDays=days.filter(d=>logs[d]?.sleep?.sleepScore)
   const avgSleep=sleepDays.length?Math.round(sleepDays.reduce((s,d)=>s+parseFloat(logs[d].sleep.sleepScore),0)/sleepDays.length):null
   const hrvDays=days.filter(d=>logs[d]?.body?.hrv)
   const avgHrv=hrvDays.length?Math.round(hrvDays.reduce((s,d)=>s+parseFloat(logs[d].body.hrv),0)/hrvDays.length):null
-  const load=days.reduce((s,d)=>{ const l=logs[d]; if(!l) return s; return s+(parseFloat(l.exercise?.running?.distance)||0)+(l.exercise?.gym?.on?(l.exercise.gym.types.length||1)*8:0)+(l.exercise?.yoga?.on?3:0)+(l.exercise?.functional?.on?4:0) },0)
+  const load=days.reduce((s,d)=>{ const l=logs[d]; if(!l) return s; return s+getKmForDate(d)+(l.exercise?.gym?.on?(l.exercise.gym.types.length||1)*8:0)+(l.exercise?.yoga?.on?3:0)+(l.exercise?.functional?.on?4:0) },0)
 
   let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(logs[d.toISOString().split('T')[0]]) streak++; else break }
-  const records=calcRecords(logs)
+  const records=calcRecords(logs, activities)
 
   const weightData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null})).filter(r=>r.weight)
   const sleepData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null})).filter(r=>r.sleep||r.recovery)
   const hrvData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null})).filter(r=>r.hrv||r.rhr)
+
+  // Weekly KM chart — merge all date sources
   const wkMap={}
-  days.forEach(d=>{ const km=parseFloat(logs[d]?.exercise?.running?.distance)||0; if(km){const dt=new Date(d+'T00:00:00');const mon=new Date(dt);mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1));const k=mon.toISOString().split('T')[0];wkMap[k]=(wkMap[k]||0)+km} })
+  const allChartDates = [...new Set([...days, ...Object.keys(stravaKmByDate).filter(d => days.includes(d))])]
+  allChartDates.forEach(d=>{
+    const km = getKmForDate(d)
+    if(!km) return
+    const dt=new Date(d+'T00:00:00'); const mon=new Date(dt); mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1)); const k=mon.toISOString().split('T')[0]
+    wkMap[k]=(wkMap[k]||0)+km
+  })
   const kmData=Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([k,km])=>({week:`${new Date(k+'T00:00:00').getDate()}/${new Date(k+'T00:00:00').getMonth()+1}`,km:Math.round(km*10)/10,target:settings.weeklyKm?.value||null}))
 
   const cal=parseFloat(tl?.nutrition?.calories)||0, pro=parseFloat(tl?.nutrition?.protein)||0, carb=parseFloat(tl?.nutrition?.carbs)||0
