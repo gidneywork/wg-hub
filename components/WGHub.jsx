@@ -277,7 +277,9 @@ function Dashboard({ logs, settings, activities, setView }) {
     return parseFloat(logs[date]?.exercise?.running?.distance) || 0
   }
 
-  const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-(weekStart.getDay()===0?6:weekStart.getDay()-1))
+  const weekStart=new Date()
+  weekStart.setDate(weekStart.getDate()-(weekStart.getDay()===0?6:weekStart.getDay()-1))
+  weekStart.setHours(0,0,0,0) // Must be midnight — otherwise Monday dates (stored as T00:00:00) fail the >= check
   const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate)])]
   const thisWeekKm = allDates
     .filter(d => new Date(d+'T00:00:00') >= weekStart)
@@ -294,9 +296,14 @@ function Dashboard({ logs, settings, activities, setView }) {
   let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(logs[d.toISOString().split('T')[0]]) streak++; else break }
   const records=calcRecords(logs, activities)
 
-  const weightData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null})).filter(r=>r.weight)
-  const sleepData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null})).filter(r=>r.sleep||r.recovery)
-  const hrvData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null})).filter(r=>r.hrv||r.rhr)
+  // X-axis tick interval — keeps labels readable at any period length
+  const xInterval = period==='7D'?0:period==='30D'?4:period==='90D'?14:60
+  const periodLabel = period==='7D'?'Last 7 days':period==='30D'?'Last 30 days':period==='90D'?'Last 90 days':'Last year'
+
+  // Include ALL dates in the period (null for missing) so the X-axis always spans the full range
+  const weightData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
+  const sleepData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null}))
+  const hrvData=days.map(d=>({date:fmtDate(d).split(' ').slice(0,2).join(' '),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null}))
 
   // Weekly KM chart — merge all date sources
   const wkMap={}
@@ -424,20 +431,20 @@ function Dashboard({ logs, settings, activities, setView }) {
           </div>
 
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-            <ChartCard title='WEEKLY RUNNING KM' sub={`Kilometres per week${settings.weeklyKm?.value?` · target ${settings.weeklyKm.value}km`:''}`}>
+            <ChartCard title='WEEKLY RUNNING KM' sub={`${periodLabel} · km per week${settings.weeklyKm?.value?` · target ${settings.weeklyKm.value}km`:''}`}>
               {kmData.length>0?(<ResponsiveContainer width='100%' height={200}><BarChart data={kmData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='km'/><Tooltip contentStyle={TT}/>{settings.weeklyKm?.value&&<Bar dataKey='target' fill='rgba(0,230,118,0.12)' radius={[3,3,0,0]} name='Target'/>}<Bar dataKey='km' fill='#00e676' radius={[5,5,0,0]} name='km'/></BarChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
-            <ChartCard title='WEIGHT TREND' sub='Bodyweight in kilograms'>
-              {weightData.length>1?(<ResponsiveContainer width='100%' height={200}><AreaChart data={weightData} margin={{top:4,right:8,left:-12,bottom:0}}><defs><linearGradient id='wGrad' x1='0' y1='0' x2='0' y2='1'><stop offset='5%' stopColor='#40a9ff' stopOpacity={0.25}/><stop offset='95%' stopColor='#40a9ff' stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis domain={['dataMin - 1','dataMax + 1']} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='kg'/><Tooltip contentStyle={TT}/><Area type='monotone' dataKey='weight' stroke='#40a9ff' strokeWidth={2} fill='url(#wGrad)' dot={false} name='Weight (kg)'/></AreaChart></ResponsiveContainer>):<ChartEmpty/>}
+            <ChartCard title='WEIGHT TREND' sub={`${periodLabel} · bodyweight in kilograms`}>
+              {weightData.some(r=>r.weight)?(<ResponsiveContainer width='100%' height={200}><AreaChart data={weightData} margin={{top:4,right:8,left:-12,bottom:0}}><defs><linearGradient id='wGrad' x1='0' y1='0' x2='0' y2='1'><stop offset='5%' stopColor='#40a9ff' stopOpacity={0.25}/><stop offset='95%' stopColor='#40a9ff' stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis domain={['dataMin - 1','dataMax + 1']} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='kg'/><Tooltip contentStyle={TT}/><Area type='monotone' dataKey='weight' stroke='#40a9ff' strokeWidth={2} fill='url(#wGrad)' dot={false} connectNulls={false} name='Weight (kg)'/></AreaChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
-            <ChartCard title='SLEEP & RECOVERY SCORES' sub='Daily scores out of 100'>
-              {sleepData.length>0?(<ResponsiveContainer width='100%' height={200}><LineChart data={sleepData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis domain={[0,100]} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='sleep' stroke='#b388ff' strokeWidth={2} dot={false} name='Sleep'/><Line type='monotone' dataKey='recovery' stroke='#00e676' strokeWidth={2} dot={false} name='Recovery' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
+            <ChartCard title='SLEEP & RECOVERY SCORES' sub={`${periodLabel} · daily scores out of 100`}>
+              {sleepData.some(r=>r.sleep||r.recovery)?(<ResponsiveContainer width='100%' height={200}><LineChart data={sleepData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis domain={[0,100]} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='sleep' stroke='#b388ff' strokeWidth={2} dot={false} connectNulls={false} name='Sleep'/><Line type='monotone' dataKey='recovery' stroke='#00e676' strokeWidth={2} dot={false} connectNulls={false} name='Recovery' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
-            <ChartCard title='HRV & RESTING HEART RATE' sub='Recovery indicators over time'>
-              {hrvData.length>0?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
+            <ChartCard title='HRV & RESTING HEART RATE' sub={`${periodLabel} · recovery indicators`}>
+              {hrvData.some(r=>r.hrv||r.rhr)?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} connectNulls={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} connectNulls={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
-            <NutritionChart logs={logs} days={days} settings={settings}/>
-            <GymChart logs={logs} days={days} activities={activities}/>
+            <NutritionChart logs={logs} days={days} settings={settings} xInterval={xInterval} periodLabel={periodLabel}/>
+            <GymChart logs={logs} days={days} activities={activities} periodLabel={periodLabel}/>
           </div>
           <RecentHistory logs={logs} settings={settings} setView={setView}/>
         </>
@@ -451,17 +458,18 @@ function ChartCard({title,sub,children}){
 }
 
 // ─── NUTRITION CHART ──────────────────────────────────────────────────────────
-function NutritionChart({ logs, days, settings }) {
+function NutritionChart({ logs, days, settings, xInterval, periodLabel }) {
   const [show, setShow] = useState({ calories:true, protein:true, carbs:true })
 
-  const data = days
-    .map(d => ({
-      date:     fmtDate(d).split(' ').slice(0,2).join(' '),
-      calories: parseFloat(logs[d]?.nutrition?.calories) || null,
-      protein:  parseFloat(logs[d]?.nutrition?.protein)  || null,
-      carbs:    parseFloat(logs[d]?.nutrition?.carbs)    || null,
-    }))
-    .filter(r => r.calories || r.protein || r.carbs)
+  // Include all dates (null for missing) so X-axis always spans the full period
+  const data = days.map(d => ({
+    date:     fmtDate(d).split(' ').slice(0,2).join(' '),
+    calories: parseFloat(logs[d]?.nutrition?.calories) || null,
+    protein:  parseFloat(logs[d]?.nutrition?.protein)  || null,
+    carbs:    parseFloat(logs[d]?.nutrition?.carbs)    || null,
+  }))
+
+  const hasData = data.some(r => r.calories || r.protein || r.carbs)
 
   const toggles = [
     { key:'calories', label:'CALORIES', color:'#00e676' },
@@ -474,7 +482,7 @@ function NutritionChart({ logs, days, settings }) {
   const carbTarget = settings?.dailyCarbs?.value
 
   return (
-    <ChartCard title='DAILY NUTRITION' sub='Toggle metrics · calories on right axis (kcal) · macros on left (g)'>
+    <ChartCard title='DAILY NUTRITION' sub={`${periodLabel||'Last 7 days'} · calories right axis (kcal) · macros left (g)`}>
       <div style={{display:'flex',gap:8,marginBottom:14}}>
         {toggles.map(({key,label,color})=>(
           <button key={key} onClick={()=>setShow(p=>({...p,[key]:!p[key]}))} style={{
@@ -490,17 +498,17 @@ function NutritionChart({ logs, days, settings }) {
           <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:'auto',alignSelf:'center'}}>— targets active</span>
         )}
       </div>
-      {data.length>0?(
+      {hasData?(
         <ResponsiveContainer width='100%' height={200}>
           <LineChart data={data} margin={{top:4,right:show.calories?48:8,left:-12,bottom:0}}>
             <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/>
-            <XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
+            <XAxis dataKey='date' interval={xInterval||0} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
             <YAxis yAxisId='g' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='g'/>
             <YAxis yAxisId='k' orientation='right' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} tickFormatter={v=>`${Math.round(v/100)/10}k`}/>
             <Tooltip contentStyle={TT} formatter={(val,name)=>name.includes('kcal')?[`${Number(val).toLocaleString()} kcal`,name]:[`${val}g`,name]}/>
-            {show.protein  &&<Line yAxisId='g' type='monotone' dataKey='protein'  stroke='#40a9ff' strokeWidth={2} dot={false} name='Protein (g)'    connectNulls/>}
-            {show.carbs    &&<Line yAxisId='g' type='monotone' dataKey='carbs'    stroke='#ff9f40' strokeWidth={2} dot={false} name='Carbs (g)'      connectNulls/>}
-            {show.calories &&<Line yAxisId='k' type='monotone' dataKey='calories' stroke='#00e676' strokeWidth={2} dot={false} name='Calories (kcal)' connectNulls/>}
+            {show.protein  &&<Line yAxisId='g' type='monotone' dataKey='protein'  stroke='#40a9ff' strokeWidth={2} dot={false} connectNulls={false} name='Protein (g)'    />}
+            {show.carbs    &&<Line yAxisId='g' type='monotone' dataKey='carbs'    stroke='#ff9f40' strokeWidth={2} dot={false} connectNulls={false} name='Carbs (g)'      />}
+            {show.calories &&<Line yAxisId='k' type='monotone' dataKey='calories' stroke='#00e676' strokeWidth={2} dot={false} connectNulls={false} name='Calories (kcal)'/>}
             {calTarget  && show.calories && <Line yAxisId='k' type='monotone' dataKey={()=>calTarget}  stroke='rgba(0,230,118,0.3)'  strokeWidth={1} strokeDasharray='4 3' dot={false} name='Cal target'  legendType='none'/>}
             {proTarget  && show.protein  && <Line yAxisId='g' type='monotone' dataKey={()=>proTarget}  stroke='rgba(64,169,255,0.3)' strokeWidth={1} strokeDasharray='4 3' dot={false} name='Pro target'  legendType='none'/>}
             {carbTarget && show.carbs    && <Line yAxisId='g' type='monotone' dataKey={()=>carbTarget} stroke='rgba(255,159,64,0.3)' strokeWidth={1} strokeDasharray='4 3' dot={false} name='Carb target' legendType='none'/>}
@@ -513,81 +521,86 @@ function NutritionChart({ logs, days, settings }) {
   )
 }
 
-// ─── GYM & YOGA SESSIONS CHART ───────────────────────────────────────────────
-function GymChart({ logs, days, activities }) {
+// ─── GYM & YOGA DURATION CHART ───────────────────────────────────────────────
+function GymChart({ logs, days, activities, periodLabel }) {
   const SESSION_COLORS = {
     'Bicep / Shoulders': '#40a9ff',
     'Chest / Triceps':   '#b388ff',
     'Core Training':     '#ff9f40',
     'Back':              '#00e676',
     'Legs':              '#ff6b6b',
-    'Weight Training':   '#ffd666',  // Strava generic gym sessions
-    'Yoga':              '#80deea',  // teal for yoga
+    'Weight Training':   '#ffd666',
+    'Yoga':              '#80deea',
   }
   const ALL_KEYS = Object.keys(SESSION_COLORS)
+  const dateSet  = new Set(days)
 
   const wkKey = (date) => {
-    const dt=new Date(date+'T00:00:00'); const mon=new Date(dt)
+    const dt=new Date(date+'T00:00:00'), mon=new Date(dt)
     mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1))
     return [mon.toISOString().split('T')[0], `${mon.getDate()}/${mon.getMonth()+1}`]
   }
 
   const wkMap = {}
 
-  // ── From manual daily logs (typed gym sessions + yoga)
+  // ── Manual daily logs — yoga uses entered duration, gym types have no duration field
   days.forEach(d => {
     const l = logs[d]
     const [k, weekLabel] = wkKey(d)
     if(!wkMap[k]) wkMap[k] = { week: weekLabel }
-
-    if(l?.exercise?.gym?.on && l.exercise.gym.types?.length) {
-      l.exercise.gym.types.forEach(type => { wkMap[k][type]=(wkMap[k][type]||0)+1 })
-    }
-    if(l?.exercise?.yoga?.on) {
-      wkMap[k]['Yoga']=(wkMap[k]['Yoga']||0)+1
+    const yogaMins = parseFloat(l?.exercise?.yoga?.duration) || 0
+    if(l?.exercise?.yoga?.on && yogaMins > 0) {
+      wkMap[k]['Yoga'] = (wkMap[k]['Yoga']||0) + yogaMins
     }
   })
 
-  // ── From Strava activities (supplement — skipped if manual log covers that day)
+  // ── Strava activities — use actual moving_time for real duration
   ;(activities||[]).forEach(a => {
     const type = a.custom_type || a.strava_type
     if(type !== 'gym' && type !== 'yoga') return
     const date = (a.start_date||'').split('T')[0]
-    if(!date) return
+    if(!date || !dateSet.has(date)) return
 
-    // Only use Strava data if no manual entry already covers this session type
+    const mins = Math.round((a.data?.moving_time || 0) / 60)
+    if(!mins) return
+
     const l = logs[date]
-    if(type==='gym'  && l?.exercise?.gym?.on)  return
-    if(type==='yoga' && l?.exercise?.yoga?.on) return
-
     const [k, weekLabel] = wkKey(date)
     if(!wkMap[k]) wkMap[k] = { week: weekLabel }
 
-    if(type==='gym')  wkMap[k]['Weight Training']=(wkMap[k]['Weight Training']||0)+1
-    if(type==='yoga') wkMap[k]['Yoga']=(wkMap[k]['Yoga']||0)+1
+    if(type === 'gym') {
+      // Strava doesn't know muscle group — use 'Weight Training' unless manual log has typed session
+      if(l?.exercise?.gym?.on && l.exercise.gym.types?.length) {
+        // Manual log has type breakdown — split duration equally across logged types
+        const perType = Math.round(mins / l.exercise.gym.types.length)
+        l.exercise.gym.types.forEach(t => { wkMap[k][t] = (wkMap[k][t]||0) + perType })
+      } else {
+        wkMap[k]['Weight Training'] = (wkMap[k]['Weight Training']||0) + mins
+      }
+    } else if(type === 'yoga') {
+      // Prefer Strava duration; only skip if manual yoga already has a duration entered
+      const hasManualDuration = l?.exercise?.yoga?.on && parseFloat(l?.exercise?.yoga?.duration) > 0
+      if(!hasManualDuration) wkMap[k]['Yoga'] = (wkMap[k]['Yoga']||0) + mins
+    }
   })
 
-  const data = Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v)
-
-  // Totals per type across the period
-  const typeTotals = {}
-  ALL_KEYS.forEach(k => {
-    typeTotals[k] = data.reduce((s,w) => s+(w[k]||0), 0)
-  })
-
-  const totalSessions = ALL_KEYS.reduce((s,k) => s+typeTotals[k], 0)
-  const activeKeys    = ALL_KEYS.filter(k => typeTotals[k] > 0)
+  const data        = Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v)
+  const typeTotals  = {}
+  ALL_KEYS.forEach(k => { typeTotals[k] = data.reduce((s,w)=>s+(w[k]||0), 0) })
+  const totalMins   = ALL_KEYS.reduce((s,k)=>s+typeTotals[k], 0)
+  const activeKeys  = ALL_KEYS.filter(k => typeTotals[k] > 0)
+  const fmtMins     = m => m>=60 ? `${Math.floor(m/60)}h${m%60>0?` ${m%60}m`:''}` : `${m}m`
 
   return (
-    <ChartCard title='GYM & YOGA SESSIONS' sub={`${totalSessions} session${totalSessions!==1?'s':''} in period · manual logs + Strava`}>
-      {data.length>0?(
+    <ChartCard title='GYM & YOGA DURATION' sub={`${periodLabel||'Last 7 days'} · ${fmtMins(totalMins)} total · Strava + manual yoga`}>
+      {data.length>0 && totalMins>0 ? (
         <>
           <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:14}}>
             {activeKeys.map(k=>(
               <span key={k} style={{display:'flex',alignItems:'center',gap:5,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
                 <span style={{width:8,height:8,borderRadius:2,background:SESSION_COLORS[k],display:'inline-block'}}/>
                 {k}
-                <span style={{color:SESSION_COLORS[k],fontWeight:600}}>×{typeTotals[k]}</span>
+                <span style={{color:SESSION_COLORS[k],fontWeight:600}}>{fmtMins(typeTotals[k])}</span>
               </span>
             ))}
           </div>
@@ -595,8 +608,8 @@ function GymChart({ logs, days, activities }) {
             <BarChart data={data} margin={{top:4,right:8,left:-16,bottom:0}}>
               <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/>
               <XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
-              <YAxis allowDecimals={false} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
-              <Tooltip contentStyle={TT} cursor={{fill:'rgba(255,255,255,0.04)'}}/>
+              <YAxis allowDecimals={false} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='m' tickFormatter={v=>v>=60?`${Math.floor(v/60)}h`:v}/>
+              <Tooltip contentStyle={TT} formatter={(v,n)=>[fmtMins(v),n]} cursor={{fill:'rgba(255,255,255,0.04)'}}/>
               {activeKeys.map((k,i)=>(
                 <Bar key={k} dataKey={k} stackId='g' fill={SESSION_COLORS[k]} name={k}
                   radius={i===activeKeys.length-1?[4,4,0,0]:[0,0,0,0]}/>
@@ -606,8 +619,8 @@ function GymChart({ logs, days, activities }) {
         </>
       ):(
         <div style={{height:200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>
-          <span>No gym or yoga sessions found</span>
-          <span style={{fontSize:10,color:'var(--muted2)'}}>Log sessions manually or sync Strava activities</span>
+          <span>No duration data found for this period</span>
+          <span style={{fontSize:10}}>Duration comes from Strava activities · manual yoga duration field</span>
         </div>
       )}
     </ChartCard>
