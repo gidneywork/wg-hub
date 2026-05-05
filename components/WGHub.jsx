@@ -436,6 +436,8 @@ function Dashboard({ logs, settings, activities, setView }) {
             <ChartCard title='HRV & RESTING HEART RATE' sub='Recovery indicators over time'>
               {hrvData.length>0?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
+            <NutritionChart logs={logs} days={days} settings={settings}/>
+            <GymChart logs={logs} days={days}/>
           </div>
           <RecentHistory logs={logs} settings={settings} setView={setView}/>
         </>
@@ -446,6 +448,131 @@ function Dashboard({ logs, settings, activities, setView }) {
 
 function ChartCard({title,sub,children}){
   return <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 20px 16px'}}><div style={{marginBottom:16}}><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>{title}</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{sub}</div></div>{children}</div>
+}
+
+// ─── NUTRITION CHART ──────────────────────────────────────────────────────────
+function NutritionChart({ logs, days, settings }) {
+  const [show, setShow] = useState({ calories:true, protein:true, carbs:true })
+
+  const data = days
+    .map(d => ({
+      date:     fmtDate(d).split(' ').slice(0,2).join(' '),
+      calories: parseFloat(logs[d]?.nutrition?.calories) || null,
+      protein:  parseFloat(logs[d]?.nutrition?.protein)  || null,
+      carbs:    parseFloat(logs[d]?.nutrition?.carbs)    || null,
+    }))
+    .filter(r => r.calories || r.protein || r.carbs)
+
+  const toggles = [
+    { key:'calories', label:'CALORIES', color:'#00e676' },
+    { key:'protein',  label:'PROTEIN',  color:'#40a9ff' },
+    { key:'carbs',    label:'CARBS',    color:'#ff9f40' },
+  ]
+
+  const calTarget  = settings?.dailyCalories?.value
+  const proTarget  = settings?.dailyProtein?.value
+  const carbTarget = settings?.dailyCarbs?.value
+
+  return (
+    <ChartCard title='DAILY NUTRITION' sub='Toggle metrics · calories on right axis (kcal) · macros on left (g)'>
+      <div style={{display:'flex',gap:8,marginBottom:14}}>
+        {toggles.map(({key,label,color})=>(
+          <button key={key} onClick={()=>setShow(p=>({...p,[key]:!p[key]}))} style={{
+            background: show[key] ? `${color}22` : 'var(--s3)',
+            color:      show[key] ? color : 'var(--muted)',
+            border:     `1px solid ${show[key] ? color+'55' : 'var(--border2)'}`,
+            borderRadius:6, padding:'5px 14px',
+            fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:1,
+            cursor:'pointer', transition:'all 0.15s',
+          }}>{label}</button>
+        ))}
+        {(calTarget||proTarget||carbTarget)&&(
+          <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:'auto',alignSelf:'center'}}>— targets active</span>
+        )}
+      </div>
+      {data.length>0?(
+        <ResponsiveContainer width='100%' height={200}>
+          <LineChart data={data} margin={{top:4,right:show.calories?48:8,left:-12,bottom:0}}>
+            <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/>
+            <XAxis dataKey='date' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
+            <YAxis yAxisId='g' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='g'/>
+            <YAxis yAxisId='k' orientation='right' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} tickFormatter={v=>`${Math.round(v/100)/10}k`}/>
+            <Tooltip contentStyle={TT} formatter={(val,name)=>name.includes('kcal')?[`${Number(val).toLocaleString()} kcal`,name]:[`${val}g`,name]}/>
+            {show.protein  &&<Line yAxisId='g' type='monotone' dataKey='protein'  stroke='#40a9ff' strokeWidth={2} dot={false} name='Protein (g)'    connectNulls/>}
+            {show.carbs    &&<Line yAxisId='g' type='monotone' dataKey='carbs'    stroke='#ff9f40' strokeWidth={2} dot={false} name='Carbs (g)'      connectNulls/>}
+            {show.calories &&<Line yAxisId='k' type='monotone' dataKey='calories' stroke='#00e676' strokeWidth={2} dot={false} name='Calories (kcal)' connectNulls/>}
+            {calTarget  && show.calories && <Line yAxisId='k' type='monotone' dataKey={()=>calTarget}  stroke='rgba(0,230,118,0.3)'  strokeWidth={1} strokeDasharray='4 3' dot={false} name='Cal target'  legendType='none'/>}
+            {proTarget  && show.protein  && <Line yAxisId='g' type='monotone' dataKey={()=>proTarget}  stroke='rgba(64,169,255,0.3)' strokeWidth={1} strokeDasharray='4 3' dot={false} name='Pro target'  legendType='none'/>}
+            {carbTarget && show.carbs    && <Line yAxisId='g' type='monotone' dataKey={()=>carbTarget} stroke='rgba(255,159,64,0.3)' strokeWidth={1} strokeDasharray='4 3' dot={false} name='Carb target' legendType='none'/>}
+          </LineChart>
+        </ResponsiveContainer>
+      ):(
+        <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No nutrition data logged yet</div>
+      )}
+    </ChartCard>
+  )
+}
+
+// ─── GYM SESSIONS CHART ───────────────────────────────────────────────────────
+function GymChart({ logs, days }) {
+  const GYM_COLORS = {
+    'Bicep / Shoulders': '#40a9ff',
+    'Chest / Triceps':   '#b388ff',
+    'Core Training':     '#ff9f40',
+    'Back':              '#00e676',
+    'Legs':              '#ff6b6b',
+  }
+  const GYM_KEYS = Object.keys(GYM_COLORS)
+
+  const wkMap = {}
+  days.forEach(d => {
+    const l = logs[d]
+    if(!l?.exercise?.gym?.on || !l.exercise.gym.types?.length) return
+    const dt=new Date(d+'T00:00:00'); const mon=new Date(dt)
+    mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1))
+    const k=mon.toISOString().split('T')[0]
+    if(!wkMap[k]) wkMap[k]={week:`${mon.getDate()}/${mon.getMonth()+1}`,total:0}
+    l.exercise.gym.types.forEach(type=>{ wkMap[k][type]=(wkMap[k][type]||0)+1; wkMap[k].total++ })
+  })
+
+  const data = Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v)
+  const totalSessions = days.reduce((s,d)=>s+(logs[d]?.exercise?.gym?.on?1:0),0)
+
+  // Tally each type across the period
+  const typeTotals = {}
+  GYM_KEYS.forEach(k=>{ typeTotals[k]=days.reduce((s,d)=>s+(logs[d]?.exercise?.gym?.types?.includes(k)?1:0),0) })
+
+  return (
+    <ChartCard title='GYM SESSIONS' sub={`${totalSessions} session${totalSessions!==1?'s':''} in period · stacked by type`}>
+      {data.length>0?(
+        <>
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:14}}>
+            {GYM_KEYS.filter(k=>typeTotals[k]>0).map(k=>(
+              <span key={k} style={{display:'flex',alignItems:'center',gap:5,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
+                <span style={{width:8,height:8,borderRadius:2,background:GYM_COLORS[k],display:'inline-block'}}/>
+                {k}
+                <span style={{color:GYM_COLORS[k],fontWeight:600}}>×{typeTotals[k]}</span>
+              </span>
+            ))}
+          </div>
+          <ResponsiveContainer width='100%' height={180}>
+            <BarChart data={data} margin={{top:4,right:8,left:-16,bottom:0}}>
+              <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/>
+              <XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
+              <YAxis allowDecimals={false} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
+              <Tooltip contentStyle={TT} cursor={{fill:'rgba(255,255,255,0.04)'}}/>
+              {GYM_KEYS.map((k,i)=>(
+                <Bar key={k} dataKey={k} stackId='g' fill={GYM_COLORS[k]} name={k}
+                  radius={i===GYM_KEYS.length-1?[4,4,0,0]:[0,0,0,0]}/>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </>
+      ):(
+        <div style={{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No gym sessions logged yet</div>
+      )}
+    </ChartCard>
+  )
 }
 
 // ─── RECENT HISTORY ───────────────────────────────────────────────────────────
