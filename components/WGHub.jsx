@@ -756,7 +756,12 @@ function LogData({ logs, saveLog, settings, plan, activities }) {
     if(!base.body.weightTime) base.body.weightTime = ''
 
     // Auto-populate from Strava activities for this date if no manual data yet
-    const dayActivities = (activities||[]).filter(a=>(a.start_date||'').split('T')[0]===date)
+    // Use local date conversion to avoid UTC timezone mismatch (e.g. 11pm run becoming next day)
+    const dayActivities = (activities||[]).filter(a=>{
+      if(!a.start_date) return false
+      const localDate = new Date(a.start_date).toLocaleDateString('en-CA') // YYYY-MM-DD in local time
+      return localDate === date
+    })
     if(dayActivities.length && !logs[date]) {
       const runs = dayActivities.filter(a=>(a.custom_type||a.strava_type)==='run')
       if(runs.length) {
@@ -770,7 +775,7 @@ function LogData({ logs, saveLog, settings, plan, activities }) {
     }
     setForm(base)
     setSaved(false)
-  },[date,logs])
+  },[date, logs, activities])
 
   const setN=(sec,f,v)=>setForm(p=>({...p,[sec]:{...p[sec],[f]:v}}))
   const setEx=(type,f,v)=>setForm(p=>({...p,exercise:{...p.exercise,[type]:{...p.exercise[type],[f]:v}}}))
