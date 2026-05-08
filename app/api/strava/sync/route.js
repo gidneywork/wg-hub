@@ -1,5 +1,5 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
-import { getValidToken, updateSyncMeta, STRAVA_TYPE_MAP } from '../../../../lib/strava'
+import { getValidToken, updateSyncMeta, resolveStravaType } from '../../../../lib/strava'
 
 async function upsertBatch(activities) {
   if (!activities.length) return 0
@@ -20,7 +20,7 @@ async function upsertBatch(activities) {
         id:          a.id,
         data:        a,
         start_date:  a.start_date,
-        strava_type: STRAVA_TYPE_MAP[a.sport_type] || STRAVA_TYPE_MAP[a.type] || 'custom',
+        strava_type: resolveStravaType(a.sport_type, a.type, a.name),
         synced_at:   new Date().toISOString(),
       }))
     )
@@ -73,6 +73,16 @@ export async function POST() {
     const { count } = await supabaseServer
       .from('strava_activities')
       .select('*', { count: 'exact', head: true })
+
+    // Write audit log
+    if (newCount > 0) {
+      await supabaseServer.from('audit_log').insert({
+        event_type: 'strava_sync',
+        title: `Strava sync — ${newCount} new activit${newCount===1?'y':'ies'} imported`,
+        detail: `Total activities in database: ${count}`,
+        metadata: { new: newCount, total: count, synced: allActivities.length },
+      })
+    }
 
     return Response.json({ synced: allActivities.length, new: newCount, total: count })
 

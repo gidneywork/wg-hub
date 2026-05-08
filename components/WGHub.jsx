@@ -187,6 +187,7 @@ export default function WGHub({ onSignOut }) {
   const [plan,     setPlan    ] = useState(null)
   const [stravaConnection, setStravaConnection] = useState(null)
   const [activities, setActivities] = useState([])
+  const [whoopData,  setWhoopData ] = useState({})
   const [ready,    setReady   ] = useState(false)
 
   useEffect(() => {
@@ -196,18 +197,20 @@ export default function WGHub({ onSignOut }) {
 
     ;(async () => {
       try {
-        const [logsData, settingsData, planData, stravaConn, activitiesData] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
           db.loadStravaConnection(),
           db.loadActivities(),
+          db.loadWhoopData(),
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
         setPlan(planData || getDefaultPlan())
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])
+        setWhoopData(whoopD || {})
         if (stravaStatus === 'connected') setView('history')
       } catch (e) {
         console.error('Initial load failed:', e)
@@ -215,6 +218,19 @@ export default function WGHub({ onSignOut }) {
       }
       setReady(true)
     })()
+
+    // ── Supabase Realtime subscriptions (live updates across all devices) ──
+    const unsubActivities = db.subscribeToActivities(() => {
+      db.loadActivities().then(setActivities)
+    })
+    const unsubLogs = db.subscribeToLogs(() => {
+      db.loadLogs().then(setLogs)
+    })
+    const unsubWhoop = db.subscribeToWhoop(() => {
+      db.loadWhoopData().then(setWhoopData)
+    })
+
+    return () => { unsubActivities(); unsubLogs(); unsubWhoop() }
   }, [])
 
   const saveLog      = async (date, data) => { await db.saveLog(date, data);     setLogs(p => ({...p, [date]: data})) }
@@ -262,7 +278,7 @@ export default function WGHub({ onSignOut }) {
           <span style={{fontFamily:'var(--font-head)',fontSize:24,letterSpacing:1}}>HUB</span>
           <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:4}}>PERFORMANCE</span>
         </div>
-        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'DAILY DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'planner',l:'PLANNER'}].map(({k,l})=>(
+        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'DAILY DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'planner',l:'PLANNER'},{k:'finance',l:'FINANCE'}].map(({k,l})=>(
           <button key={k} onClick={()=>setView(k)} style={{background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-mono)',fontSize:11,letterSpacing:'1.5px',color:view===k?'var(--accent)':'var(--muted)',paddingBottom:2,borderBottom:`2px solid ${view===k?'var(--accent)':'transparent'}`,transition:'color 0.15s',whiteSpace:'nowrap'}}>{l}</button>
         ))}
         <button onClick={()=>setView('tv')} style={{background:view==='tv'?'var(--accent)':'var(--s2)',color:view==='tv'?'var(--bg)':'var(--muted)',border:'1px solid var(--border2)',borderRadius:7,padding:'5px 13px',fontFamily:'var(--font-mono)',fontSize:10,cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>TV MODE</button>
@@ -287,25 +303,52 @@ export default function WGHub({ onSignOut }) {
             <div style={{width:20,height:20,border:'2px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
             <span style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>Loading training data...</span>
           </div>
-        ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} activities={activities} setView={setView}/>
-         :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities}/>
+        ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} activities={activities} whoopData={whoopData} setView={setView}/>
+         :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities} whoopData={whoopData}/>
          :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); const a=await db.loadActivities(); setActivities(a); }}/>
          :view==='plan'?     <TrainingPlan plan={plan} savePlan={savePlan}/>
          :view==='planner'?  <PlannerPage/>
+         :view==='finance'?  <FinancePage/>
          :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
-         :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} setView={setView}/>
+         :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
         }
       </div>
     </div>
   )
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ logs, settings, activities, setView }) {
+// ─── MERGE WHOOP DATA ─────────────────────────────────────────────────────────
+// Returns merged body/sleep data for a date — Whoop takes priority over manual logs
+function mergeWhoopForDate(date, log, whoopData) {
+  const w = whoopData?.[date]
+  if (!w) return log || {}
+  return {
+    ...log,
+    body: {
+      ...(log?.body || {}),
+      hrv:    w.hrv    ?? log?.body?.hrv    ?? '',
+      rhr:    w.rhr    ?? log?.body?.rhr    ?? '',
+      weight: log?.body?.weight || '',  // weight stays manual only
+    },
+    sleep: {
+      ...(log?.sleep || {}),
+      sleepScore:    w.sleep_score     ?? log?.sleep?.sleepScore    ?? '',
+      recoveryScore: w.recovery_score  ?? log?.sleep?.recoveryScore ?? '',
+      hoursSlept:    w.hours_slept     ?? log?.sleep?.hoursSlept    ?? '',
+      bedTime:       w.bed_time        || log?.sleep?.bedTime       || '',
+    },
+  }
+}
+function Dashboard({ logs, settings, activities, whoopData, setView }) {
   const [period, setPeriod] = useState('7D')
-  const nDays=period==='7D'?7:period==='30D'?30:period==='90D'?90:365
+  const ytdDays = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1)) / 86400000) + 1
+  const nDays=period==='7D'?7:period==='30D'?30:period==='90D'?90:period==='YTD'?ytdDays:365
   const days=Array.from({length:nDays},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(nDays-1-i)); return d.toISOString().split('T')[0] })
-  const today=todayStr(), tl=logs[today]
+  const today=todayStr()
+  const tl = mergeWhoopForDate(today, logs[today], whoopData)
+
+  // ── Helper: get merged body/sleep data for any date (Whoop priority) ──
+  const getMerged = (date) => mergeWhoopForDate(date, logs[date], whoopData)
 
   // ── Merged KM lookup: Strava takes priority over manual log for a given date
   const stravaKmByDate = {}
@@ -321,7 +364,6 @@ function Dashboard({ logs, settings, activities, setView }) {
 
   const getKmForDate = (date) => {
     if(stravaKmByDate[date]) return stravaKmByDate[date]
-    // Support both new runs[] array and legacy running{} shape
     const log = logs[date]
     if(log?.exercise?.runs) return log.exercise.runs.reduce((s,r)=>s+(parseFloat(r.distance)||0),0)
     return parseFloat(log?.exercise?.running?.distance) || 0
@@ -329,32 +371,33 @@ function Dashboard({ logs, settings, activities, setView }) {
 
   const weekStart=new Date()
   weekStart.setDate(weekStart.getDate()-(weekStart.getDay()===0?6:weekStart.getDay()-1))
-  weekStart.setHours(0,0,0,0) // Must be midnight — otherwise Monday dates (stored as T00:00:00) fail the >= check
-  const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate)])]
+  weekStart.setHours(0,0,0,0)
+  const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate), ...Object.keys(whoopData||{})])]
   const thisWeekKm = allDates
     .filter(d => new Date(d+'T00:00:00') >= weekStart)
     .reduce((s,d) => s + getKmForDate(d), 0)
 
   const totalKm=days.reduce((s,d)=>s+getKmForDate(d),0)
-  const logsCount=days.filter(d=>logs[d]).length
-  const sleepDays=days.filter(d=>logs[d]?.sleep?.sleepScore)
-  const avgSleep=sleepDays.length?Math.round(sleepDays.reduce((s,d)=>s+parseFloat(logs[d].sleep.sleepScore),0)/sleepDays.length):null
-  const hrvDays=days.filter(d=>logs[d]?.body?.hrv)
-  const avgHrv=hrvDays.length?Math.round(hrvDays.reduce((s,d)=>s+parseFloat(logs[d].body.hrv),0)/hrvDays.length):null
-  const load=days.reduce((s,d)=>{ const l=logs[d]; if(!l) return s; return s+getKmForDate(d)+(l.exercise?.gym?.on?(l.exercise.gym.types.length||1)*8:0)+(l.exercise?.yoga?.on?3:0)+(l.exercise?.functional?.on?4:0) },0)
+  const logsCount=days.filter(d=>logs[d]||whoopData?.[d]).length
+  // Sleep/HRV now reads from merged data (Whoop priority)
+  const sleepDays=days.filter(d=>getMerged(d)?.sleep?.sleepScore)
+  const avgSleep=sleepDays.length?Math.round(sleepDays.reduce((s,d)=>s+parseFloat(getMerged(d).sleep.sleepScore),0)/sleepDays.length):null
+  const hrvDays=days.filter(d=>getMerged(d)?.body?.hrv)
+  const avgHrv=hrvDays.length?Math.round(hrvDays.reduce((s,d)=>s+parseFloat(getMerged(d).body.hrv),0)/hrvDays.length):null
+  const load=days.reduce((s,d)=>{ const km=getKmForDate(d); const acts=(activities||[]).filter(a=>{const dt=new Date(a.start_date).toLocaleDateString('en-CA');return dt===d}); const gymMins=acts.filter(a=>(a.custom_type||a.strava_type)==='gym').reduce((t,a)=>t+(a.data?.moving_time||0)/60,0); const yogaMins=acts.filter(a=>(a.custom_type||a.strava_type)==='yoga').reduce((t,a)=>t+(a.data?.moving_time||0)/60,0); return s+km+(gymMins/60)*8+(yogaMins/60)*3 },0)
 
-  let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(logs[d.toISOString().split('T')[0]]) streak++; else break }
+  let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); const ds=d.toISOString().split('T')[0]; if(logs[ds]||whoopData?.[ds]) streak++; else break }
   const records=calcRecords(logs, activities)
 
-  // X-axis tick interval — keeps labels readable at any period length
-  const xInterval = period==='7D'?0:period==='30D'?4:period==='90D'?14:60
-  const periodLabel = period==='7D'?'Last 7 days':period==='30D'?'Last 30 days':period==='90D'?'Last 90 days':'Last year'
+  // X-axis tick interval
+  const xInterval = period==='7D'?0:period==='30D'?4:period==='90D'?14:period==='YTD'?Math.ceil(nDays/26):60
+  const periodLabel = period==='7D'?'Last 7 days':period==='30D'?'Last 30 days':period==='90D'?'Last 90 days':period==='YTD'?`YTD ${new Date().getFullYear()}`:'Last year'
   const sfmt = (d) => period==='7D'?fmtDateShort(d):period==='30D'?fmtDateShort(d):fmtDateMMM(d)
 
-  // Include ALL dates in the period (null for missing) so the X-axis always spans the full range
+  // Chart data — uses merged Whoop+manual data
   const weightData=days.map(d=>({date:sfmt(d),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
-  const sleepData=days.map(d=>({date:sfmt(d),sleep:parseFloat(logs[d]?.sleep?.sleepScore)||null,recovery:parseFloat(logs[d]?.sleep?.recoveryScore)||null}))
-  const hrvData=days.map(d=>({date:sfmt(d),hrv:parseFloat(logs[d]?.body?.hrv)||null,rhr:parseFloat(logs[d]?.body?.rhr)||null}))
+  const sleepData=days.map(d=>{ const m=getMerged(d); return {date:sfmt(d),sleep:parseFloat(m?.sleep?.sleepScore)||null,recovery:parseFloat(m?.sleep?.recoveryScore)||null} })
+  const hrvData=days.map(d=>{ const m=getMerged(d); return {date:sfmt(d),hrv:parseFloat(m?.body?.hrv)||null,rhr:parseFloat(m?.body?.rhr)||null} })
 
   // Weekly KM chart — merge all date sources
   const wkMap={}, elevMap={}
@@ -400,7 +443,7 @@ function Dashboard({ logs, settings, activities, setView }) {
           <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:5,letterSpacing:1}}>WG HUB · PERSONAL PERFORMANCE DASHBOARD</p>
         </div>
         <div style={{display:'flex',gap:6}}>
-          {['7D','30D','90D','1Y'].map(p=>(
+          {['7D','30D','90D','1Y','YTD'].map(p=>(
             <button key={p} onClick={()=>setPeriod(p)} style={{background:period===p?'var(--accent)':'var(--s2)',color:period===p?'var(--bg)':'var(--muted)',border:'1px solid var(--border2)',borderRadius:7,padding:'7px 16px',fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,cursor:'pointer',letterSpacing:1,transition:'all 0.15s'}}>{p}</button>
           ))}
         </div>
@@ -736,71 +779,46 @@ function RecentHistory({ logs, settings, setView }) {
 }
 
 // ─── LOG DATA ─────────────────────────────────────────────────────────────────
-function LogData({ logs, saveLog, settings, plan, activities }) {
+function LogData({ logs, saveLog, settings, plan, whoopData }) {
   const [date, setDate] = useState(todayStr())
   const [form, setForm] = useState(mkEmpty())
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Migrate old data shape (single running→runs array) + Strava auto-populate
   useEffect(()=>{
     const base = logs[date] ? JSON.parse(JSON.stringify(logs[date])) : mkEmpty()
-    // Migrate legacy shape
-    if(base.exercise?.running && !base.exercise?.runs) {
-      base.exercise.runs = base.exercise.running.on
-        ? [{distance:base.exercise.running.distance||'',duration:base.exercise.running.duration||'',notes:base.exercise.running.notes||''}]
-        : [{distance:'',duration:'',notes:''}]
-      delete base.exercise.running
-    }
-    if(!base.exercise.runs) base.exercise.runs = [{distance:'',duration:'',notes:''}]
     if(!base.body.weightTime) base.body.weightTime = ''
+    if(!base.nutrition) base.nutrition = {calories:'',protein:'',carbs:''}
 
-    // Auto-populate from Strava activities for this date if no manual data yet
-    // Use local date conversion to avoid UTC timezone mismatch (e.g. 11pm run becoming next day)
-    const dayActivities = (activities||[]).filter(a=>{
-      if(!a.start_date) return false
-      const localDate = new Date(a.start_date).toLocaleDateString('en-CA') // YYYY-MM-DD in local time
-      return localDate === date
-    })
-    if(dayActivities.length && !logs[date]) {
-      const runs = dayActivities.filter(a=>(a.custom_type||a.strava_type)==='run')
-      if(runs.length) {
-        base.exercise.runs = runs.map(a=>({
-          distance: a.data?.distance ? (a.data.distance/1000).toFixed(2) : '',
-          duration: a.data?.moving_time ? (() => { const s=a.data.moving_time; const h=Math.floor(s/3600); const m=Math.floor((s%3600)/60); return h>0?`${h}:${m.toString().padStart(2,'0')}`:`${m}:${(s%60).toString().padStart(2,'0')}` })() : '',
-          notes: a.custom_name || a.data?.name || '',
-          fromStrava: true,
-        }))
-      }
+    // Pre-fill body/sleep from Whoop if available and field is empty
+    const w = whoopData?.[date]
+    if(w) {
+      if(!base.body.hrv && w.hrv)                       base.body.hrv           = String(w.hrv)
+      if(!base.body.rhr && w.rhr)                       base.body.rhr           = String(w.rhr)
+      if(!base.sleep.sleepScore && w.sleep_score)        base.sleep.sleepScore   = String(Math.round(w.sleep_score))
+      if(!base.sleep.recoveryScore && w.recovery_score)  base.sleep.recoveryScore= String(Math.round(w.recovery_score))
+      if(!base.sleep.hoursSlept && w.hours_slept)        base.sleep.hoursSlept   = String(w.hours_slept)
+      if(!base.sleep.bedTime && w.bed_time)              base.sleep.bedTime      = w.bed_time
     }
     setForm(base)
     setSaved(false)
-  },[date, logs, activities])
+  },[date, logs, whoopData])
 
   const setN=(sec,f,v)=>setForm(p=>({...p,[sec]:{...p[sec],[f]:v}}))
-  const setEx=(type,f,v)=>setForm(p=>({...p,exercise:{...p.exercise,[type]:{...p.exercise[type],[f]:v}}}))
-  const setFuncEx=(i,f,v)=>setForm(p=>{ const exs=[...p.exercise.functional.exercises]; exs[i]={...exs[i],[f]:v}; return {...p,exercise:{...p.exercise,functional:{...p.exercise.functional,exercises:exs}}} })
-  const addFuncEx=()=>setForm(p=>({...p,exercise:{...p.exercise,functional:{...p.exercise.functional,exercises:[...p.exercise.functional.exercises,{exercise:'',reps:''}]}}}))
-  const removeFuncEx=i=>setForm(p=>({...p,exercise:{...p.exercise,functional:{...p.exercise.functional,exercises:p.exercise.functional.exercises.filter((_,idx)=>idx!==i)}}}))
-  const toggleGym=t=>setForm(p=>{ const types=p.exercise.gym.types.includes(t)?p.exercise.gym.types.filter(x=>x!==t):[...p.exercise.gym.types,t]; return {...p,exercise:{...p.exercise,gym:{...p.exercise.gym,types}}} })
-  const setRun=(i,f,v)=>setForm(p=>{ const runs=[...(p.exercise.runs||[])]; runs[i]={...runs[i],[f]:v}; return {...p,exercise:{...p.exercise,runs}} })
-  const addRun=()=>setForm(p=>({...p,exercise:{...p.exercise,runs:[...(p.exercise.runs||[]),{distance:'',duration:'',notes:''}]}}))
-  const removeRun=i=>setForm(p=>({...p,exercise:{...p.exercise,runs:p.exercise.runs.filter((_,idx)=>idx!==i)}}))
-  const hasRuns=form.exercise.runs?.some(r=>r.distance||r.duration)
-
   const handleSave=async()=>{ setSaving(true); await saveLog(date,form); setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),3000) }
 
   const isExisting=!!logs[date]
   const planDayName=getDayName(date)
   const planDay=plan?.find(d=>d.day===planDayName)
   const ts=(val,key)=>targetStatus(val,settings[key])
+  const w=whoopData?.[date]
 
   return (
     <div style={{padding:'24px 28px',maxWidth:960,margin:'0 auto'}} className='fade'>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24}}>
         <div>
           <h1 style={{fontFamily:'var(--font-head)',fontSize:36,letterSpacing:2,lineHeight:1}}>{isExisting?'EDIT':'LOG'} <span style={{color:'var(--accent)'}}>DAILY DATA</span></h1>
-          <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:5,letterSpacing:1}}>{isExisting?'Updating entry':'New entry'} · {fmtDate(date)} · {planDayName.toUpperCase()}</p>
+          <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:5,letterSpacing:1}}>{isExisting?'Updating entry':'New entry'} · {fmtDate(date)} · {planDayName.toUpperCase()}{w?<span style={{color:'#a78bfa',marginLeft:8}}>· Whoop ✓</span>:null}</p>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <input type='date' value={date} onChange={e=>setDate(e.target.value)} style={{width:170,fontSize:13}}/>
@@ -822,20 +840,29 @@ function LogData({ logs, saveLog, settings, plan, activities }) {
         </div>
       )}
 
+      {w&&(
+        <div style={{background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.25)',borderRadius:'var(--r)',padding:'12px 16px',marginBottom:18,display:'flex',gap:20,flexWrap:'wrap'}}>
+          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'#a78bfa',letterSpacing:1,width:'100%',marginBottom:4}}>WHOOP DATA AVAILABLE FOR THIS DATE</div>
+          {[['Recovery',`${Math.round(w.recovery_score||0)}%`],['Sleep',`${Math.round(w.sleep_score||0)}%`],['HRV',`${Math.round(w.hrv||0)}ms`],['RHR',`${Math.round(w.rhr||0)}bpm`],['Hours Slept',`${w.hours_slept}h`],['Strain',w.day_strain]].map(([l,v])=>v&&(
+            <div key={l}><div style={{fontFamily:'var(--font-mono)',fontSize:8,color:'var(--muted)',letterSpacing:1}}>{l.toUpperCase()}</div><div style={{fontFamily:'var(--font-mono)',fontSize:13,color:'#a78bfa'}}>{v}</div></div>
+          ))}
+        </div>
+      )}
+
       <div style={{display:'flex',flexDirection:'column',gap:14}}>
         <LogSection title='BODY DATA' accent='var(--accent)'>
           <Row cols={4}>
-            <FF label='RESTING HEART RATE (bpm)' ts={ts(form.body.rhr,'rhr')}><input type='number' placeholder='52' value={form.body.rhr} onChange={e=>setN('body','rhr',e.target.value)}/></FF>
-            <FF label='HRV' ts={ts(form.body.hrv,'hrv')}><input type='number' placeholder='78' value={form.body.hrv} onChange={e=>setN('body','hrv',e.target.value)}/></FF>
+            <FF label='RESTING HEART RATE (bpm)' ts={ts(form.body.rhr,'rhr')}><input type='number' placeholder={w?.rhr?`${Math.round(w.rhr)} from Whoop`:'52'} value={form.body.rhr} onChange={e=>setN('body','rhr',e.target.value)}/></FF>
+            <FF label='HRV' ts={ts(form.body.hrv,'hrv')}><input type='number' placeholder={w?.hrv?`${Math.round(w.hrv)} from Whoop`:'78'} value={form.body.hrv} onChange={e=>setN('body','hrv',e.target.value)}/></FF>
             <FF label='WEIGHT (kg)' ts={ts(form.body.weight,'weightTarget')}><input type='number' placeholder='75.5' step='0.1' value={form.body.weight} onChange={e=>setN('body','weight',e.target.value)}/></FF>
             <FF label='WEIGHT TIME'><input type='time' value={form.body.weightTime||''} onChange={e=>setN('body','weightTime',e.target.value)}/></FF>
           </Row>
         </LogSection>
         <LogSection title='SLEEP' accent='var(--purple)'>
           <Row cols={4}>
-            <FF label='SLEEP SCORE (0–100)' ts={ts(form.sleep.sleepScore,'sleepScore')}><input type='number' min='0' max='100' placeholder='85' value={form.sleep.sleepScore} onChange={e=>setN('sleep','sleepScore',e.target.value)}/></FF>
-            <FF label='RECOVERY SCORE (0–100)' ts={ts(form.sleep.recoveryScore,'recoveryScore')}><input type='number' min='0' max='100' placeholder='80' value={form.sleep.recoveryScore} onChange={e=>setN('sleep','recoveryScore',e.target.value)}/></FF>
-            <FF label='HOURS SLEPT' ts={ts(form.sleep.hoursSlept,'hoursSlept')}><input type='number' placeholder='7.5' step='0.25' value={form.sleep.hoursSlept} onChange={e=>setN('sleep','hoursSlept',e.target.value)}/></FF>
+            <FF label='SLEEP SCORE (0–100)' ts={ts(form.sleep.sleepScore,'sleepScore')}><input type='number' min='0' max='100' placeholder={w?.sleep_score?`${Math.round(w.sleep_score)} from Whoop`:'85'} value={form.sleep.sleepScore} onChange={e=>setN('sleep','sleepScore',e.target.value)}/></FF>
+            <FF label='RECOVERY SCORE (0–100)' ts={ts(form.sleep.recoveryScore,'recoveryScore')}><input type='number' min='0' max='100' placeholder={w?.recovery_score?`${Math.round(w.recovery_score)} from Whoop`:'80'} value={form.sleep.recoveryScore} onChange={e=>setN('sleep','recoveryScore',e.target.value)}/></FF>
+            <FF label='HOURS SLEPT' ts={ts(form.sleep.hoursSlept,'hoursSlept')}><input type='number' placeholder={w?.hours_slept?`${w.hours_slept} from Whoop`:'7.5'} step='0.25' value={form.sleep.hoursSlept} onChange={e=>setN('sleep','hoursSlept',e.target.value)}/></FF>
             <FF label='BED TIME'><input type='time' value={form.sleep.bedTime} onChange={e=>setN('sleep','bedTime',e.target.value)}/></FF>
           </Row>
         </LogSection>
@@ -846,53 +873,14 @@ function LogData({ logs, saveLog, settings, plan, activities }) {
             <FF label='CARBS (g)' ts={ts(form.nutrition.carbs,'dailyCarbs')}><input type='number' placeholder='320' value={form.nutrition.carbs} onChange={e=>setN('nutrition','carbs',e.target.value)}/></FF>
           </Row>
         </LogSection>
-        <LogSection title='EXERCISE' accent='var(--blue)'>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {/* ── RUNNING — multiple sessions ── */}
-            <div style={{background:'var(--s2)',borderRadius:10,border:`1px solid ${hasRuns?'rgba(0,230,118,0.3)':'var(--border)'}`,overflow:'hidden'}}>
-              <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:hasRuns?'rgba(0,230,118,0.05)':'transparent',borderBottom:'1px solid var(--border)'}}>
-                <span style={{fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,letterSpacing:1,color:hasRuns?'var(--accent)':'var(--muted)'}}>RUNNING</span>
-                <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:'auto'}}>{form.exercise.runs?.length||1} SESSION{(form.exercise.runs?.length||1)>1?'S':''}</span>
-              </div>
-              <div style={{padding:16,display:'flex',flexDirection:'column',gap:12}}>
-                {(form.exercise.runs||[{distance:'',duration:'',notes:''}]).map((run,i)=>(
-                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr 32px',gap:10,alignItems:'end'}}>
-                    <FF label={`DISTANCE (km)${run.fromStrava?' · from Strava':''}`}><input type='number' placeholder='15.0' step='0.1' value={run.distance} onChange={e=>setRun(i,'distance',e.target.value)} style={{borderColor:run.fromStrava?'rgba(252,76,2,0.4)':''}}/></FF>
-                    <FF label='DURATION (h:mm)'><input type='text' placeholder='1:45' value={run.duration} onChange={e=>setRun(i,'duration',e.target.value)}/></FF>
-                    <FF label='NOTES / ZONE'><input type='text' placeholder='Zone 2 · 150–160bpm' value={run.notes} onChange={e=>setRun(i,'notes',e.target.value)}/></FF>
-                    {i>0&&<button onClick={()=>removeRun(i)} style={{background:'rgba(255,107,107,0.1)',border:'1px solid rgba(255,107,107,0.3)',borderRadius:7,color:'var(--red)',cursor:'pointer',fontSize:14,height:38,alignSelf:'end'}}>×</button>}
-                    {i===0&&<div/>}
-                  </div>
-                ))}
-                <button onClick={addRun} style={{background:'none',border:'1px dashed var(--border2)',borderRadius:7,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:11,padding:'9px',cursor:'pointer',textAlign:'left'}}>+ ADD SECOND RUN</button>
-              </div>
-            </div>
-            <ExBlock checked={form.exercise.functional.on} toggle={()=>setEx('functional','on',!form.exercise.functional.on)} label='FUNCTIONAL TRAINING' accent='var(--orange)'>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 100px 32px',gap:8,marginBottom:2}}>
-                  <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>EXERCISE</span>
-                  <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>REPS</span><span/>
-                </div>
-                {form.exercise.functional.exercises.map((ex,i)=>(
-                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 100px 32px',gap:8}}>
-                    <input type='text' placeholder='Exercise' value={ex.exercise} onChange={e=>setFuncEx(i,'exercise',e.target.value)}/>
-                    <input type='number' placeholder='0' value={ex.reps} onChange={e=>setFuncEx(i,'reps',e.target.value)}/>
-                    <button onClick={()=>removeFuncEx(i)} style={{background:'var(--s4)',border:'1px solid var(--border)',borderRadius:7,color:'var(--muted)',cursor:'pointer',fontSize:14}}>×</button>
-                  </div>
-                ))}
-                <button onClick={addFuncEx} style={{background:'none',border:'1px dashed var(--border2)',borderRadius:7,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:11,padding:'9px',cursor:'pointer'}}>+ ADD EXERCISE</button>
-              </div>
-            </ExBlock>
-            <ExBlock checked={form.exercise.gym.on} toggle={()=>setEx('gym','on',!form.exercise.gym.on)} label='GYM' accent='var(--purple)'>
-              <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                {GYM_OPTIONS.map(opt=>{ const sel=form.exercise.gym.types.includes(opt); return (<button key={opt} onClick={()=>toggleGym(opt)} style={{background:sel?'var(--purple)':'var(--s4)',color:sel?'#0d1018':'var(--muted)',border:`1px solid ${sel?'var(--purple)':'var(--border2)'}`,borderRadius:7,padding:'8px 16px',fontFamily:'var(--font-mono)',fontSize:11,fontWeight:sel?600:400,cursor:'pointer',transition:'all 0.15s'}}>{opt}</button>) })}
-              </div>
-            </ExBlock>
-            <ExBlock checked={form.exercise.yoga.on} toggle={()=>setEx('yoga','on',!form.exercise.yoga.on)} label='YOGA' accent='var(--blue)'>
-              <div style={{maxWidth:200}}><FF label='DURATION (mins)'><input type='number' placeholder='30' value={form.exercise.yoga.duration} onChange={e=>setEx('yoga','duration',e.target.value)}/></FF></div>
-            </ExBlock>
+        {/* Exercise section removed — all workout data now pulled from Strava automatically */}
+        <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'14px 18px',display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:20}}>⚡</span>
+          <div>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--accent)',letterSpacing:1,marginBottom:3}}>EXERCISE DATA AUTO-SYNCED FROM STRAVA</div>
+            <div style={{fontSize:12,color:'var(--muted)'}}>All workouts, runs, gym sessions and yoga are pulled automatically from your Strava account. View them on the <button onClick={()=>{}} style={{background:'none',border:'none',color:'var(--accent)',fontFamily:'inherit',fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>History</button> page.</div>
           </div>
-        </LogSection>
+        </div>
       </div>
       <div style={{display:'flex',justifyContent:'flex-end',marginTop:22}}><SaveBtn saved={saved} saving={saving} onClick={handleSave} large/></div>
     </div>
@@ -1114,34 +1102,151 @@ function SettingsPage({ settings, saveSettings, stravaConnection, onStravaConnec
         ))}
       </div>
       <div style={{display:'flex',justifyContent:'flex-end',marginTop:22}}><SaveBtn saved={saved} onClick={handleSave} large/></div>
+
+      {/* Whoop upload */}
+      <WhoopUploadCard/>
+      {/* Audit log */}
+      <AuditLogPanel/>
+    </div>
+  )
+}
+
+// ─── WHOOP UPLOAD CARD ────────────────────────────────────────────────────────
+function WhoopUploadCard() {
+  const [files,     setFiles    ] = useState({})
+  const [uploading, setUploading] = useState(false)
+  const [result,    setResult   ] = useState(null)
+
+  const FILE_SLOTS = [
+    { key:'physiological_cycles', label:'physiological_cycles.csv', desc:'Recovery, HRV, RHR, strain' },
+    { key:'sleeps',               label:'sleeps.csv',               desc:'Sleep scores, stages, efficiency' },
+    { key:'workouts',             label:'workouts.csv',             desc:'Workout strain and HR zones' },
+    { key:'journal_entries',      label:'journal_entries.csv',      desc:'Daily journal answers (optional)' },
+  ]
+
+  const handleUpload = async () => {
+    if (!Object.keys(files).length) return
+    setUploading(true); setResult(null)
+    try {
+      const fd = new FormData()
+      Object.entries(files).forEach(([k,f]) => fd.append(k, f))
+      const res  = await fetch('/api/whoop/upload', { method:'POST', body:fd })
+      const data = await res.json()
+      setResult(data.error ? { error: data.error } : { ok: true, message: data.message })
+    } catch(e) { setResult({ error: e.message }) }
+    setUploading(false)
+  }
+
+  return (
+    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden',marginTop:16}}>
+      <div style={{padding:'13px 20px',borderBottom:'1px solid var(--border)',borderLeft:'3px solid #a78bfa',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'2px',color:'#a78bfa'}}>WHOOP DATA IMPORT</span>
+        <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>Upload exported CSV files from Whoop app → Account → Export Data</span>
+      </div>
+      <div style={{padding:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+          {FILE_SLOTS.map(({key,label,desc})=>(
+            <label key={key} style={{background:'var(--s2)',border:`1px solid ${files[key]?'#a78bfa55':'var(--border2)'}`,borderRadius:'var(--r)',padding:'12px 16px',cursor:'pointer',display:'block',transition:'border-color 0.15s'}}>
+              <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:files[key]?'#a78bfa':'var(--muted)',letterSpacing:1,marginBottom:4}}>{label}</div>
+              <div style={{fontSize:12,color:'var(--muted2)',marginBottom:8}}>{desc}</div>
+              {files[key]
+                ? <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'#a78bfa'}}>✓ {files[key].name}</div>
+                : <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)'}}>Click to select file</div>}
+              <input type='file' accept='.csv' style={{display:'none'}} onChange={e=>{ if(e.target.files[0]) setFiles(p=>({...p,[key]:e.target.files[0]})) }}/>
+            </label>
+          ))}
+        </div>
+        {result&&(
+          <div style={{background:result.error?'rgba(255,107,107,0.1)':'rgba(167,139,250,0.1)',border:`1px solid ${result.error?'#ff6b6b':'#a78bfa'}`,borderRadius:'var(--r)',padding:'10px 16px',marginBottom:12,fontFamily:'var(--font-mono)',fontSize:12,color:result.error?'#ff6b6b':'#a78bfa'}}>
+            {result.error||result.message}
+          </div>
+        )}
+        <button onClick={handleUpload} disabled={uploading||!Object.keys(files).length} style={{background:Object.keys(files).length?'#a78bfa':'var(--s3)',color:Object.keys(files).length?'#0d1018':'var(--muted)',border:'none',borderRadius:8,padding:'10px 28px',fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,cursor:Object.keys(files).length?'pointer':'default',letterSpacing:1}}>
+          {uploading?'IMPORTING...':'IMPORT WHOOP DATA'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── AUDIT LOG PANEL ─────────────────────────────────────────────────────────
+function AuditLogPanel() {
+  const [entries,   setEntries  ] = useState([])
+  const [loading,   setLoading  ] = useState(true)
+  const [search,    setSearch   ] = useState('')
+  const [typeFilter,setTypeFilter] = useState('all')
+
+  useEffect(()=>{ loadEntries() },[])
+
+  const loadEntries = async (type='all', q='') => {
+    setLoading(true)
+    const data = await db.loadAuditLog({ type: type==='all'?undefined:type, search:q||undefined })
+    setEntries(data)
+    setLoading(false)
+  }
+
+  const EVENT_COLORS = { strava_sync:'#fc4c02', whoop_upload:'#a78bfa', pb_set:'#00e676', activity_sync:'#40a9ff' }
+  const fmtTs = (iso) => new Date(iso).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+
+  return (
+    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden',marginTop:16}}>
+      <div style={{padding:'13px 20px',borderBottom:'1px solid var(--border)',borderLeft:'3px solid var(--blue)'}}>
+        <span style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'2px',color:'var(--blue)'}}>ACTIVITY LOG</span>
+      </div>
+      <div style={{padding:16,display:'flex',gap:10,borderBottom:'1px solid var(--border)'}}>
+        <input type='text' placeholder='Search logs...' value={search} onChange={e=>{ setSearch(e.target.value); loadEntries(typeFilter,e.target.value) }} style={{maxWidth:280,fontSize:13}}/>
+        <select value={typeFilter} onChange={e=>{ setTypeFilter(e.target.value); loadEntries(e.target.value,search) }} style={{fontSize:13,width:180}}>
+          <option value='all'>All Events</option>
+          <option value='strava_sync'>Strava Sync</option>
+          <option value='whoop_upload'>Whoop Upload</option>
+          <option value='pb_set'>Personal Bests</option>
+          <option value='activity_sync'>Activity Sync</option>
+        </select>
+        <span style={{marginLeft:'auto',fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',alignSelf:'center'}}>{entries.length} entries</span>
+      </div>
+      <div style={{maxHeight:380,overflowY:'auto'}}>
+        {loading?(
+          <div style={{padding:24,textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>Loading...</div>
+        ):entries.length===0?(
+          <div style={{padding:24,textAlign:'center',fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>No log entries yet</div>
+        ):entries.map(e=>(
+          <div key={e.id} style={{display:'grid',gridTemplateColumns:'160px 120px 1fr',gap:12,padding:'10px 16px',borderBottom:'1px solid var(--border)',alignItems:'start'}}>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)'}}>{fmtTs(e.created_at)}</div>
+            <div><span style={{fontFamily:'var(--font-mono)',fontSize:9,color:EVENT_COLORS[e.event_type]||'var(--muted)',background:`${EVENT_COLORS[e.event_type]||'var(--muted)'}18`,border:`1px solid ${EVENT_COLORS[e.event_type]||'var(--muted)'}44`,borderRadius:4,padding:'2px 7px',letterSpacing:1}}>{e.event_type?.replace('_',' ').toUpperCase()}</span></div>
+            <div>
+              <div style={{fontSize:13,color:'var(--text)',marginBottom:2}}>{e.title}</div>
+              {e.detail&&<div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)'}}>{e.detail}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
 // ─── TV MODE ──────────────────────────────────────────────────────────────────
-function TVMode({ logs, settings, plan, activities, setView }) {
+function TVMode({ logs, settings, plan, activities, whoopData, setView }) {
   const [,setTick]=useState(0)
   const [tvPeriod, setTvPeriod]=useState('week')
   useEffect(()=>{ const id=setInterval(()=>setTick(t=>t+1),30000); return()=>clearInterval(id) },[])
-  const today=todayStr(), tl=logs[today], now=new Date()
+  const today=todayStr(), now=new Date()
+  const tl = mergeWhoopForDate(today, logs[today], whoopData)
   const planDayIndex=now.getDay()===0?6:now.getDay()-1
   const todayPlan=plan?.[planDayIndex]
 
-  // Period days
-  const nDays = tvPeriod==='week'?7:tvPeriod==='month'?30:tvPeriod==='6month'?180:365
+  const ytdDays = Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/86400000)+1
+  const nDays = tvPeriod==='week'?7:tvPeriod==='month'?30:tvPeriod==='6month'?180:tvPeriod==='ytd'?ytdDays:365
   const periodDays = Array.from({length:nDays},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(nDays-1-i)); return d.toISOString().split('T')[0] })
 
-  // Strava KM for period
   const stravaKmByDate={}
   ;(activities||[]).forEach(a=>{ const type=a.custom_type||a.strava_type; if(type!=='run') return; const km=(a.data?.distance||0)/1000; if(!km) return; const date=(a.start_date||'').split('T')[0]; stravaKmByDate[date]=(stravaKmByDate[date]||0)+km })
   const getKm=d=>stravaKmByDate[d]||parseFloat(logs[d]?.exercise?.runs?.[0]?.distance||logs[d]?.exercise?.running?.distance)||0
   const periodKm = periodDays.reduce((s,d)=>s+getKm(d),0)
 
-  let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(logs[d.toISOString().split('T')[0]]) streak++; else break }
+  let streak=0; for(let i=0;i<365;i++){ const d=new Date(); d.setDate(d.getDate()-i); const ds=d.toISOString().split('T')[0]; if(logs[ds]||whoopData?.[ds]) streak++; else break }
 
-  // Averages for the selected period
-  const loggedDays = periodDays.filter(d=>logs[d])
-  const avg=(key,sub)=>{ const vals=loggedDays.map(d=>parseFloat(logs[d]?.[key]?.[sub])).filter(v=>!isNaN(v)&&v>0); return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:null }
+  // Averages using merged Whoop data
+  const avg=(key,sub)=>{ const vals=periodDays.map(d=>parseFloat(mergeWhoopForDate(d,logs[d],whoopData)?.[key]?.[sub])).filter(v=>!isNaN(v)&&v>0); return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:null }
 
   const tvStats=[
     {label:'WEIGHT',    v:tl?.body?.weight,        avg:avg('body','weight'),        unit:'kg',   color:'#00e676',tKey:'weightTarget'},
@@ -1152,14 +1257,29 @@ function TVMode({ logs, settings, plan, activities, setView }) {
     {label:'HRS SLEPT', v:tl?.sleep?.hoursSlept,    avg:avg('sleep','hoursSlept'),   unit:'h',    color:'#40a9ff',tKey:'hoursSlept'},
   ].map(s=>({ ...s, ts:targetStatus(s.v,settings[s.tKey]), avgTs:targetStatus(s.avg,settings[s.tKey]) }))
 
-  const periodLabel = tvPeriod==='week'?'7 DAYS':tvPeriod==='month'?'30 DAYS':tvPeriod==='6month'?'6 MONTHS':'1 YEAR'
+  const periodLabel = tvPeriod==='week'?'7 DAYS':tvPeriod==='month'?'30 DAYS':tvPeriod==='6month'?'6 MONTHS':tvPeriod==='ytd'?`YTD ${now.getFullYear()}`:'1 YEAR'
+
+  // Nutrition totals + averages for period
+  const nutritionPeriod = periodDays.reduce((acc,d)=>{
+    const cal=parseFloat(logs[d]?.nutrition?.calories)||0
+    const pro=parseFloat(logs[d]?.nutrition?.protein)||0
+    const carb=parseFloat(logs[d]?.nutrition?.carbs)||0
+    if(cal||pro||carb) acc.days++
+    acc.calories+=cal; acc.protein+=pro; acc.carbs+=carb
+    return acc
+  },{calories:0,protein:0,carbs:0,days:0})
+  const nutritionAvg = nutritionPeriod.days>0 ? {
+    calories: Math.round(nutritionPeriod.calories/nutritionPeriod.days),
+    protein:  Math.round(nutritionPeriod.protein/nutritionPeriod.days),
+    carbs:    Math.round(nutritionPeriod.carbs/nutritionPeriod.days),
+  } : null
 
   return (
     <div style={{minHeight:'calc(100vh - 60px)',background:'var(--bg)',padding:'28px 36px',display:'flex',flexDirection:'column',gap:18}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <div><div style={{fontFamily:'var(--font-head)',fontSize:48,letterSpacing:3,lineHeight:1}}><span style={{color:'var(--accent)'}}>WG</span> HUB</div><div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:4}}>PERFORMANCE DASHBOARD · AUTO-REFRESHES EVERY 30s</div></div>
         <div style={{display:'flex',gap:8}}>
-          {[{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'6month',l:'6M'},{k:'1year',l:'1Y'}].map(({k,l})=>(
+          {[{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'6month',l:'6M'},{k:'1year',l:'1Y'},{k:'ytd',l:'YTD'}].map(({k,l})=>(
             <button key={k} onClick={()=>setTvPeriod(k)} style={{background:tvPeriod===k?'var(--accent)':'var(--s2)',color:tvPeriod===k?'var(--bg)':'var(--muted)',border:`1px solid ${tvPeriod===k?'var(--accent)':'var(--border)'}`,borderRadius:7,padding:'6px 16px',fontFamily:'var(--font-mono)',fontSize:11,cursor:'pointer',letterSpacing:1}}>{l}</button>
           ))}
         </div>
@@ -1187,15 +1307,24 @@ function TVMode({ logs, settings, plan, activities, setView }) {
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr',gap:14}}>
-        <div style={{background:'var(--s1)',border:`1px solid ${streak>0?'rgba(0,230,118,0.35)':'var(--border)'}`,borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>LOGGING STREAK</div>
-          <div style={{fontFamily:'var(--font-head)',fontSize:72,color:streak>0?'var(--accent)':'var(--muted)',lineHeight:1}}>{streak}</div>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:6}}>consecutive days</div>
-        </div>
         <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>KM · {periodLabel}</div>
+          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:8}}>KM RUN · {periodLabel}</div>
           <div style={{fontFamily:'var(--font-head)',fontSize:72,color:'var(--blue)',lineHeight:1}}>{periodKm.toFixed(1)}</div>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:6}}>kilometres run</div>
+          <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',marginTop:6}}>kilometres</div>
+        </div>
+        {/* Nutrition totals */}
+        <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
+          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:12}}>NUTRITION · {periodLabel} {nutritionPeriod.days>0?`· ${nutritionPeriod.days} days logged`:''}</div>
+          {nutritionAvg?(
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {[{l:'AVG CALORIES',v:nutritionAvg.calories,unit:'kcal',color:'#00e676',tKey:'dailyCalories'},{l:'AVG PROTEIN',v:nutritionAvg.protein,unit:'g',color:'#40a9ff',tKey:'dailyProtein'},{l:'AVG CARBS',v:nutritionAvg.carbs,unit:'g',color:'#ff9f40',tKey:'dailyCarbs'}].map(({l,v,unit,color,tKey})=>{
+                const ts2=targetStatus(v,settings[tKey])
+                return (<div key={l}><div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:3}}><span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>{l}</span><span style={{fontFamily:'var(--font-head)',fontSize:22,color:ts2?ts2.color:color}}>{v}<span style={{fontFamily:'var(--font-mono)',fontSize:10,opacity:0.6}}>{unit}</span></span></div><div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}><div style={{height:'100%',width:`${ts2?.pct||0}%`,background:ts2?ts2.color:color,borderRadius:2}}/></div></div>)
+              })}
+            </div>
+          ):(
+            <div style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted2)'}}>No nutrition logged this period</div>
+          )}
         </div>
         {todayPlan&&(
           <div style={{background:'var(--s1)',border:`1px solid ${todayPlan.accent}44`,borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
@@ -1213,17 +1342,6 @@ function TVMode({ logs, settings, plan, activities, setView }) {
           </div>
         )}
       </div>
-      {(tl?.nutrition?.calories||tl?.nutrition?.protein)&&(
-        <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'18px 24px'}}>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:14}}>TODAY'S NUTRITION</div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
-            {[{label:'PROTEIN',val:tl?.nutrition?.protein,unit:'g',color:'#40a9ff',tKey:'dailyProtein'},{label:'CARBS',val:tl?.nutrition?.carbs,unit:'g',color:'#ff9f40',tKey:'dailyCarbs'},{label:'CALORIES',val:tl?.nutrition?.calories,unit:'kcal',color:'#00e676',tKey:'dailyCalories'}].map(({label,val,unit,color,tKey})=>{
-              const ts2=targetStatus(val,settings[tKey])
-              return (<div key={label}><div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:6}}><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',letterSpacing:1,minWidth:70}}>{label}</span><span style={{fontFamily:'var(--font-head)',fontSize:36,color:ts2?ts2.color:color}}>{val||'—'}{val&&<span style={{fontFamily:'var(--font-mono)',fontSize:12,opacity:0.6}}>{unit}</span>}</span></div>{settings[tKey]?.value&&val&&(<div style={{height:5,background:'var(--s3)',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',width:`${ts2?.pct||0}%`,background:ts2?ts2.color:color,borderRadius:3}}/></div>)}</div>)
-            })}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -1342,7 +1460,29 @@ function PlannerPage() {
   )
 }
 
-// ─── MICRO COMPONENTS ─────────────────────────────────────────────────────────
+// ─── FINANCE PAGE ──────────────────────────────────────────────────────────────
+function FinancePage() {
+  return (
+    <div style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}} className='fade'>
+      <h1 style={{fontFamily:'var(--font-head)',fontSize:38,letterSpacing:2,lineHeight:1,marginBottom:8}}>FINANCE <span style={{color:'var(--accent)'}}>TRACKER</span></h1>
+      <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',letterSpacing:1,marginBottom:32}}>Savings, investments and money tracking — coming soon.</p>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
+        {[
+          {title:'SAVINGS',     icon:'💰', desc:'Track savings goals, monthly contributions and progress towards targets.',    color:'var(--accent)'},
+          {title:'INVESTMENTS', icon:'📈', desc:'Monitor portfolio performance, asset allocation and growth over time.',       color:'var(--blue)'},
+          {title:'BUDGET',      icon:'📊', desc:'Monthly income vs expenditure, category breakdown and spending trends.',     color:'var(--orange)'},
+        ].map(({title,icon,desc,color})=>(
+          <div key={title} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'28px 24px',display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:32}}>{icon}</div>
+            <div style={{fontFamily:'var(--font-head)',fontSize:26,color,letterSpacing:1}}>{title}</div>
+            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>{desc}</div>
+            <div style={{marginTop:'auto',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted2)',letterSpacing:1,borderTop:'1px solid var(--border)',paddingTop:14}}>COMING SOON</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 function SaveBtn({saved,saving,onClick,large}){
   const label = saving ? 'SAVING...' : saved ? '✓ SAVED' : 'SAVE'
   return <button onClick={onClick} disabled={saving} style={{background:saved||saving?'transparent':'var(--accent)',color:saved?'var(--accent)':saving?'var(--muted)':'#07090f',border:saved?'1px solid var(--accent)':saving?'1px solid var(--border)':'1px solid transparent',borderRadius:8,padding:large?'12px 40px':'10px 22px',fontFamily:'var(--font-mono)',fontSize:large?13:12,fontWeight:600,cursor:saving?'default':'pointer',letterSpacing:1,transition:'all 0.2s',minWidth:large?200:120}}>{label}</button>

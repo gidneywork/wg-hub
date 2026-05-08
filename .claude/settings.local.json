@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx claude-mem *)",
+      "Bash(bun *)",
+      "PowerShell(bun *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.bun\\\\bin\\\\bun.exe\" --version)",
+      "PowerShell($userPath = [Environment]::GetEnvironmentVariable\\('Path','User'\\); $userPath)",
+      "Bash(export PATH=\"/c/Users/Will Gidney/.bun/bin:$PATH\")",
+      "PowerShell(Test-Path *)",
+      "Bash(export PATH=\"/c/Users/Will Gidney/.bun/bin:/c/Users/Will Gidney/.local/bin:$PATH\")",
+      "Bash(uv --version)"
+    ]
+  }
+}
