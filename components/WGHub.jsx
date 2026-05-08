@@ -565,12 +565,13 @@ function AIAssistant({ logs, activities, whoopData, settings }) {
   const [input,   setInput  ] = useState('')
   const [loading, setLoading] = useState(false)
   const [started, setStarted] = useState(true)
-  const bottomRef = useRef(null)
+  const bottomRef  = useRef(null)
+  const chatBoxRef = useRef(null)
 
-  // Persist messages to localStorage whenever they change
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)) } catch {}
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll only within the chat box, not the whole page
+    if(chatBoxRef.current) chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight
   }, [messages])
 
   // Auto-run daily summary once per calendar day only
@@ -694,7 +695,7 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
         <button onClick={()=>{setStarted(false);setMessages([])}} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}}>✕</button>
       </div>
 
-      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,marginBottom:10}}>
+      <div ref={chatBoxRef} style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,marginBottom:10}}>
         {messages.length===0&&(
           <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',textAlign:'center',marginTop:20}}>Ask me anything about your training...</div>
         )}
@@ -710,7 +711,6 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
             {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)',animation:`bounce 1s ${i*0.15}s infinite`}}/>)}
           </div>
         )}
-        <div ref={bottomRef}/>
       </div>
 
       <div style={{display:'flex',gap:8}}>
