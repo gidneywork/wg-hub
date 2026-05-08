@@ -544,7 +544,7 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
               {hrvData.some(r=>r.hrv||r.rhr)?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} connectNulls={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} connectNulls={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
           </div>
-          <RecentHistory logs={logs} settings={settings} activities={activities} setView={setView}/>
+          <RecentHistory logs={logs} settings={settings} activities={activities} whoopData={whoopData} setView={setView}/>
         </>
       )}
     </div>
@@ -553,17 +553,37 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
 
 // ─── AI PERSONAL ASSISTANT ────────────────────────────────────────────────────
 function AIAssistant({ logs, activities, whoopData, settings }) {
-  const [messages, setMessages] = useState([])
-  const [input,    setInput   ] = useState('')
-  const [loading,  setLoading ] = useState(false)
-  const [started,  setStarted ] = useState(true)
+  const STORAGE_KEY = 'wghub_ai_messages'
+  const SUMMARY_KEY = 'wghub_ai_summary_date'
+
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [input,   setInput  ] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [started, setStarted] = useState(true)
   const bottomRef = useRef(null)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-
-  // Auto-load weekly summary on first render
+  // Persist messages to localStorage whenever they change
   useEffect(() => {
-    sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)) } catch {}
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Auto-run daily summary once per calendar day only
+  useEffect(() => {
+    const today = todayStr()
+    const lastSummaryDate = localStorage.getItem(SUMMARY_KEY)
+    if(lastSummaryDate === today) return // already ran today
+    // Small delay so buildContext has access to latest data
+    const t = setTimeout(() => {
+      sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
+      localStorage.setItem(SUMMARY_KEY, today)
+    }, 800)
+    return () => clearTimeout(t)
   }, [])
 
   const buildContext = () => {
@@ -866,8 +886,7 @@ function GymChart({ logs, days, activities, periodLabel }) {
 }
 
 // ─── RECENT HISTORY ───────────────────────────────────────────────────────────
-function RecentHistory({ logs, settings, activities, setView }) {
-  // Build Strava KM lookup by date
+function RecentHistory({ logs, settings, activities, whoopData, setView }) {
   const stravaKmByDate = {}
   ;(activities||[]).forEach(a => {
     const type = a.custom_type || a.strava_type
@@ -885,42 +904,74 @@ function RecentHistory({ logs, settings, activities, setView }) {
     return parseFloat(log?.exercise?.running?.distance)||null
   }
 
-  // Show dates that have either logs OR Strava runs
-  const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate)])].sort().reverse().slice(0,30)
-  if(!allDates.length) return null
-  const cell=(val,unit='',tKey=null)=>{
-    const ts=tKey?targetStatus(val,settings[tKey]):null
-    return <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:ts?ts.color:val?'var(--text)':'var(--muted2)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{val?`${val}${unit}`:'—'}</td>
+  // Merge Whoop data — Whoop takes priority over manual for body/sleep fields
+  const getMergedVal = (date, key, sub) => {
+    const w = whoopData?.[date]
+    const l = logs[date]
+    if(key==='sleep') {
+      const wVal = sub==='sleepScore'?w?.sleep_score:sub==='recoveryScore'?w?.recovery_score:sub==='hoursSlept'?w?.hours_slept:null
+      return wVal ?? l?.sleep?.[sub]
+    }
+    if(key==='body') {
+      const wVal = sub==='hrv'?w?.hrv:sub==='rhr'?w?.rhr:null
+      return wVal ?? l?.body?.[sub]
+    }
+    return l?.[key]?.[sub]
   }
+
+  // All dates — logs, Strava runs, or Whoop data
+  const allDates = [...new Set([
+    ...Object.keys(logs),
+    ...Object.keys(stravaKmByDate),
+    ...Object.keys(whoopData||{}),
+  ])].sort().reverse().slice(0,60)
+
+  if(!allDates.length) return null
+
+  const cell = (val, unit='', tKey=null) => {
+    const ts = tKey ? targetStatus(val, settings[tKey]) : null
+    const display = val != null && val !== '' ? `${typeof val==='number'?Math.round(val*10)/10:val}${unit}` : '—'
+    return <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:ts?ts.color:val?'var(--text)':'var(--muted2)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{display}</td>
+  }
+
   return (
     <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden'}}>
       <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>RECENT LOG HISTORY</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>Last {allDates.length} entries · click any row to edit</div></div>
+        <div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>RECENT LOG HISTORY</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{allDates.length} entries · Strava + Whoop + manual · click any row to edit</div></div>
         <div style={{display:'flex',alignItems:'center',gap:12,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
           {[['#00e676','On target'],['#ff9f40','Within 15%'],['#ff6b6b','Off target']].map(([c,l])=>(
             <span key={l} style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:8,height:8,borderRadius:2,background:c,display:'inline-block'}}/>{l}</span>
           ))}
         </div>
       </div>
-      <div style={{overflowX:'auto'}}>
+      <div style={{overflowX:'auto',overflowY:'auto',maxHeight:400}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead><tr style={{background:'var(--s2)'}}>{['DATE','KM RUN','WEIGHT','SLEEP','RECOVERY','HRV','RHR','CALORIES','PROTEIN',''].map(h=><th key={h} style={{padding:'8px 12px',fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',textAlign:'left',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead>
+          <thead style={{position:'sticky',top:0,zIndex:1}}>
+            <tr style={{background:'var(--s2)'}}>{['DATE','KM RUN','WEIGHT','SLEEP','RECOVERY','HRV','RHR','CALORIES','PROTEIN',''].map(h=><th key={h} style={{padding:'8px 12px',fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',textAlign:'left',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',background:'var(--s2)'}}>{h}</th>)}</tr>
+          </thead>
           <tbody>
             {allDates.map(date=>{
-              const l=logs[date]; const isToday=date===todayStr()
+              const l = logs[date]
+              const w = whoopData?.[date]
+              const isToday = date===todayStr()
               const km = getKm(date)
               const hasStrava = !!stravaKmByDate[date]
+              const hasWhoop  = !!w
               return (
                 <tr key={date} onClick={()=>setView('log')} style={{background:isToday?'rgba(0,230,118,0.04)':'transparent',cursor:'pointer',transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='var(--s2)'} onMouseLeave={e=>e.currentTarget.style.background=isToday?'rgba(0,230,118,0.04)':'transparent'}>
-                  <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:isToday?'var(--accent)':'var(--text)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{fmtDate(date)}{isToday&&<span style={{marginLeft:6,fontSize:9,color:'var(--accent)'}}>TODAY</span>}</td>
+                  <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:isToday?'var(--accent)':'var(--text)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>
+                    {fmtDate(date)}
+                    {isToday&&<span style={{marginLeft:6,fontSize:9,color:'var(--accent)'}}>TODAY</span>}
+                    {hasWhoop&&<span style={{marginLeft:6,fontSize:9,color:'#a78bfa'}}>W</span>}
+                  </td>
                   <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>
                     {km ? <span style={{color:hasStrava?'#fc4c02':'var(--accent)'}}>{km}km{hasStrava&&<span style={{fontSize:9,marginLeft:4,opacity:0.7}}>S</span>}</span> : <span style={{color:'var(--muted2)'}}>—</span>}
                   </td>
                   {cell(l?.body?.weight,'kg','weightTarget')}
-                  {cell(l?.sleep?.sleepScore,'/100','sleepScore')}
-                  {cell(l?.sleep?.recoveryScore,'/100','recoveryScore')}
-                  {cell(l?.body?.hrv,'','hrv')}
-                  {cell(l?.body?.rhr,'bpm','rhr')}
+                  {cell(getMergedVal(date,'sleep','sleepScore'),'/100','sleepScore')}
+                  {cell(getMergedVal(date,'sleep','recoveryScore'),'/100','recoveryScore')}
+                  {cell(getMergedVal(date,'body','hrv'),'','hrv')}
+                  {cell(getMergedVal(date,'body','rhr'),'bpm','rhr')}
                   {cell(l?.nutrition?.calories,' kcal','dailyCalories')}
                   {cell(l?.nutrition?.protein,'g','dailyProtein')}
                   <td style={{padding:'9px 12px',borderBottom:'1px solid var(--border)'}}><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',background:'var(--s3)',padding:'3px 8px',borderRadius:4}}>EDIT</span></td>
