@@ -631,7 +631,15 @@ RECENT ACTIVITIES (last 10):
 ${recentActivities.length ? recentActivities.join('\n') : 'No recent activities'}
 
 TODAY: ${today}
-Answer in 2-4 sentences max unless asked for detail. Use specific numbers from the data.`
+
+Format responses using this structure when giving weekly summaries:
+- Start with "Week Summary: [date range]"
+- Use sections: Hits ✅ / Misses ⚠️ / Focus 🔑 / Weekly Takeaway 📝
+- Under each section, use bullet points (• ) for each item with a short bold label then colon then detail
+- End each section with a "Coach's note:" in italics
+- Keep each bullet to 1-2 lines max, be specific with numbers from the data
+- For other questions, keep responses concise with bullet points where helpful
+- Never use markdown bold (**text**) — use plain text with structure instead`
   }
 
   const sendMessage = async (text) => {
@@ -686,7 +694,7 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
   }
 
   return (
-    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'16px',display:'flex',flexDirection:'column',height:280}}>
+    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'16px',display:'flex',flexDirection:'column',height:340}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
           <div style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)'}}/>
@@ -701,7 +709,7 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
         )}
         {messages.map((m,i)=>(
           <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
-            <div style={{maxWidth:'85%',background:m.role==='user'?'var(--accent)':'var(--s2)',color:m.role==='user'?'var(--bg)':'var(--text)',borderRadius:10,padding:'8px 12px',fontSize:12,lineHeight:1.5,fontFamily:m.role==='user'?'var(--font-mono)':'var(--font-body)'}}>
+            <div style={{maxWidth:'85%',background:m.role==='user'?'var(--accent)':'var(--s2)',color:m.role==='user'?'var(--bg)':'var(--text)',borderRadius:10,padding:'8px 12px',fontSize:12,lineHeight:1.6,fontFamily:m.role==='user'?'var(--font-mono)':'var(--font-body)',whiteSpace:'pre-wrap'}}>
               {m.content}
             </div>
           </div>
