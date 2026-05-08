@@ -10,7 +10,11 @@
       "Bash(export PATH=\"/c/Users/Will Gidney/.bun/bin:$PATH\")",
       "PowerShell(Test-Path *)",
       "Bash(export PATH=\"/c/Users/Will Gidney/.bun/bin:/c/Users/Will Gidney/.local/bin:$PATH\")",
-      "Bash(uv --version)"
+      "Bash(uv --version)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\Will Gidney\\\\wg-hub\\\\components\\\\WGHub.jsx\"\\); $crlf = 0; $lf = 0; for\\($i=0;$i -lt $bytes.Length;$i++\\){ if\\($bytes[$i] -eq 10\\){ if\\($i -gt 0 -and $bytes[$i-1] -eq 13\\){ $crlf++ } else { $lf++ } } }; \"CRLF: $crlf, LF-only: $lf, total bytes: $\\($bytes.Length\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\Will Gidney\\\\wg-hub\\\\.claude-tmp-edit.ps1\")",
+      "PowerShell(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Will Gidney\\\\wg-hub\\\\.claude-tmp-edit.ps1\")",
+      "PowerShell($utf8 = New-Object System.Text.UTF8Encoding\\($false\\); $c = [System.IO.File]::ReadAllText\\(\"C:\\\\Users\\\\Will Gidney\\\\wg-hub\\\\components\\\\WGHub.jsx\", $utf8\\); $lines = $c -split \"`n\"; \"===sendMessage===\"; $lines[610..625]; \"===periodKm===\"; $lines[1469..1485]; \"===bottom row===\"; $lines[1543..1573])"
     ]
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -102,6 +102,8 @@ const CSS_VARS = `
     --r:10px; --r-lg:14px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .fade { animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 
@@ -340,7 +342,7 @@ function mergeWhoopForDate(date, log, whoopData) {
   }
 }
 function Dashboard({ logs, settings, activities, whoopData, setView }) {
-  const [period, setPeriod] = useState('7D')
+  const [period, setPeriod] = useState('30D')
   const ytdDays = Math.ceil((new Date() - new Date(new Date().getFullYear(),0,1)) / 86400000) + 1
   const nDays=period==='7D'?7:period==='30D'?30:period==='90D'?90:period==='YTD'?ytdDays:365
   const days=Array.from({length:nDays},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(nDays-1-i)); return d.toISOString().split('T')[0] })
@@ -395,7 +397,10 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
   const sfmt = (d) => period==='7D'?fmtDateShort(d):period==='30D'?fmtDateShort(d):fmtDateMMM(d)
 
   // Chart data — uses merged Whoop+manual data
-  const weightData=days.map(d=>({date:sfmt(d),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
+  // Weight fill-forward — carry last known weight for missing days
+  const weightDataRaw = days.map(d=>({date:sfmt(d),weight:logs[d]?.body?.weight?parseFloat(logs[d].body.weight):null}))
+  let lastKnownWeight = null
+  const weightData = weightDataRaw.map(r=>{ if(r.weight) lastKnownWeight=r.weight; return {...r, weight: r.weight ?? lastKnownWeight} })
   const sleepData=days.map(d=>{ const m=getMerged(d); return {date:sfmt(d),sleep:parseFloat(m?.sleep?.sleepScore)||null,recovery:parseFloat(m?.sleep?.recoveryScore)||null} })
   const hrvData=days.map(d=>{ const m=getMerged(d); return {date:sfmt(d),hrv:parseFloat(m?.body?.hrv)||null,rhr:parseFloat(m?.body?.rhr)||null} })
 
@@ -501,19 +506,7 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
               <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',marginTop:6}}>consecutive days</div>
               <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{streak===0?'Log today to start a streak':streak<7?'Building momentum':streak<30?'Strong consistency':streak<90?'Elite dedication':'Unstoppable'}</div>
             </div>
-            <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 22px'}}>
-              <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:14}}>TODAY'S NUTRITION</div>
-              {cal>0?(
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
-                  {[{label:'PROTEIN',val:pro,unit:'g',color:'#40a9ff',tKey:'dailyProtein'},{label:'CARBS',val:carb,unit:'g',color:'#ff9f40',tKey:'dailyCarbs'},{label:'CALORIES',val:cal,unit:'kcal',color:'#00e676',tKey:'dailyCalories'}].map(({label,val,unit,color,tKey})=>{
-                    const ts2=targetStatus(val,settings[tKey])
-                    return (<div key={label}><div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>{label}</span><span style={{fontFamily:'var(--font-head)',fontSize:20,color:ts2?ts2.color:color}}>{label==='CALORIES'?Number(val).toLocaleString():val}<span style={{fontSize:11,opacity:0.7}}>{unit}</span></span></div>{settings[tKey]?.value&&(<div style={{height:6,background:'var(--s3)',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',width:`${ts2?.pct||0}%`,background:ts2?ts2.color:color,borderRadius:3,transition:'width 0.5s ease'}}/></div>)}{ts2&&<div style={{fontFamily:'var(--font-mono)',fontSize:8,color:ts2.color,marginTop:3}}>{ts2.status}</div>}</div>)
-                  })}
-                </div>
-              ):(
-                <div style={{color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No nutrition logged today — <button onClick={()=>setView('log')} style={{background:'none',border:'none',color:'var(--accent)',fontFamily:'var(--font-mono)',fontSize:12,cursor:'pointer',textDecoration:'underline'}}>log now</button></div>
-              )}
-            </div>
+            <AIAssistant logs={logs} activities={activities} whoopData={whoopData} settings={settings}/>
           </div>
 
           <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 22px',marginBottom:12}}>
@@ -551,15 +544,168 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
               {hrvData.some(r=>r.hrv||r.rhr)?(<ResponsiveContainer width='100%' height={200}><LineChart data={hrvData} margin={{top:4,right:8,left:-12,bottom:0}}><CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/><XAxis dataKey='date' interval={xInterval} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><YAxis tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/><Tooltip contentStyle={TT}/><Line type='monotone' dataKey='hrv' stroke='#ff9f40' strokeWidth={2} dot={false} connectNulls={false} name='HRV'/><Line type='monotone' dataKey='rhr' stroke='#ff6b6b' strokeWidth={2} dot={false} connectNulls={false} name='Resting HR' strokeDasharray='5 3'/><Legend formatter={v=><span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#6b7a96'}}>{v.toUpperCase()}</span>}/></LineChart></ResponsiveContainer>):<ChartEmpty/>}
             </ChartCard>
           </div>
-          <RecentHistory logs={logs} settings={settings} setView={setView}/>
+          <RecentHistory logs={logs} settings={settings} activities={activities} setView={setView}/>
         </>
       )}
     </div>
   )
 }
 
-function ChartCard({title,sub,children}){
-  return <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 20px 16px'}}><div style={{marginBottom:16}}><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>{title}</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{sub}</div></div>{children}</div>
+// ─── AI PERSONAL ASSISTANT ────────────────────────────────────────────────────
+function AIAssistant({ logs, activities, whoopData, settings }) {
+  const [messages, setMessages] = useState([])
+  const [input,    setInput   ] = useState('')
+  const [loading,  setLoading ] = useState(false)
+  const [started,  setStarted ] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  const buildContext = () => {
+    const today = todayStr()
+    const last7  = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-i); return d.toISOString().split('T')[0] })
+
+    // Recent Whoop data
+    const recentWhoop = last7.map(d => {
+      const w = whoopData?.[d]
+      if(!w) return null
+      return `${d}: Recovery ${w.recovery_score||'?'}%, HRV ${w.hrv||'?'}ms, RHR ${w.rhr||'?'}bpm, Sleep ${w.sleep_score||'?'}%, Hours ${w.hours_slept||'?'}h`
+    }).filter(Boolean)
+
+    // Recent nutrition
+    const recentNutrition = last7.map(d => {
+      const l = logs[d]
+      if(!l?.nutrition?.calories) return null
+      return `${d}: ${l.nutrition.calories}kcal, ${l.nutrition.protein||0}g protein, ${l.nutrition.carbs||0}g carbs`
+    }).filter(Boolean)
+
+    // Recent activities
+    const recentActivities = (activities||[]).slice(0,10).map(a => {
+      const type = a.custom_type || a.strava_type
+      const km   = a.data?.distance ? `${(a.data.distance/1000).toFixed(1)}km` : ''
+      const mins = a.data?.moving_time ? `${Math.round(a.data.moving_time/60)}min` : ''
+      const name = a.custom_name || a.data?.name || type
+      return `${(a.start_date||'').split('T')[0]}: ${name} (${type}) ${km} ${mins}`.trim()
+    })
+
+    // Targets
+    const targets = Object.entries(settings).map(([k,v]) => `${v.label}: ${v.value}${v.unit}`).join(', ')
+
+    return `You are WG Hub's personal performance assistant for Will, an ultra-marathon runner training for a 100km race. Be concise, direct and data-driven. Use the training data below to answer questions and proactively flag issues.
+
+TARGETS: ${targets}
+
+RECENT WHOOP DATA (last 7 days):
+${recentWhoop.length ? recentWhoop.join('\n') : 'No Whoop data available'}
+
+RECENT NUTRITION (last 7 days):
+${recentNutrition.length ? recentNutrition.join('\n') : 'No nutrition logged'}
+
+RECENT ACTIVITIES (last 10):
+${recentActivities.length ? recentActivities.join('\n') : 'No recent activities'}
+
+TODAY: ${today}
+Answer in 2-4 sentences max unless asked for detail. Use specific numbers from the data.`
+  }
+
+  const sendMessage = async (text) => {
+    if(!text.trim() || loading) return
+    const userMsg = { role:'user', content: text }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    setLoading(true)
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: buildContext(),
+          messages: newMessages,
+        }),
+      })
+      const data = await res.json()
+      const reply = data.content?.[0]?.text || 'Sorry, I could not generate a response.'
+      setMessages(p => [...p, { role:'assistant', content: reply }])
+    } catch(e) {
+      setMessages(p => [...p, { role:'assistant', content: 'Connection error. Try again.' }])
+    }
+    setLoading(false)
+  }
+
+  const quickPrompts = [
+    'How is my recovery looking?',
+    'Am I on track for my weekly KM target?',
+    'Any patterns in my sleep data?',
+    'What should I focus on today?',
+  ]
+
+  if(!started) {
+    return (
+      <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 22px',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+            <div style={{width:8,height:8,borderRadius:'50%',background:'var(--accent)',animation:'pulse 2s infinite'}}/>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px'}}>WG HUB · PERSONAL ASSISTANT</div>
+          </div>
+          <div style={{fontFamily:'var(--font-head)',fontSize:22,marginBottom:8}}>TRAINING <span style={{color:'var(--accent)'}}>ASSISTANT</span></div>
+          <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:16}}>Your AI coach with full access to your Strava, Whoop and nutrition data. Ask anything about your training.</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:16}}>
+            {quickPrompts.map(p=>(
+              <button key={p} onClick={()=>{ setStarted(true); setTimeout(()=>sendMessage(p),100) }} style={{background:'var(--s2)',border:'1px solid var(--border2)',borderRadius:7,padding:'8px 10px',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',cursor:'pointer',textAlign:'left',lineHeight:1.4,transition:'all 0.15s'}} onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border2)'}>{p}</button>
+            ))}
+          </div>
+        </div>
+        <button onClick={()=>setStarted(true)} style={{background:'var(--accent)',color:'var(--bg)',border:'none',borderRadius:8,padding:'9px',fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,cursor:'pointer',letterSpacing:1,width:'100%'}}>OPEN ASSISTANT</button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'16px',display:'flex',flexDirection:'column',height:280}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <div style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)'}}/>
+          <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>WG HUB ASSISTANT</span>
+        </div>
+        <button onClick={()=>{setStarted(false);setMessages([])}} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}}>✕</button>
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,marginBottom:10}}>
+        {messages.length===0&&(
+          <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',textAlign:'center',marginTop:20}}>Ask me anything about your training...</div>
+        )}
+        {messages.map((m,i)=>(
+          <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
+            <div style={{maxWidth:'85%',background:m.role==='user'?'var(--accent)':'var(--s2)',color:m.role==='user'?'var(--bg)':'var(--text)',borderRadius:10,padding:'8px 12px',fontSize:12,lineHeight:1.5,fontFamily:m.role==='user'?'var(--font-mono)':'var(--font-body)'}}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:'flex',gap:4,padding:'8px 12px'}}>
+            {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)',animation:`bounce 1s ${i*0.15}s infinite`}}/>)}
+          </div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+
+      <div style={{display:'flex',gap:8'}}>
+        <input
+          type='text' value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&sendMessage(input)}
+          placeholder='Ask about your training...'
+          style={{flex:1,fontSize:12,borderRadius:8}}
+        />
+        <button onClick={()=>sendMessage(input)} disabled={loading||!input.trim()} style={{background:input.trim()?'var(--accent)':'var(--s3)',color:input.trim()?'var(--bg)':'var(--muted)',border:'none',borderRadius:8,padding:'0 14px',cursor:input.trim()?'pointer':'default',fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,transition:'all 0.15s',whiteSpace:'nowrap'}}>→</button>
+      </div>
+    </div>
+  )
+}
+  return <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 20px 16px'}}><div style={{marginBottom:16,display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}><div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>{title}</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{sub}</div></div>{action&&<div style={{flexShrink:0}}>{action}</div>}</div>{children}</div>
 }
 
 // ─── NUTRITION CHART ──────────────────────────────────────────────────────────
@@ -626,8 +772,10 @@ function NutritionChart({ logs, days, settings, xInterval, periodLabel }) {
   )
 }
 
-// ─── GYM & YOGA DURATION CHART ───────────────────────────────────────────────
+// ─── GYM & YOGA CHART — HEATMAP / DONUT TOGGLE ───────────────────────────────
 function GymChart({ logs, days, activities, periodLabel }) {
+  const [chartType, setChartType] = useState('heatmap')
+
   const SESSION_COLORS = {
     'Bicep / Shoulders': '#40a9ff',
     'Chest / Triceps':   '#b388ff',
@@ -636,106 +784,179 @@ function GymChart({ logs, days, activities, periodLabel }) {
     'Legs':              '#ff6b6b',
     'Weight Training':   '#ffd666',
     'Yoga':              '#80deea',
-  }
-  const ALL_KEYS = Object.keys(SESSION_COLORS)
-  const dateSet  = new Set(days)
-
-  const wkKey = (date) => {
-    const dt=new Date(date+'T00:00:00'), mon=new Date(dt)
-    mon.setDate(dt.getDate()-(dt.getDay()===0?6:dt.getDay()-1))
-    return [mon.toISOString().split('T')[0], `${mon.getDate()}/${mon.getMonth()+1}`]
+    'Functional':        '#fc4c02',
   }
 
-  const wkMap = {}
+  const dateSet = new Set(days)
 
-  // ── Manual daily logs — yoga uses entered duration, gym types have no duration field
+  // Build session data per date
+  const sessionsByDate = {}
   days.forEach(d => {
     const l = logs[d]
-    const [k, weekLabel] = wkKey(d)
-    if(!wkMap[k]) wkMap[k] = { week: weekLabel }
-    const yogaMins = parseFloat(l?.exercise?.yoga?.duration) || 0
-    if(l?.exercise?.yoga?.on && yogaMins > 0) {
-      wkMap[k]['Yoga'] = (wkMap[k]['Yoga']||0) + yogaMins
-    }
+    if(!l) return
+    const types = []
+    if(l.exercise?.gym?.on && l.exercise.gym.types?.length) types.push(...l.exercise.gym.types)
+    if(l.exercise?.yoga?.on) types.push('Yoga')
+    if(types.length) sessionsByDate[d] = types
   })
 
-  // ── Strava activities — use actual moving_time for real duration
   ;(activities||[]).forEach(a => {
     const type = a.custom_type || a.strava_type
-    if(type !== 'gym' && type !== 'yoga') return
-    const date = (a.start_date||'').split('T')[0]
-    if(!date || !dateSet.has(date)) return
-
-    const mins = Math.round((a.data?.moving_time || 0) / 60)
-    if(!mins) return
-
+    if(type !== 'gym' && type !== 'yoga' && type !== 'functional') return
+    const date = new Date(a.start_date).toLocaleDateString('en-CA')
+    if(!dateSet.has(date)) return
     const l = logs[date]
-    const [k, weekLabel] = wkKey(date)
-    if(!wkMap[k]) wkMap[k] = { week: weekLabel }
-
-    if(type === 'gym') {
-      // Strava doesn't know muscle group — use 'Weight Training' unless manual log has typed session
-      if(l?.exercise?.gym?.on && l.exercise.gym.types?.length) {
-        // Manual log has type breakdown — split duration equally across logged types
-        const perType = Math.round(mins / l.exercise.gym.types.length)
-        l.exercise.gym.types.forEach(t => { wkMap[k][t] = (wkMap[k][t]||0) + perType })
-      } else {
-        wkMap[k]['Weight Training'] = (wkMap[k]['Weight Training']||0) + mins
-      }
-    } else if(type === 'yoga') {
-      // Prefer Strava duration; only skip if manual yoga already has a duration entered
-      const hasManualDuration = l?.exercise?.yoga?.on && parseFloat(l?.exercise?.yoga?.duration) > 0
-      if(!hasManualDuration) wkMap[k]['Yoga'] = (wkMap[k]['Yoga']||0) + mins
+    if(!sessionsByDate[date]) {
+      sessionsByDate[date] = type === 'yoga' ? ['Yoga'] : type === 'functional' ? ['Functional'] : ['Weight Training']
     }
   })
 
-  const data        = Object.entries(wkMap).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v)
-  const typeTotals  = {}
-  ALL_KEYS.forEach(k => { typeTotals[k] = data.reduce((s,w)=>s+(w[k]||0), 0) })
-  const totalMins   = ALL_KEYS.reduce((s,k)=>s+typeTotals[k], 0)
-  const activeKeys  = ALL_KEYS.filter(k => typeTotals[k] > 0)
-  const fmtMins     = m => m>=60 ? `${Math.floor(m/60)}h${m%60>0?` ${m%60}m`:''}` : `${m}m`
+  // Totals for donut
+  const typeTotals = {}
+  Object.values(sessionsByDate).forEach(types => {
+    types.forEach(t => { typeTotals[t] = (typeTotals[t] || 0) + 1 })
+  })
+  const totalSessions = Object.values(typeTotals).reduce((s,v) => s+v, 0)
+  const activeTypes = Object.entries(typeTotals).sort(([,a],[,b]) => b-a)
+
+  // Heatmap — show all days in period as a grid
+  const HeatmapView = () => {
+    const weeks = []
+    let week = []
+    const startDow = new Date(days[0]+'T00:00:00').getDay()
+    for(let i=0; i<startDow; i++) week.push(null) // padding
+    days.forEach(d => {
+      week.push(d)
+      if(week.length === 7) { weeks.push(week); week = [] }
+    })
+    if(week.length) { while(week.length<7) week.push(null); weeks.push(week) }
+
+    const DOW = ['M','T','W','T','F','S','S']
+    return (
+      <div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>
+          {DOW.map((d,i) => <div key={i} style={{fontFamily:'var(--font-mono)',fontSize:8,color:'var(--muted)',textAlign:'center'}}>{d}</div>)}
+        </div>
+        {weeks.map((week,wi) => (
+          <div key={wi} style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:2}}>
+            {week.map((d,di) => {
+              const types = d ? sessionsByDate[d] : null
+              const color = types ? SESSION_COLORS[types[0]] || '#00e676' : null
+              const hasRun = d && (activities||[]).some(a => {
+                const aType = a.custom_type || a.strava_type
+                return aType === 'run' && new Date(a.start_date).toLocaleDateString('en-CA') === d
+              })
+              return (
+                <div key={di} title={d ? `${fmtDate(d)}${types?' · '+types.join(', '):''}${hasRun?' · Run':''}` : ''}
+                  style={{
+                    aspectRatio:'1',
+                    borderRadius:3,
+                    background: !d ? 'transparent' : types ? `${color}99` : hasRun ? 'rgba(0,230,118,0.2)' : 'var(--s3)',
+                    border: types ? `1px solid ${color}66` : hasRun ? '1px solid rgba(0,230,118,0.3)' : '1px solid var(--border)',
+                    cursor: d ? 'pointer' : 'default',
+                    position: 'relative',
+                  }}
+                >
+                  {types?.length > 1 && <div style={{position:'absolute',bottom:1,right:1,width:4,height:4,borderRadius:'50%',background:'var(--accent)'}}/>}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+        <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:10}}>
+          <span style={{display:'flex',alignItems:'center',gap:4,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
+            <span style={{width:10,height:10,borderRadius:2,background:'rgba(0,230,118,0.2)',border:'1px solid rgba(0,230,118,0.3)',display:'inline-block'}}/>Run
+          </span>
+          {Object.entries(SESSION_COLORS).slice(0,4).map(([k,c]) => typeTotals[k] > 0 && (
+            <span key={k} style={{display:'flex',alignItems:'center',gap:4,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
+              <span style={{width:10,height:10,borderRadius:2,background:`${c}99`,border:`1px solid ${c}66`,display:'inline-block'}}/>{k.split('/')[0].trim()}
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Donut view
+  const DonutView = () => {
+    if(!totalSessions) return <div style={{height:180,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No sessions in period</div>
+    const r=70, cx=90, cy=90, circumference=2*Math.PI*r
+    let offset=0
+    const slices = activeTypes.map(([type,count]) => {
+      const pct=count/totalSessions, dash=pct*circumference, gap=circumference-dash
+      const slice={type,count,pct,dash,gap,offset,color:SESSION_COLORS[type]||'#888'}
+      offset+=dash; return slice
+    })
+    return (
+      <div style={{display:'flex',alignItems:'center',gap:24}}>
+        <svg width={180} height={180} style={{flexShrink:0}}>
+          {slices.map(({type,dash,gap,offset,color}) => (
+            <circle key={type} cx={cx} cy={cy} r={r}
+              fill='none' stroke={color} strokeWidth={28}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={circumference/4-offset}
+              style={{transition:'stroke-dasharray 0.5s ease'}}/>
+          ))}
+          <text x={cx} y={cy-8} textAnchor='middle' style={{fontFamily:'var(--font-head)',fontSize:28,fill:'var(--text)'}}>{totalSessions}</text>
+          <text x={cx} y={cy+12} textAnchor='middle' style={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--muted)'}}>SESSIONS</text>
+        </svg>
+        <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+          {activeTypes.map(([type,count]) => (
+            <div key={type}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>{type}</span>
+                <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:SESSION_COLORS[type]||'#888',fontWeight:600}}>×{count}</span>
+              </div>
+              <div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${(count/totalSessions)*100}%`,background:SESSION_COLORS[type]||'#888',borderRadius:2}}/>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <ChartCard title='GYM & YOGA DURATION' sub={`${periodLabel||'Last 7 days'} · ${fmtMins(totalMins)} total · Strava + manual yoga`}>
-      {data.length>0 && totalMins>0 ? (
-        <>
-          <div style={{display:'flex',flexWrap:'wrap',gap:10,marginBottom:14}}>
-            {activeKeys.map(k=>(
-              <span key={k} style={{display:'flex',alignItems:'center',gap:5,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
-                <span style={{width:8,height:8,borderRadius:2,background:SESSION_COLORS[k],display:'inline-block'}}/>
-                {k}
-                <span style={{color:SESSION_COLORS[k],fontWeight:600}}>{fmtMins(typeTotals[k])}</span>
-              </span>
-            ))}
-          </div>
-          <ResponsiveContainer width='100%' height={180}>
-            <BarChart data={data} margin={{top:4,right:8,left:-16,bottom:0}}>
-              <CartesianGrid strokeDasharray='3 3' stroke='rgba(255,255,255,0.05)'/>
-              <XAxis dataKey='week' tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}}/>
-              <YAxis allowDecimals={false} tick={{fontFamily:'var(--font-mono)',fontSize:10,fill:'#6b7a96'}} unit='m' tickFormatter={v=>v>=60?`${Math.floor(v/60)}h`:v}/>
-              <Tooltip contentStyle={TT} formatter={(v,n)=>[fmtMins(v),n]} cursor={{fill:'rgba(255,255,255,0.04)'}}/>
-              {activeKeys.map((k,i)=>(
-                <Bar key={k} dataKey={k} stackId='g' fill={SESSION_COLORS[k]} name={k}
-                  radius={i===activeKeys.length-1?[4,4,0,0]:[0,0,0,0]}/>
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </>
-      ):(
-        <div style={{height:200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>
-          <span>No duration data found for this period</span>
-          <span style={{fontSize:10}}>Duration comes from Strava activities · manual yoga duration field</span>
+    <ChartCard
+      title='GYM & YOGA SESSIONS'
+      sub={`${periodLabel||'Last 7 days'} · ${totalSessions} session${totalSessions!==1?'s':''} · Strava + manual`}
+      action={
+        <div style={{display:'flex',gap:4}}>
+          {[{k:'heatmap',l:'HEATMAP'},{k:'donut',l:'DONUT'}].map(({k,l})=>(
+            <button key={k} onClick={()=>setChartType(k)} style={{background:chartType===k?'var(--accent)':'var(--s3)',color:chartType===k?'var(--bg)':'var(--muted)',border:'none',borderRadius:5,padding:'3px 10px',fontFamily:'var(--font-mono)',fontSize:9,cursor:'pointer',letterSpacing:1}}>{l}</button>
+          ))}
         </div>
-      )}
+      }
+    >
+      {chartType==='heatmap' ? <HeatmapView/> : <DonutView/>}
     </ChartCard>
   )
 }
 
 // ─── RECENT HISTORY ───────────────────────────────────────────────────────────
-function RecentHistory({ logs, settings, setView }) {
-  const entries=Object.keys(logs).sort().reverse().slice(0,30)
-  if(!entries.length) return null
+function RecentHistory({ logs, settings, activities, setView }) {
+  // Build Strava KM lookup by date
+  const stravaKmByDate = {}
+  ;(activities||[]).forEach(a => {
+    const type = a.custom_type || a.strava_type
+    if(type !== 'run') return
+    const km = (a.data?.distance || 0) / 1000
+    if(!km) return
+    const date = new Date(a.start_date).toLocaleDateString('en-CA')
+    stravaKmByDate[date] = (stravaKmByDate[date] || 0) + km
+  })
+
+  const getKm = (date) => {
+    if(stravaKmByDate[date]) return stravaKmByDate[date].toFixed(1)
+    const log = logs[date]
+    if(log?.exercise?.runs) { const t=log.exercise.runs.reduce((s,r)=>s+(parseFloat(r.distance)||0),0); return t>0?t.toFixed(1):null }
+    return parseFloat(log?.exercise?.running?.distance)||null
+  }
+
+  // Show dates that have either logs OR Strava runs
+  const allDates = [...new Set([...Object.keys(logs), ...Object.keys(stravaKmByDate)])].sort().reverse().slice(0,30)
+  if(!allDates.length) return null
   const cell=(val,unit='',tKey=null)=>{
     const ts=tKey?targetStatus(val,settings[tKey]):null
     return <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:ts?ts.color:val?'var(--text)':'var(--muted2)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{val?`${val}${unit}`:'—'}</td>
@@ -743,7 +964,7 @@ function RecentHistory({ logs, settings, setView }) {
   return (
     <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden'}}>
       <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>RECENT LOG HISTORY</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>Last {entries.length} entries · click any row to edit</div></div>
+        <div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>RECENT LOG HISTORY</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>Last {allDates.length} entries · click any row to edit</div></div>
         <div style={{display:'flex',alignItems:'center',gap:12,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
           {[['#00e676','On target'],['#ff9f40','Within 15%'],['#ff6b6b','Off target']].map(([c,l])=>(
             <span key={l} style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:8,height:8,borderRadius:2,background:c,display:'inline-block'}}/>{l}</span>
@@ -754,12 +975,16 @@ function RecentHistory({ logs, settings, setView }) {
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead><tr style={{background:'var(--s2)'}}>{['DATE','KM RUN','WEIGHT','SLEEP','RECOVERY','HRV','RHR','CALORIES','PROTEIN',''].map(h=><th key={h} style={{padding:'8px 12px',fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',textAlign:'left',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{h}</th>)}</tr></thead>
           <tbody>
-            {entries.map(date=>{
+            {allDates.map(date=>{
               const l=logs[date]; const isToday=date===todayStr()
+              const km = getKm(date)
+              const hasStrava = !!stravaKmByDate[date]
               return (
                 <tr key={date} onClick={()=>setView('log')} style={{background:isToday?'rgba(0,230,118,0.04)':'transparent',cursor:'pointer',transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='var(--s2)'} onMouseLeave={e=>e.currentTarget.style.background=isToday?'rgba(0,230,118,0.04)':'transparent'}>
                   <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,color:isToday?'var(--accent)':'var(--text)',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>{fmtDate(date)}{isToday&&<span style={{marginLeft:6,fontSize:9,color:'var(--accent)'}}>TODAY</span>}</td>
-                  {cell(l?.exercise?.runs?.reduce((s,r)=>s+(parseFloat(r.distance)||0),0)||l?.exercise?.running?.distance,'km','weeklyKm')}
+                  <td style={{padding:'9px 12px',fontFamily:'var(--font-mono)',fontSize:12,borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}}>
+                    {km ? <span style={{color:hasStrava?'#fc4c02':'var(--accent)'}}>{km}km{hasStrava&&<span style={{fontSize:9,marginLeft:4,opacity:0.7}}>S</span>}</span> : <span style={{color:'var(--muted2)'}}>—</span>}
+                  </td>
                   {cell(l?.body?.weight,'kg','weightTarget')}
                   {cell(l?.sleep?.sleepScore,'/100','sleepScore')}
                   {cell(l?.sleep?.recoveryScore,'/100','recoveryScore')}
@@ -1314,12 +1539,12 @@ function TVMode({ logs, settings, plan, activities, whoopData, setView }) {
         </div>
         {/* Nutrition totals */}
         <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'22px 24px'}}>
-          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:12}}>NUTRITION · {periodLabel} {nutritionPeriod.days>0?`· ${nutritionPeriod.days} days logged`:''}</div>
-          {nutritionAvg?(
+          <div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:'1.5px',marginBottom:12}}>NUTRITION TOTALS · {periodLabel} {nutritionPeriod.days>0?`· ${nutritionPeriod.days} days`:''}</div>
+          {nutritionPeriod.days>0?(
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {[{l:'AVG CALORIES',v:nutritionAvg.calories,unit:'kcal',color:'#00e676',tKey:'dailyCalories'},{l:'AVG PROTEIN',v:nutritionAvg.protein,unit:'g',color:'#40a9ff',tKey:'dailyProtein'},{l:'AVG CARBS',v:nutritionAvg.carbs,unit:'g',color:'#ff9f40',tKey:'dailyCarbs'}].map(({l,v,unit,color,tKey})=>{
-                const ts2=targetStatus(v,settings[tKey])
-                return (<div key={l}><div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:3}}><span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>{l}</span><span style={{fontFamily:'var(--font-head)',fontSize:22,color:ts2?ts2.color:color}}>{v}<span style={{fontFamily:'var(--font-mono)',fontSize:10,opacity:0.6}}>{unit}</span></span></div><div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}><div style={{height:'100%',width:`${ts2?.pct||0}%`,background:ts2?ts2.color:color,borderRadius:2}}/></div></div>)
+              {[{l:'CALORIES',v:Math.round(nutritionPeriod.calories).toLocaleString(),unit:'kcal',color:'#00e676',tKey:'dailyCalories',daily:Math.round(nutritionPeriod.calories/nutritionPeriod.days)},{l:'PROTEIN',v:Math.round(nutritionPeriod.protein).toLocaleString(),unit:'g',color:'#40a9ff',tKey:'dailyProtein',daily:Math.round(nutritionPeriod.protein/nutritionPeriod.days)},{l:'CARBS',v:Math.round(nutritionPeriod.carbs).toLocaleString(),unit:'g',color:'#ff9f40',tKey:'dailyCarbs',daily:Math.round(nutritionPeriod.carbs/nutritionPeriod.days)}].map(({l,v,unit,color,tKey,daily})=>{
+                const ts2=targetStatus(daily,settings[tKey])
+                return (<div key={l}><div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:3}}><span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1}}>{l}</span><span style={{fontFamily:'var(--font-head)',fontSize:22,color:ts2?ts2.color:color}}>{v}<span style={{fontFamily:'var(--font-mono)',fontSize:10,opacity:0.6}}>{unit}</span></span></div><div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}><div style={{height:'100%',width:`${ts2?.pct||0}%`,background:ts2?ts2.color:color,borderRadius:2}}/></div><div style={{fontFamily:'var(--font-mono)',fontSize:8,color:'var(--muted2)',marginTop:2}}>{daily}{unit}/day avg</div></div>)
               })}
             </div>
           ):(
