@@ -774,9 +774,7 @@ function NutritionChart({ logs, days, settings, xInterval, periodLabel }) {
   )
 }
 
-// ─── GYM & YOGA CHART — HEATMAP / DONUT TOGGLE ───────────────────────────────
 function GymChart({ logs, days, activities, periodLabel }) {
-  const [chartType, setChartType] = useState('heatmap')
 
   const SESSION_COLORS = {
     'Bicep / Shoulders': '#40a9ff',
@@ -821,117 +819,12 @@ function GymChart({ logs, days, activities, periodLabel }) {
   const totalSessions = Object.values(typeTotals).reduce((s,v) => s+v, 0)
   const activeTypes = Object.entries(typeTotals).sort(([,a],[,b]) => b-a)
 
-  // Heatmap — show all days in period as a grid
-  const HeatmapView = () => {
-    const weeks = []
-    let week = []
-    const startDow = new Date(days[0]+'T00:00:00').getDay()
-    for(let i=0; i<startDow; i++) week.push(null) // padding
-    days.forEach(d => {
-      week.push(d)
-      if(week.length === 7) { weeks.push(week); week = [] }
-    })
-    if(week.length) { while(week.length<7) week.push(null); weeks.push(week) }
-
-    const DOW = ['M','T','W','T','F','S','S']
-    return (
-      <div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>
-          {DOW.map((d,i) => <div key={i} style={{fontFamily:'var(--font-mono)',fontSize:8,color:'var(--muted)',textAlign:'center'}}>{d}</div>)}
-        </div>
-        {weeks.map((week,wi) => (
-          <div key={wi} style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:2}}>
-            {week.map((d,di) => {
-              const types = d ? sessionsByDate[d] : null
-              const color = types ? SESSION_COLORS[types[0]] || '#00e676' : null
-              const hasRun = d && (activities||[]).some(a => {
-                const aType = a.custom_type || a.strava_type
-                return aType === 'run' && new Date(a.start_date).toLocaleDateString('en-CA') === d
-              })
-              return (
-                <div key={di} title={d ? `${fmtDate(d)}${types?' · '+types.join(', '):''}${hasRun?' · Run':''}` : ''}
-                  style={{
-                    aspectRatio:'1',
-                    borderRadius:3,
-                    background: !d ? 'transparent' : types ? `${color}99` : hasRun ? 'rgba(0,230,118,0.2)' : 'var(--s3)',
-                    border: types ? `1px solid ${color}66` : hasRun ? '1px solid rgba(0,230,118,0.3)' : '1px solid var(--border)',
-                    cursor: d ? 'pointer' : 'default',
-                    position: 'relative',
-                  }}
-                >
-                  {types?.length > 1 && <div style={{position:'absolute',bottom:1,right:1,width:4,height:4,borderRadius:'50%',background:'var(--accent)'}}/>}
-                </div>
-              )
-            })}
-          </div>
-        ))}
-        <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:10}}>
-          <span style={{display:'flex',alignItems:'center',gap:4,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
-            <span style={{width:10,height:10,borderRadius:2,background:'rgba(0,230,118,0.2)',border:'1px solid rgba(0,230,118,0.3)',display:'inline-block'}}/>Run
-          </span>
-          {Object.entries(SESSION_COLORS).slice(0,4).map(([k,c]) => typeTotals[k] > 0 && (
-            <span key={k} style={{display:'flex',alignItems:'center',gap:4,fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)'}}>
-              <span style={{width:10,height:10,borderRadius:2,background:`${c}99`,border:`1px solid ${c}66`,display:'inline-block'}}/>{k.split('/')[0].trim()}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Donut view
-  const DonutView = () => {
-    if(!totalSessions) return <div style={{height:180,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No sessions in period</div>
-    const r=70, cx=90, cy=90, circumference=2*Math.PI*r
-    let offset=0
-    const slices = activeTypes.map(([type,count]) => {
-      const pct=count/totalSessions, dash=pct*circumference, gap=circumference-dash
-      const slice={type,count,pct,dash,gap,offset,color:SESSION_COLORS[type]||'#888'}
-      offset+=dash; return slice
-    })
-    return (
-      <div style={{display:'flex',alignItems:'center',gap:24}}>
-        <svg width={180} height={180} style={{flexShrink:0}}>
-          {slices.map(({type,dash,gap,offset,color}) => (
-            <circle key={type} cx={cx} cy={cy} r={r}
-              fill='none' stroke={color} strokeWidth={28}
-              strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset={circumference/4-offset}
-              style={{transition:'stroke-dasharray 0.5s ease'}}/>
-          ))}
-          <text x={cx} y={cy-8} textAnchor='middle' style={{fontFamily:'var(--font-head)',fontSize:28,fill:'var(--text)'}}>{totalSessions}</text>
-          <text x={cx} y={cy+12} textAnchor='middle' style={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--muted)'}}>SESSIONS</text>
-        </svg>
-        <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
-          {activeTypes.map(([type,count]) => (
-            <div key={type}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>{type}</span>
-                <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:SESSION_COLORS[type]||'#888',fontWeight:600}}>×{count}</span>
-              </div>
-              <div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}>
-                <div style={{height:'100%',width:`${(count/totalSessions)*100}%`,background:SESSION_COLORS[type]||'#888',borderRadius:2}}/>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <ChartCard
       title='GYM & YOGA SESSIONS'
       sub={`${periodLabel||'Last 7 days'} · ${totalSessions} session${totalSessions!==1?'s':''} · Strava + manual`}
-      action={
-        <div style={{display:'flex',gap:4}}>
-          {[{k:'heatmap',l:'HEATMAP'},{k:'donut',l:'DONUT'}].map(({k,l})=>(
-            <button key={k} onClick={()=>setChartType(k)} style={{background:chartType===k?'var(--accent)':'var(--s3)',color:chartType===k?'var(--bg)':'var(--muted)',border:'none',borderRadius:5,padding:'3px 10px',fontFamily:'var(--font-mono)',fontSize:9,cursor:'pointer',letterSpacing:1}}>{l}</button>
-          ))}
-        </div>
-      }
     >
-      {chartType==='heatmap' ? <HeatmapView/> : <DonutView/>}
+      <DonutView/>
     </ChartCard>
   )
 }
