@@ -824,7 +824,43 @@ function GymChart({ logs, days, activities, periodLabel }) {
       title='GYM & YOGA SESSIONS'
       sub={`${periodLabel||'Last 7 days'} · ${totalSessions} session${totalSessions!==1?'s':''} · Strava + manual`}
     >
-      <DonutView/>
+      {totalSessions===0?(
+        <div style={{height:180,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--muted2)',fontFamily:'var(--font-mono)',fontSize:12}}>No sessions in period</div>
+      ):(()=>{
+        const r=70, cx=90, cy=90, circumference=2*Math.PI*r
+        let offset=0
+        const slices = activeTypes.map(([type,count]) => {
+          const pct=count/totalSessions, dash=pct*circumference, gap=circumference-dash
+          const slice={type,count,dash,gap,offset,color:SESSION_COLORS[type]||'#888'}
+          offset+=dash; return slice
+        })
+        return (
+          <div style={{display:'flex',alignItems:'center',gap:24}}>
+            <svg width={180} height={180} style={{flexShrink:0}}>
+              {slices.map(({type,dash,gap,offset,color}) => (
+                <circle key={type} cx={cx} cy={cy} r={r} fill='none' stroke={color} strokeWidth={28}
+                  strokeDasharray={`${dash} ${gap}`} strokeDashoffset={circumference/4-offset}
+                  style={{transition:'stroke-dasharray 0.5s ease'}}/>
+              ))}
+              <text x={cx} y={cy-8} textAnchor='middle' style={{fontFamily:'var(--font-head)',fontSize:28,fill:'var(--text)'}}>{totalSessions}</text>
+              <text x={cx} y={cy+12} textAnchor='middle' style={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--muted)'}}>SESSIONS</text>
+            </svg>
+            <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+              {activeTypes.map(([type,count]) => (
+                <div key={type}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                    <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>{type}</span>
+                    <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:SESSION_COLORS[type]||'#888',fontWeight:600}}>×{count}</span>
+                  </div>
+                  <div style={{height:4,background:'var(--s3)',borderRadius:2,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${(count/totalSessions)*100}%`,background:SESSION_COLORS[type]||'#888',borderRadius:2}}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
     </ChartCard>
   )
 }
