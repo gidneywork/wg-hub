@@ -1,4 +1,4 @@
-import { supabaseServer } from '../../../../lib/supabase-server'
+import { supabaseServer } from '../../../lib/supabase-server'
 
 // GET /api/audit — fetch audit log with optional filtering
 export async function GET(request) {
