@@ -570,9 +570,13 @@ function AIAssistant({ logs, activities, whoopData, settings }) {
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)) } catch {}
-    // Scroll only within the chat box, not the whole page
     if(chatBoxRef.current) chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight
   }, [messages])
+
+  // On initial mount, scroll to bottom immediately to show latest messages
+  useEffect(() => {
+    if(chatBoxRef.current) chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight
+  }, [])
 
   // Auto-run daily summary once per calendar day only
   useEffect(() => {
@@ -817,26 +821,17 @@ function GymChart({ logs, days, activities, periodLabel }) {
 
   const dateSet = new Set(days)
 
-  // Build session data per date
+  // Build session data purely from Strava activities type field
   const sessionsByDate = {}
-  days.forEach(d => {
-    const l = logs[d]
-    if(!l) return
-    const types = []
-    if(l.exercise?.gym?.on && l.exercise.gym.types?.length) types.push(...l.exercise.gym.types)
-    if(l.exercise?.yoga?.on) types.push('Yoga')
-    if(types.length) sessionsByDate[d] = types
-  })
-
   ;(activities||[]).forEach(a => {
     const type = a.custom_type || a.strava_type
     if(type !== 'gym' && type !== 'yoga' && type !== 'functional') return
     const date = new Date(a.start_date).toLocaleDateString('en-CA')
     if(!dateSet.has(date)) return
-    const l = logs[date]
-    if(!sessionsByDate[date]) {
-      sessionsByDate[date] = type === 'yoga' ? ['Yoga'] : type === 'functional' ? ['Functional'] : ['Weight Training']
-    }
+    const label = type === 'yoga' ? 'Yoga' : type === 'functional' ? 'Functional' : 'Weight Training'
+    if(!sessionsByDate[date]) sessionsByDate[date] = []
+    // Avoid duplicates on same date/type
+    if(!sessionsByDate[date].includes(label)) sessionsByDate[date].push(label)
   })
 
   // Totals for donut
