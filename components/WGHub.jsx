@@ -581,14 +581,21 @@ function AIAssistant({ logs, activities, whoopData, settings }) {
   // Auto-run daily summary once per calendar day only
   useEffect(() => {
     const today = todayStr()
-    const lastSummaryDate = localStorage.getItem(SUMMARY_KEY)
-    if(lastSummaryDate === today) return // already ran today
-    // Small delay so buildContext has access to latest data
-    const t = setTimeout(() => {
-      sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
-      localStorage.setItem(SUMMARY_KEY, today)
-    }, 800)
-    return () => clearTimeout(t)
+    try {
+      const lastSummaryDate = localStorage.getItem(SUMMARY_KEY)
+      if(lastSummaryDate === today) return
+      const t = setTimeout(() => {
+        sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
+        try { localStorage.setItem(SUMMARY_KEY, today) } catch {}
+      }, 800)
+      return () => clearTimeout(t)
+    } catch {
+      // localStorage blocked (Safari private mode) — run summary anyway
+      const t = setTimeout(() => {
+        sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
+      }, 800)
+      return () => clearTimeout(t)
+    }
   }, [])
 
   const buildContext = () => {
@@ -654,17 +661,24 @@ Format responses using this structure when giving weekly summaries:
     setInput('')
     setLoading(true)
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 25000)
+
     try {
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages, systemPrompt: buildContext() }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
       const data = await res.json()
-      const reply = data.reply || data.error || 'Sorry, something went wrong.'
+      const reply = data.reply || `Error: ${data.error || 'Something went wrong.'}`
       setMessages(p => [...p, { role:'assistant', content: reply }])
     } catch(e) {
-      setMessages(p => [...p, { role:'assistant', content: 'Connection error. Try again.' }])
+      clearTimeout(timeout)
+      const msg = e.name==='AbortError' ? 'Request timed out — try a shorter question.' : 'Connection error — check your internet and try again.'
+      setMessages(p => [...p, { role:'assistant', content: msg }])
     }
     setLoading(false)
   }

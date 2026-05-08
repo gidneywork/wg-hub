@@ -1,3 +1,5 @@
+export const maxDuration = 30 // Extend Vercel function timeout to 30s
+
 export async function POST(request) {
   try {
     const { messages, systemPrompt } = await request.json()
@@ -5,20 +7,20 @@ export async function POST(request) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Content-Type':            'application/json',
-        'x-api-key':               process.env.ANTHROPIC_API_KEY,
-        'anthropic-version':       '2023-06-01',
+        'Content-Type':      'application/json',
+        'x-api-key':         process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 600,
         system:     systemPrompt,
         messages,
       }),
     })
 
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error?.message || 'API error')
+    if (!res.ok) throw new Error(data.error?.message || `API error ${res.status}`)
 
     return Response.json({ reply: data.content?.[0]?.text || 'No response generated.' })
 
