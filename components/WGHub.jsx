@@ -705,6 +705,8 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
     </div>
   )
 }
+
+function ChartCard({title,sub,children,action}){
   return <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 20px 16px'}}><div style={{marginBottom:16,display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}><div><div style={{fontFamily:'var(--font-mono)',fontSize:11,fontWeight:600,letterSpacing:'1.5px'}}>{title}</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{sub}</div></div>{action&&<div style={{flexShrink:0}}>{action}</div>}</div>{children}</div>
 }
 
