@@ -556,10 +556,15 @@ function AIAssistant({ logs, activities, whoopData, settings }) {
   const [messages, setMessages] = useState([])
   const [input,    setInput   ] = useState('')
   const [loading,  setLoading ] = useState(false)
-  const [started,  setStarted ] = useState(false)
+  const [started,  setStarted ] = useState(true)
   const bottomRef = useRef(null)
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // Auto-load weekly summary on first render
+  useEffect(() => {
+    sendMessage('Give me a concise summary of my training week so far — hits, misses, and one thing to focus on.')
+  }, [])
 
   const buildContext = () => {
     const today = todayStr()
