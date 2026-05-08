@@ -485,7 +485,7 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
           </div>
         )}
         <div style={{display:'flex',gap:20,marginLeft:'auto',flexWrap:'wrap'}}>
-          {[{l:`KM (${period})`,v:`${totalKm.toFixed(1)}km`,c:'var(--accent)'},{l:'DAYS LOGGED',v:logsCount,c:'var(--blue)'},{l:'AVG SLEEP',v:avgSleep?`${avgSleep}/100`:'—',c:'var(--purple)'},{l:'AVG HRV',v:avgHrv??'—',c:'var(--orange)'},{l:'LOAD SCORE',v:Math.round(load),c:'var(--red)'},{l:'STREAK',v:`${streak}d`,c:'var(--accent)'}].map(({l,v,c})=>(
+          {[{l:`KM (${period})`,v:`${totalKm.toFixed(1)}km`,c:'var(--accent)'},{l:'DAYS LOGGED',v:logsCount,c:'var(--blue)'},{l:'AVG SLEEP',v:avgSleep?`${avgSleep}/100`:'—',c:'var(--purple)'},{l:'AVG HRV',v:avgHrv??'—',c:'var(--orange)'},{l:'AVG RHR',v:(()=>{ const vals=days.map(d=>parseFloat(getMerged(d)?.body?.rhr)).filter(v=>!isNaN(v)&&v>0); return vals.length?`${Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)}bpm`:'—' })(),c:'var(--red)'},{l:'STREAK',v:`${streak}d`,c:'var(--accent)'}].map(({l,v,c})=>(
             <div key={l} style={{textAlign:'center'}}><div style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',letterSpacing:1,marginBottom:3}}>{l}</div><div style={{fontFamily:'var(--font-head)',fontSize:22,color:c}}>{v}</div></div>
           ))}
         </div>
