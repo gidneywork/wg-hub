@@ -693,7 +693,7 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
         <div ref={bottomRef}/>
       </div>
 
-      <div style={{display:'flex',gap:8'}}>
+      <div style={{display:'flex',gap:8}}>
         <input
           type='text' value={input} onChange={e=>setInput(e.target.value)}
           onKeyDown={e=>e.key==='Enter'&&sendMessage(input)}
