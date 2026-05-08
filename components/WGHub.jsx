@@ -622,18 +622,13 @@ Answer in 2-4 sentences max unless asked for detail. Use specific numbers from t
     setLoading(true)
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: buildContext(),
-          messages: newMessages,
-        }),
+        body: JSON.stringify({ messages: newMessages, systemPrompt: buildContext() }),
       })
       const data = await res.json()
-      const reply = data.content?.[0]?.text || 'Sorry, I could not generate a response.'
+      const reply = data.reply || data.error || 'Sorry, something went wrong.'
       setMessages(p => [...p, { role:'assistant', content: reply }])
     } catch(e) {
       setMessages(p => [...p, { role:'assistant', content: 'Connection error. Try again.' }])
