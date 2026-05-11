@@ -15,6 +15,21 @@ export function daysWindow(n, endDate = new Date()) {
   })
 }
 
+// Merge per-date Whoop snapshot into the log, with LOGS PRIMARY and
+// Whoop as fallback. Previously Whoop won (auto-sync model); since
+// HRV/RHR/Recovery/Sleep moved to manual-entry fields on Daily Data,
+// the user's typed value owns the field and Whoop only fills in when
+// the log field is empty. Same Whoop-fills-when-empty contract as
+// loadFormFromLog on the Daily Data form.
+//
+// pick() treats empty strings as missing so log: '' still falls back
+// to whoop's value rather than holding an empty value.
+const pick = (logVal, whoopVal) => {
+  if (logVal != null && logVal !== '') return logVal
+  if (whoopVal != null) return whoopVal
+  return ''
+}
+
 export function mergeWhoopForDate(date, log, whoopData) {
   const w = whoopData?.[date]
   if (!w) return log || {}
@@ -22,16 +37,16 @@ export function mergeWhoopForDate(date, log, whoopData) {
     ...log,
     body: {
       ...(log?.body || {}),
-      hrv: w.hrv ?? log?.body?.hrv ?? '',
-      rhr: w.rhr ?? log?.body?.rhr ?? '',
+      hrv:    pick(log?.body?.hrv, w.hrv),
+      rhr:    pick(log?.body?.rhr, w.rhr),
       weight: log?.body?.weight || '',
     },
     sleep: {
       ...(log?.sleep || {}),
-      sleepScore: w.sleep_score ?? log?.sleep?.sleepScore ?? '',
-      recoveryScore: w.recovery_score ?? log?.sleep?.recoveryScore ?? '',
-      hoursSlept: w.hours_slept ?? log?.sleep?.hoursSlept ?? '',
-      bedTime: w.bed_time || log?.sleep?.bedTime || '',
+      sleepScore:    pick(log?.sleep?.sleepScore,    w.sleep_score),
+      recoveryScore: pick(log?.sleep?.recoveryScore, w.recovery_score),
+      hoursSlept:    pick(log?.sleep?.hoursSlept,    w.hours_slept),
+      bedTime:       log?.sleep?.bedTime || w.bed_time || '',
     },
   }
 }
