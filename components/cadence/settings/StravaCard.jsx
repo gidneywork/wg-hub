@@ -72,24 +72,29 @@ export default function StravaCard({ stravaConnection, onDisconnect }) {
         <div className="integration-body">
           <div>
             <h3 className="integration-name">Connect your Strava account</h3>
-            <p className="integration-loc" style={{ marginBottom: 16 }}>
-              {/* The .integration-loc class supplies mono caption styling. */}
-              Sync activities into History automatically — your Strava data is never modified.
+            <p className="integration-info-p">
+              Sync all your activities automatically. Activities appear in the History page where you can rename them, change their type, and add notes. Your Strava data is never modified.
             </p>
             <a
               href="/api/strava/connect"
-              className="btn btn-primary"
-              style={{ display: 'inline-block', textDecoration: 'none' }}
+              className="btn btn-primary connect-link"
             >
               Connect Strava
             </a>
           </div>
           <div className="integration-info">
-            <p>
-              Activities appear on the History page where you can rename them,
-              change their session type, and add notes. Heart rate, pace, elevation
-              and source are all preserved on import.
-            </p>
+            <div className="sync-list-eyebrow">What gets synced</div>
+            <ul className="sync-list">
+              {[
+                'All runs, rides, swims and gym sessions',
+                'Activity name, type, distance, duration, pace',
+                'Heart rate data where available',
+                'Elevation gain',
+                'New activities sync incrementally',
+              ].map(item => (
+                <li key={item}><span className="check">✓</span><span>{item}</span></li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

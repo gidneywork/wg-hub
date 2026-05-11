@@ -2076,6 +2076,49 @@
   margin-bottom: 16px;
   max-width: 44ch;
 }
+[data-cadence] .settings-page .integration-info-p {
+  font-size: var(--type-13);
+  color: var(--text-soft);
+  line-height: 1.6;
+  margin-bottom: 18px;
+  max-width: 44ch;
+}
+[data-cadence] .settings-page .connect-link {
+  display: inline-block;
+  text-decoration: none;
+}
+[data-cadence] .settings-page .sync-list-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--moss-deep);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+[data-theme="dark"] [data-cadence] .settings-page .sync-list-eyebrow { color: var(--moss); }
+[data-cadence] .settings-page .sync-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+[data-cadence] .settings-page .sync-list li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: var(--type-13);
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+[data-cadence] .settings-page .sync-list .check {
+  color: var(--moss-deep);
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+[data-theme="dark"] [data-cadence] .settings-page .sync-list .check { color: var(--moss); }
 
 /* Target row --------------------------------------------------------- */
 [data-cadence] .settings-page .target-row {
