@@ -111,16 +111,32 @@ export function mkEmptyForm() {
   }
 }
 
-// Hydrate a fresh form from a persisted log entry (or empty when absent).
-// Defensive against partial logs missing one of the sub-objects.
-export function loadFormFromLog(log) {
+// Hydrate a fresh form from a persisted log entry (or empty when absent),
+// with optional Whoop pre-fill for the five fields Whoop tracks. When a
+// log field is empty, fall back to whoop[date]'s matching value so the
+// user has a starting point to edit; once they touch any field, the
+// full form snapshot saves to logs, "promoting" the Whoop values to
+// log-owned values for that date.
+export function loadFormFromLog(log, whoop) {
   const empty = mkEmptyForm()
-  if (!log) return empty
-  return {
+  const base = !log ? empty : {
     body:      { ...empty.body,      ...(log.body      || {}) },
     sleep:     { ...empty.sleep,     ...(log.sleep     || {}) },
     nutrition: { ...empty.nutrition, ...(log.nutrition || {}) },
   }
+  if (whoop) {
+    const fill = (current, whoopVal, round = true) => {
+      if (current != null && current !== '') return current
+      if (whoopVal == null) return current
+      return round ? String(Math.round(whoopVal)) : String(whoopVal)
+    }
+    base.body.hrv  = fill(base.body.hrv,  whoop.hrv)
+    base.body.rhr  = fill(base.body.rhr,  whoop.rhr)
+    base.sleep.sleepScore    = fill(base.sleep.sleepScore,    whoop.sleep_score)
+    base.sleep.recoveryScore = fill(base.sleep.recoveryScore, whoop.recovery_score)
+    base.sleep.hoursSlept    = fill(base.sleep.hoursSlept,    whoop.hours_slept, false)
+  }
+  return base
 }
 
 // ── Target band + percentage (mirrors settings/targetState behaviour
@@ -197,6 +213,42 @@ export function buildWeightHelper(actualStr, target, weekDelta) {
     tone = weekDelta > 0 ? 'down' : 'up'
   }
   return { chevron, tone, text: `this week · ${above}` }
+}
+
+// Vitals helper — semantic-aware ▲/▼ delta against a target with a
+// tolerance band. Arrow reflects literal direction; tone reflects
+// movement toward the goal (moss = better, clay = worse).
+//
+//   higher-is-better (HRV, sleep score, recovery, hours slept):
+//     actual > target  → ▲ moss   "▲ 5 vs target"
+//     actual < target  → ▼ clay   "▼ 15 vs target"
+//   lower-is-better (RHR):
+//     actual < target  → ▼ moss
+//     actual > target  → ▲ clay
+//
+//   `decimals` formats the magnitude (1 for hoursSlept, 0 for others)
+//   so "0.5" reads naturally for sub-unit metrics without padding ints.
+export function buildVitalsHelper(actualStr, target, decimals = 0) {
+  const a = parseFloat(actualStr)
+  const t = parseFloat(target?.value)
+  if (!isFinite(a) || !isFinite(t) || t === 0) return null
+  const lower = !!target.lowerIsBetter
+  const diff = a - t
+  const tolerance = decimals > 0 ? 0.25 : 0.5
+  if (Math.abs(diff) <= tolerance) {
+    return { chevron: '●', tone: 'flat', text: 'on target' }
+  }
+  const arrow = diff > 0 ? '▲' : '▼'
+  const better = lower ? diff < 0 : diff > 0
+  const tone = better ? 'up' : 'down'
+  const mag = decimals > 0
+    ? Math.abs(diff).toFixed(decimals)
+    : Math.round(Math.abs(diff)).toString()
+  return {
+    chevron: `${arrow} ${mag}`,
+    tone,
+    text: 'vs target',
+  }
 }
 
 // Macro helper text — "97% · 5 g short" / "102% · 12 g over" / "on target".

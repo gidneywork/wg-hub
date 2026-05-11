@@ -2737,6 +2737,12 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
+/* 4-column variant for sections with four fields (Body, Sleep & recovery)
+   — responsive overrides below cover this modifier so smaller widths
+   still collapse to 2-up and then single-column. */
+[data-cadence] .daily-page .field-grid.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
 [data-cadence] .daily-page .field-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -3304,14 +3310,16 @@
 /* Daily Data — two breakpoints inherited verbatim from the mockup */
 @media (max-width: 1100px) {
   [data-cadence] .daily-page .synced-grid { grid-template-columns: repeat(3, 1fr); }
-  [data-cadence] .daily-page .field-grid { grid-template-columns: 1fr 1fr; }
+  [data-cadence] .daily-page .field-grid,
+  [data-cadence] .daily-page .field-grid.cols-4 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 800px) {
   [data-cadence] .daily-page .page-head {
     flex-direction: column;
     gap: 16px;
   }
-  [data-cadence] .daily-page .field-grid { grid-template-columns: 1fr; }
+  [data-cadence] .daily-page .field-grid,
+  [data-cadence] .daily-page .field-grid.cols-4 { grid-template-columns: 1fr; }
   [data-cadence] .daily-page .synced-grid { grid-template-columns: repeat(2, 1fr); }
   [data-cadence] .daily-page .lift-row,
   [data-cadence] .daily-page .lift-add-row {

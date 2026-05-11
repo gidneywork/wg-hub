@@ -36,7 +36,7 @@ export default function Daily({
   onStravaConnectionChange,
 }) {
   const [date, setDate] = useState(todayIso())
-  const [form, setForm] = useState(() => loadFormFromLog(logs?.[date]))
+  const [form, setForm] = useState(() => loadFormFromLog(logs?.[date], whoopData?.[date]))
 
   // Auto-save state surfaced to the SaveStatus pill.
   const [saveState, setSaveState] = useState('idle')   // 'idle' | 'saving'
@@ -115,7 +115,7 @@ export default function Daily({
       if (pendingRef.current) fireSave()
     }
     prevDateRef.current = date
-    setForm(loadFormFromLog(logs?.[date]))
+    setForm(loadFormFromLog(logs?.[date], whoopData?.[date]))
     // Reset the "recently saved" tick state — it shouldn't leak across
     // days; the new day starts in a neutral state.
     setRecentlySaved(false)
@@ -126,11 +126,12 @@ export default function Daily({
   const hydratedRef = useRef(false)
   useEffect(() => {
     if (hydratedRef.current) return
-    if (logs && Object.keys(logs).length > 0) {
-      setForm(loadFormFromLog(logs[date]))
+    if ((logs && Object.keys(logs).length > 0) ||
+        (whoopData && Object.keys(whoopData).length > 0)) {
+      setForm(loadFormFromLog(logs?.[date], whoopData?.[date]))
       hydratedRef.current = true
     }
-  }, [logs, date])
+  }, [logs, whoopData, date])
 
   return (
     <div className="daily-page">

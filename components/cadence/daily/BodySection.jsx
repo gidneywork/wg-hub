@@ -6,16 +6,19 @@ import {
   fillVariantForBand,
   buildWeightHelper,
   buildMacroHelper,
+  buildVitalsHelper,
   weeklyWeightDelta,
 } from './dailyHelpers'
 
 /**
- * Body section — three field cards, all real manual-entry fields.
+ * Body section — four manual-entry field cards.
  *   Weight          settings.weightTarget — ±0.5 band, weekly delta helper
  *   Steps           settings.dailySteps — macro-style band + helper
  *   Calories burnt  settings.dailyCaloriesOut — macro-style band + helper
- *                   (UI label is the warmer "Calories burnt"; data field
- *                    is body.caloriesOut to match Trends IN/OUT naming)
+ *   Resting HR      settings.rhr — lowerIsBetter, vitals-style ▼ chevron
+ *
+ * The data field is body.rhr; the UI label uses the warmer "Resting HR"
+ * phrasing rather than the engineering "RHR".
  */
 export default function BodySection({
   date,
@@ -53,13 +56,20 @@ export default function BodySection({
   const cOutHelper = buildMacroHelper(cOutVal, cOutTarget, 'kcal')
   const cOutHasValue = cOutVal != null && cOutVal !== ''
 
+  // Resting HR — lower is better
+  const rhrTarget = settings?.rhr
+  const rhrVal = form?.body?.rhr
+  const rhrBand = targetBand(rhrVal, rhrTarget)
+  const rhrHelper = buildVitalsHelper(rhrVal, rhrTarget)
+  const rhrHasValue = rhrVal != null && rhrVal !== ''
+
   return (
     <section className="section r r-4">
       <div className="section-head">
         <span className="title">Body</span>
-        <span className="meta">3 fields · manual entry</span>
+        <span className="meta">4 fields · manual entry</span>
       </div>
-      <div className="field-grid">
+      <div className="field-grid cols-4">
 
         <FieldCard
           label="Weight"
@@ -113,6 +123,24 @@ export default function BodySection({
           rowIndex={2}
           saved={recentlySaved && cOutHasValue && !saving}
           saving={saving && cOutHasValue}
+        />
+
+        <FieldCard
+          label="Resting HR"
+          targetRef={rhrTarget?.value ? `Target ${rhrTarget.value} bpm` : null}
+          value={rhrVal}
+          onChange={v => onField('body', 'rhr', v)}
+          unit="bpm"
+          inputMode="numeric"
+          placeholder="—"
+          progress={{
+            pct:     rhrBand?.pct ?? 0,
+            variant: fillVariantForBand(rhrBand?.band),
+          }}
+          helper={rhrHelper}
+          rowIndex={3}
+          saved={recentlySaved && rhrHasValue && !saving}
+          saving={saving && rhrHasValue}
         />
 
       </div>
