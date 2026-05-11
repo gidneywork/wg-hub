@@ -5,6 +5,7 @@ import SaveStatus from './daily/SaveStatus'
 import DateNav from './daily/DateNav'
 import SyncedTiles from './daily/SyncedTiles'
 import BodySection from './daily/BodySection'
+import SleepRecoverySection from './daily/SleepRecoverySection'
 import NutritionSection from './daily/NutritionSection'
 import LiftsSection from './daily/LiftsSection'
 import FeelingsSection from './daily/FeelingsSection'
@@ -165,12 +166,22 @@ export default function Daily({
         saveState={saveState}
       />
 
+      <SleepRecoverySection
+        form={form}
+        settings={settings}
+        onField={onField}
+        recentlySaved={recentlySaved}
+        saveState={saveState}
+        baseRowIndex={4}
+      />
+
       <NutritionSection
         form={form}
         settings={settings}
         onField={onField}
         recentlySaved={recentlySaved}
         saveState={saveState}
+        baseRowIndex={8}
       />
 
       <LiftsSection />

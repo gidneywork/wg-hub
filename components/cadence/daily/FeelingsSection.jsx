@@ -30,7 +30,7 @@ export default function FeelingsSection() {
   const stub = !FEELINGS_ENABLED
 
   return (
-    <section className="section r r-7">
+    <section className="section r r-8">
       <div className="section-head">
         <span className="title">How it landed</span>
         <span className="meta">Optional</span>

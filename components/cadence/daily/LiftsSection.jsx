@@ -32,7 +32,7 @@ const EXERCISE_OPTIONS = [
 
 export default function LiftsSection() {
   return (
-    <section className="section r r-6">
+    <section className="section r r-7">
       <div className="section-head">
         <span className="title">Lifts</span>
         <span className="meta">Optional</span>
