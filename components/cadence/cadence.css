@@ -2261,7 +2261,22 @@
   color: var(--moss-deep);
 }
 [data-theme="dark"] [data-cadence] .settings-page .upload-action { color: var(--moss); }
-[data-cadence] .settings-page .upload-import-row { margin-top: 16px; }
+[data-cadence] .settings-page .upload-import-row {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+[data-cadence] .settings-page .upload-result {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .settings-page .upload-result { color: var(--moss); }
+[data-cadence] .settings-page .upload-result.error { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .settings-page .upload-result.error { color: var(--clay); }
 
 /* Activity log ------------------------------------------------------- */
 [data-cadence] .settings-page .log-controls {

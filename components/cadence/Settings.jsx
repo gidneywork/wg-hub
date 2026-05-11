@@ -6,6 +6,7 @@ import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import StravaCard from './settings/StravaCard'
 import TargetSection from './settings/TargetSection'
+import WhoopUpload from './settings/WhoopUpload'
 import {
   currentValues,
   SECTION_LAYOUT,
@@ -32,6 +33,12 @@ export default function Settings({
   activities,
 }) {
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(settings)))
+
+  // Audit-log version bump — any action that writes to audit_log
+  // (target save, Whoop upload) increments this so the activity log
+  // panel in commit 6 refetches without a manual reload.
+  const [auditVersion, setAuditVersion] = useState(0)
+  const bumpAudit = () => setAuditVersion(v => v + 1)
 
   // Live values for each target row — sums + rolling means over the same
   // data the dashboard reads. Recomputed when any source changes.
@@ -73,6 +80,7 @@ export default function Settings({
         }
       )
     }
+    if (changes.length > 0) bumpAudit()
   }
 
   const handleDisconnect = async () => {
@@ -115,14 +123,7 @@ export default function Settings({
         <button type="button" className="btn btn-primary btn-lg" onClick={handleSave}>Save targets</button>
       </div>
 
-      {/* ===== Whoop data import ===== */}
-      <section className="settings-section r r-9">
-        <div className="section-head">
-          <span className="section-label">Whoop data import</span>
-          <span className="section-sub">—</span>
-        </div>
-        <div className="section-body">Upload grid wired in commit 5.</div>
-      </section>
+      <WhoopUpload onAuditWritten={bumpAudit} />
 
       {/* ===== Activity log ===== */}
       <section className="settings-section r r-10">
