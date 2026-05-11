@@ -10,6 +10,7 @@ import WorkoutHistory from './WorkoutHistory'
 import DashboardShell from './cadence/DashboardShell'
 import CadenceDashboard from './cadence/Dashboard'
 import CadenceHistory from './cadence/History'
+import CadenceSettings from './cadence/Settings'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -249,7 +250,7 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
-  const LEGACY_VIEWS = ['log','plan','planner','finance','settings','tv']
+  const LEGACY_VIEWS = ['log','plan','planner','finance','tv']
   const isLegacy = LEGACY_VIEWS.includes(view)
 
   return (
@@ -260,6 +261,16 @@ export default function WGHub({ onSignOut }) {
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection}/>
+      ) : view === 'settings' ? (
+        <CadenceSettings
+          settings={settings}
+          saveSettings={saveSettings}
+          stravaConnection={stravaConnection}
+          onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
+          logs={logs}
+          whoopData={whoopData}
+          activities={activities}
+        />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
@@ -267,7 +278,6 @@ export default function WGHub({ onSignOut }) {
            :view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
            :view==='planner' ? <PlannerPage/>
            :view==='finance' ? <FinancePage/>
-           :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
            :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
           }
         </div>
