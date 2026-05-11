@@ -2417,6 +2417,763 @@
   text-align: center;
 }
 
+/* =====================================================================
+   DAILY DATA PAGE
+   All rules scoped under [data-cadence] .daily-page so bare class
+   names from the mockup (.section, .field-card, .row, .helper, .btn,
+   .progress, .title, .meta, etc.) cannot collide with the Dashboard,
+   History, or Settings rule sets above.
+   Mockup: design/mockups/cadence-daily-data.html
+   ===================================================================== */
+
+[data-cadence] .daily-page .field-card,
+[data-cadence] .daily-page .synced-tile,
+[data-cadence] .daily-page .lift-row,
+[data-cadence] .daily-page .week-day,
+[data-cadence] .daily-page .mood-pip,
+[data-cadence] .daily-page .input-shell,
+[data-cadence] .daily-page .save-status,
+[data-cadence] .daily-page .resync-btn,
+[data-cadence] .daily-page .today-btn,
+[data-cadence] .daily-page .nav-arrow,
+[data-cadence] .daily-page .btn {
+  transition: background-color var(--t-theme) var(--ease),
+              border-color var(--t-theme) var(--ease),
+              color var(--t-theme) var(--ease);
+}
+
+/* Page head ----------------------------------------------------------- */
+[data-cadence] .daily-page .page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 36px;
+  gap: 24px;
+}
+[data-cadence] .daily-page .page-head .eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+[data-cadence] .daily-page .page-head h1 {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: var(--type-44);
+  letter-spacing: var(--tracking-h1);
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+[data-cadence] .daily-page .page-head .sub {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 16px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+
+/* Save status pill --------------------------------------------------- */
+[data-cadence] .daily-page .save-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .daily-page .save-status .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--moss);
+  box-shadow: 0 0 0 0 var(--moss-glow);
+  animation: dailyPulse 2.4s var(--ease) infinite;
+}
+[data-cadence] .daily-page .save-status.saving .dot {
+  background: var(--sand);
+  animation: none;
+}
+[data-cadence] .daily-page .save-status.saving .text { color: var(--text); }
+@keyframes dailyPulse {
+  0%   { box-shadow: 0 0 0 0 var(--moss-glow); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Date nav ----------------------------------------------------------- */
+[data-cadence] .daily-page .date-nav {
+  margin-bottom: 36px;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+[data-cadence] .daily-page .date-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+[data-cadence] .daily-page .nav-arrow {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--sans);
+  font-size: 18px;
+  line-height: 1;
+}
+[data-cadence] .daily-page .nav-arrow:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+[data-cadence] .daily-page .nav-arrow:disabled { opacity: 0.4; cursor: not-allowed; }
+[data-cadence] .daily-page .date-text {
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: var(--type-28);
+  letter-spacing: var(--tracking-h2);
+  font-variation-settings: "opsz" 144, "SOFT" 50;
+  color: var(--text);
+  line-height: 1;
+}
+[data-cadence] .daily-page .today-btn {
+  margin-left: auto;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+[data-cadence] .daily-page .today-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+[data-cadence] .daily-page .today-btn.hidden { display: none; }
+
+[data-cadence] .daily-page .week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+[data-cadence] .daily-page .week-day {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+[data-cadence] .daily-page .week-day:hover { border-color: var(--border-strong); }
+[data-cadence] .daily-page .week-day .dow {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+}
+[data-cadence] .daily-page .week-day .num {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+[data-cadence] .daily-page .week-day .pip {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--moss);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+[data-cadence] .daily-page .week-day.empty .pip { background: var(--border); opacity: 1; }
+[data-cadence] .daily-page .week-day.active {
+  background: var(--text);
+  border-color: var(--text);
+}
+[data-cadence] .daily-page .week-day.active .dow { color: var(--bg); opacity: 0.7; }
+[data-cadence] .daily-page .week-day.active .num { color: var(--bg); }
+[data-cadence] .daily-page .week-day.active .pip { background: var(--moss); opacity: 1; }
+[data-theme="dark"] [data-cadence] .daily-page .week-day.active {
+  background: var(--moss);
+  border-color: var(--moss);
+}
+[data-theme="dark"] [data-cadence] .daily-page .week-day.active .dow { color: var(--bg); }
+[data-theme="dark"] [data-cadence] .daily-page .week-day.active .num { color: var(--bg); }
+
+/* Section heads (Synced / Body / Nutrition / Lifts / How it landed) -- */
+[data-cadence] .daily-page .section { margin-bottom: 40px; }
+[data-cadence] .daily-page .section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-left: 14px;
+  border-left: 2px solid var(--moss);
+}
+[data-cadence] .daily-page .section-head .title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-20);
+  letter-spacing: -0.015em;
+  color: var(--text);
+  line-height: 1;
+}
+[data-cadence] .daily-page .section-head .meta {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+[data-cadence] .daily-page .resync-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--moss-deep);
+  padding: 0;
+}
+[data-theme="dark"] [data-cadence] .daily-page .resync-btn { color: var(--moss); }
+[data-cadence] .daily-page .resync-btn:hover { text-decoration: underline; }
+
+/* Synced tiles (read-only Whoop + Strava) ---------------------------- */
+[data-cadence] .daily-page .synced-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+[data-cadence] .daily-page .synced-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 16px 18px;
+  position: relative;
+}
+[data-cadence] .daily-page .synced-tile .label {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  margin-bottom: 8px;
+}
+[data-cadence] .daily-page .synced-tile .value {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-28);
+  letter-spacing: var(--tracking-h2);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+[data-cadence] .daily-page .synced-tile .value .unit {
+  font-family: var(--sans);
+  font-size: var(--type-11);
+  color: var(--text-muted);
+  margin-left: 3px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+[data-cadence] .daily-page .synced-tile .source {
+  font-family: var(--mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+
+/* Field cards (Body + Nutrition) ------------------------------------- */
+[data-cadence] .daily-page .field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+[data-cadence] .daily-page .field-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 18px 20px 16px;
+  position: relative;
+}
+[data-cadence] .daily-page .field-card .row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+[data-cadence] .daily-page .field-card .row .label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+}
+[data-cadence] .daily-page .field-card .row .target {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .daily-page .input-shell {
+  display: flex;
+  align-items: baseline;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .daily-page .input-shell:focus-within {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .daily-page .input-shell.saving { border-color: var(--sand); }
+[data-cadence] .daily-page .input-shell.saved { border-color: var(--moss); }
+[data-cadence] .daily-page .field-card input[type="text"],
+[data-cadence] .daily-page .field-card input[type="number"] {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: 30px;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+[data-cadence] .daily-page .field-card input::-webkit-outer-spin-button,
+[data-cadence] .daily-page .field-card input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+[data-cadence] .daily-page .field-card input::placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+  font-weight: 360;
+}
+[data-cadence] .daily-page .field-card .unit {
+  font-family: var(--sans);
+  font-size: var(--type-14);
+  color: var(--text-muted);
+  margin-left: 6px;
+  font-weight: 400;
+}
+[data-cadence] .daily-page .field-card .save-tick {
+  margin-left: 8px;
+  width: 14px; height: 14px;
+  color: var(--moss);
+  opacity: 0;
+  transition: opacity var(--t-ui) var(--ease);
+}
+[data-cadence] .daily-page .field-card.saved .save-tick { opacity: 1; }
+[data-theme="dark"] [data-cadence] .daily-page .field-card .save-tick { color: var(--moss); }
+
+[data-cadence] .daily-page .field-card .progress {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 14px;
+  position: relative;
+}
+[data-cadence] .daily-page .field-card .progress .fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--moss);
+  border-radius: 2px;
+  transition: width 600ms var(--ease);
+}
+[data-cadence] .daily-page .field-card .progress .fill.clay { background: var(--clay); }
+[data-cadence] .daily-page .field-card .progress .fill.slate { background: var(--slate); }
+
+[data-cadence] .daily-page .field-card .helper {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-cadence] .daily-page .field-card .helper .pct.up    { color: var(--moss-deep); }
+[data-cadence] .daily-page .field-card .helper .pct.down  { color: var(--clay-deep); }
+[data-cadence] .daily-page .field-card .helper .pct.flat  { color: var(--text-muted); }
+[data-theme="dark"] [data-cadence] .daily-page .field-card .helper .pct.up   { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .daily-page .field-card .helper .pct.down { color: var(--clay); }
+
+/* Phase 2 stub for Steps + Calories burnt: italic Fraunces helper note */
+[data-cadence] .daily-page .field-card.stub .helper {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-13);
+  text-transform: none;
+  letter-spacing: -0.005em;
+  color: var(--text-faint);
+}
+
+/* Lifts -------------------------------------------------------------- */
+[data-cadence] .daily-page .lifts-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px;
+}
+[data-cadence] .daily-page .lift-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+}
+[data-cadence] .daily-page .lift-row + .lift-row { border-top: 1px dashed var(--border); }
+[data-cadence] .daily-page .lift-row .exercise {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+[data-cadence] .daily-page .lift-row .weight,
+[data-cadence] .daily-page .lift-row .reps {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+[data-cadence] .daily-page .lift-row .weight .unit,
+[data-cadence] .daily-page .lift-row .reps .unit {
+  font-family: var(--sans);
+  font-size: var(--type-11);
+  color: var(--text-muted);
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+[data-cadence] .daily-page .lift-row .pb-tag {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--moss-deep);
+  background: var(--moss-soft);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+[data-theme="dark"] [data-cadence] .daily-page .lift-row .pb-tag { color: var(--moss); }
+[data-cadence] .daily-page .lift-row .del-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  line-height: 0;
+}
+[data-cadence] .daily-page .lift-row .del-btn:hover {
+  color: var(--clay-deep);
+  background: var(--bg-elevated);
+}
+[data-cadence] .daily-page .lift-row .del-btn svg { width: 14px; height: 14px; }
+
+[data-cadence] .daily-page .lift-empty {
+  padding: 32px 24px;
+  text-align: center;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+[data-cadence] .daily-page .lift-add-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 0.7fr 0.7fr auto;
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg-paper);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+[data-cadence] .daily-page .lift-add-row select,
+[data-cadence] .daily-page .lift-add-row input {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-family: var(--sans);
+  font-size: var(--type-14);
+  color: var(--text);
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+[data-cadence] .daily-page .lift-add-row select:focus,
+[data-cadence] .daily-page .lift-add-row input:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .daily-page .lift-add-row input::placeholder { color: var(--text-faint); }
+
+[data-cadence] .daily-page .btn {
+  padding: 8px 16px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 500;
+}
+[data-cadence] .daily-page .btn:hover { background: var(--text-soft); }
+[data-cadence] .daily-page .btn.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+[data-cadence] .daily-page .btn.ghost:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+[data-cadence] .daily-page .lift-add-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+[data-cadence] .daily-page .lift-add-trigger:hover {
+  border-color: var(--moss);
+  color: var(--text);
+}
+[data-cadence] .daily-page .lift-add-trigger svg { width: 12px; height: 12px; }
+
+/* How it landed — mood + journal -------------------------------------- */
+[data-cadence] .daily-page .feelings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 24px 28px;
+}
+[data-cadence] .daily-page .mood-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px dashed var(--border);
+}
+[data-cadence] .daily-page .mood-row .mood-label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+}
+[data-cadence] .daily-page .mood-pips {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+[data-cadence] .daily-page .mood-pips .anchor {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  min-width: 50px;
+}
+[data-cadence] .daily-page .mood-pips .anchor.right { text-align: right; }
+[data-cadence] .daily-page .mood-pips .pips {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  position: relative;
+}
+[data-cadence] .daily-page .mood-pips .pips::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background: var(--border);
+  z-index: 0;
+}
+[data-cadence] .daily-page .mood-pip {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg-paper);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+[data-cadence] .daily-page .mood-pip:hover { border-color: var(--moss); }
+[data-cadence] .daily-page .mood-pip.selected {
+  background: var(--moss);
+  border-color: var(--moss);
+  transform: scale(1.15);
+}
+
+/* Phase 2 stub for mood pips — faint, non-interactive */
+[data-cadence] .daily-page .mood-pip.stub {
+  border-color: var(--text-faint);
+  cursor: default;
+}
+[data-cadence] .daily-page .mood-pip.stub:hover { border-color: var(--text-faint); }
+
+[data-cadence] .daily-page .mood-word {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  min-width: 80px;
+  text-align: right;
+}
+[data-cadence] .daily-page .mood-word.empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+[data-cadence] .daily-page .journal-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 24px;
+}
+[data-cadence] .daily-page .journal-row .label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+}
+[data-cadence] .daily-page .journal-row .journal-input {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--text);
+  outline: none;
+  font-weight: 360;
+  letter-spacing: -0.005em;
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+  width: 100%;
+}
+[data-cadence] .daily-page .journal-row .journal-input::placeholder { color: var(--text-faint); }
+[data-cadence] .daily-page .journal-row .journal-input:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .daily-page .journal-row .journal-input:disabled {
+  background: var(--bg-elevated);
+  cursor: not-allowed;
+}
+
+/* Day footer --------------------------------------------------------- */
+[data-cadence] .daily-page .day-footer {
+  margin-top: 32px;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+[data-cadence] .daily-page .day-footer .keyhint kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0 4px;
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+
 /* -----------------------------------------------------------------
    EMPTY STATE — for sidebar nav targets that don't yet exist.
    Single italic Fraunces line, lowercase, no full stop, centred.
@@ -2528,4 +3285,32 @@
     gap: 10px;
   }
   [data-cadence] .settings-page .info-states { margin-left: 0; }
+}
+
+/* Daily Data — two breakpoints inherited verbatim from the mockup */
+@media (max-width: 1100px) {
+  [data-cadence] .daily-page .synced-grid { grid-template-columns: repeat(3, 1fr); }
+  [data-cadence] .daily-page .field-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 800px) {
+  [data-cadence] .daily-page .page-head {
+    flex-direction: column;
+    gap: 16px;
+  }
+  [data-cadence] .daily-page .field-grid { grid-template-columns: 1fr; }
+  [data-cadence] .daily-page .synced-grid { grid-template-columns: repeat(2, 1fr); }
+  [data-cadence] .daily-page .lift-row,
+  [data-cadence] .daily-page .lift-add-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  [data-cadence] .daily-page .mood-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  [data-cadence] .daily-page .journal-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  [data-cadence] .daily-page .mood-word { text-align: left; }
 }
