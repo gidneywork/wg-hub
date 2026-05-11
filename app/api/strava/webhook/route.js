@@ -48,6 +48,30 @@ export async function POST(request) {
           const activity = await res.json()
           await upsertSingleActivity(activity)
           await updateSyncMeta()
+
+          // Audit write — only on `create` events, never on `update` or
+          // `delete`, to avoid log spam from re-sync churn. Failures are
+          // swallowed so a bad audit insert can't fail the webhook ack.
+          if (aspect_type === 'create') {
+            try {
+              const distanceKm = activity.distance ? activity.distance / 1000 : null
+              const distanceLabel = distanceKm != null ? `${distanceKm.toFixed(1)}km` : '—'
+              await supabaseServer.from('audit_log').insert({
+                event_type: 'strava_sync',
+                title:      'Strava sync',
+                detail:     `Synced activity from Strava — ${activity.name} · ${distanceLabel}`,
+                metadata:   {
+                  activity_id:   activity.id,
+                  source:        'webhook',
+                  activity_name: activity.name,
+                  distance_km:   distanceKm,
+                },
+              })
+            } catch (auditErr) {
+              console.error('Webhook audit_log write failed:', auditErr)
+            }
+          }
+
           console.log(`Webhook: ${aspect_type}d activity ${activityId} — ${activity.name}`)
         } else {
           console.error(`Webhook: failed to fetch activity ${activityId} — ${res.status}`)

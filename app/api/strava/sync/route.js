@@ -74,15 +74,25 @@ export async function POST() {
       .from('strava_activities')
       .select('*', { count: 'exact', head: true })
 
-    // Write audit log
-    if (newCount > 0) {
-      await supabaseServer.from('audit_log').insert({
-        event_type: 'strava_sync',
-        title: `Strava sync — ${newCount} new activit${newCount===1?'y':'ies'} imported`,
-        detail: `Total activities in database: ${count}`,
-        metadata: { new: newCount, total: count, synced: allActivities.length },
-      })
-    }
+    // Write audit log — always, regardless of newCount, so the
+    // activity log shows that a sync ran even when nothing new came
+    // through. The detail string distinguishes the two cases.
+    const detail = newCount > 0
+      ? `Synced ${newCount} activit${newCount === 1 ? 'y' : 'ies'} from Strava`
+      : 'Strava sync · no new activities'
+
+    await supabaseServer.from('audit_log').insert({
+      event_type: 'strava_sync',
+      title:      'Strava sync',
+      detail,
+      metadata: {
+        source:   'manual_sync',
+        new:      newCount,
+        newCount,
+        total:    count,
+        synced:   allActivities.length,
+      },
+    })
 
     return Response.json({ synced: allActivities.length, new: newCount, total: count })
 
