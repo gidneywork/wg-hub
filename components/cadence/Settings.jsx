@@ -1,15 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import PageHeader from './settings/PageHeader'
+import InfoBanner from './settings/InfoBanner'
+import StravaCard from './settings/StravaCard'
 
 /**
  * Cadence — Settings page.
  *
  * Mockup: design/mockups/cadence-settings.html
- * Scaffold only. Subsequent commits add CSS, the page header,
- * the info banner, the Strava card, target sections, the
- * target_updated audit writes, the Whoop upload section, and
- * the activity log.
+ * Page header, info banner, and Strava card are wired.
+ * Target sections, target_updated audit writes, Whoop upload,
+ * and the activity log arrive in subsequent commits.
  */
 export default function Settings({
   settings,
@@ -22,42 +24,29 @@ export default function Settings({
 }) {
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(settings)))
 
+  // Save / Reset are wired against the local copy. Target rows in commit 4
+  // make this copy diverge from `settings`; commit 4.5 will diff the two
+  // and write target_updated audit rows on save.
+  const handleSave = async () => {
+    await saveSettings(local)
+  }
+  const handleReset = () => {
+    setLocal(JSON.parse(JSON.stringify(settings)))
+  }
+
+  const handleDisconnect = async () => {
+    await fetch('/api/strava/disconnect', { method: 'POST' })
+    await onStravaConnectionChange?.()
+  }
+
   return (
     <div className="settings-page">
 
-      {/* ===== Page header ===== */}
-      <header className="page-header r r-1">
-        <div>
-          <h1 className="page-title">Goals &amp; <em>targets.</em></h1>
-          <div className="page-sub">The numbers Cadence measures everything else against</div>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="btn btn-ghost">Reset defaults</button>
-          <button type="button" className="btn btn-primary">Save</button>
-        </div>
-      </header>
+      <PageHeader onReset={handleReset} onSave={handleSave} />
 
-      {/* ===== Info banner ===== */}
-      <div className="info-banner r r-2">
-        <div className="info-banner-eyebrow">How targets work</div>
-        <div className="info-banner-body">
-          Cadence measures every metric — dashboard, charts, daily log — against the targets you set here. Bars show where you currently stand.
-          <span className="info-states">
-            <span className="item"><span className="pip moss" />On target</span>
-            <span className="item"><span className="pip sand" />Approaching</span>
-            <span className="item"><span className="pip clay" />Off target</span>
-          </span>
-        </div>
-      </div>
+      <InfoBanner />
 
-      {/* ===== Strava integration ===== */}
-      <section className="settings-section r r-3">
-        <div className="section-head">
-          <span className="section-label">Strava</span>
-          <span className="status-badge">—</span>
-        </div>
-        <div className="section-body">Strava card scaffold — wired in commit 3.</div>
-      </section>
+      <StravaCard stravaConnection={stravaConnection} onDisconnect={handleDisconnect} />
 
       {/* ===== Running ===== */}
       <section className="settings-section r r-4">
