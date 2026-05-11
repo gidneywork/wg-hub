@@ -11,6 +11,7 @@ import DashboardShell from './cadence/DashboardShell'
 import CadenceDashboard from './cadence/Dashboard'
 import CadenceHistory from './cadence/History'
 import CadenceSettings from './cadence/Settings'
+import CadenceDaily from './cadence/Daily'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -250,7 +251,7 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
-  const LEGACY_VIEWS = ['log','plan','planner','finance','tv']
+  const LEGACY_VIEWS = ['plan','planner','finance','tv']
   const isLegacy = LEGACY_VIEWS.includes(view)
 
   return (
@@ -261,6 +262,14 @@ export default function WGHub({ onSignOut }) {
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection}/>
+      ) : view === 'log' ? (
+        <CadenceDaily
+          logs={logs}
+          saveLog={saveLog}
+          settings={settings}
+          whoopData={whoopData}
+          activities={activities}
+        />
       ) : view === 'settings' ? (
         <CadenceSettings
           settings={settings}
@@ -275,8 +284,7 @@ export default function WGHub({ onSignOut }) {
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
-          {view==='log'      ? <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities} whoopData={whoopData}/>
-           :view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
+          {view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
            :view==='planner' ? <PlannerPage/>
            :view==='finance' ? <FinancePage/>
            :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
