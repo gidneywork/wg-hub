@@ -5,14 +5,17 @@ import {
   targetBand,
   fillVariantForBand,
   buildWeightHelper,
+  buildMacroHelper,
   weeklyWeightDelta,
 } from './dailyHelpers'
 
 /**
- * Body section — three field cards.
- *   Weight        real, target-driven (settings.weightTarget)
- *   Steps         Phase 2 stub — disabled, "From Whoop — sync coming soon"
- *   Calories burnt Phase 2 stub — same pattern
+ * Body section — three field cards, all real manual-entry fields.
+ *   Weight          settings.weightTarget — ±0.5 band, weekly delta helper
+ *   Steps           settings.dailySteps — macro-style band + helper
+ *   Calories burnt  settings.dailyCaloriesOut — macro-style band + helper
+ *                   (UI label is the warmer "Calories burnt"; data field
+ *                    is body.caloriesOut to match Trends IN/OUT naming)
  */
 export default function BodySection({
   date,
@@ -23,6 +26,9 @@ export default function BodySection({
   recentlySaved,
   saveState,
 }) {
+  const saving = saveState === 'saving'
+
+  // Weight
   const weightTarget = settings?.weightTarget
   const weightVal = form?.body?.weight
   const weightBand = targetBand(weightVal, weightTarget)
@@ -32,7 +38,20 @@ export default function BodySection({
     weeklyWeightDelta(date, logs)
   )
   const weightHasValue = weightVal != null && weightVal !== ''
-  const saving = saveState === 'saving'
+
+  // Steps
+  const stepsTarget = settings?.dailySteps
+  const stepsVal = form?.body?.steps
+  const stepsBand = targetBand(stepsVal, stepsTarget)
+  const stepsHelper = buildMacroHelper(stepsVal, stepsTarget, 'steps')
+  const stepsHasValue = stepsVal != null && stepsVal !== ''
+
+  // Calories burnt (data field body.caloriesOut, UI label "Calories burnt")
+  const cOutTarget = settings?.dailyCaloriesOut
+  const cOutVal = form?.body?.caloriesOut
+  const cOutBand = targetBand(cOutVal, cOutTarget)
+  const cOutHelper = buildMacroHelper(cOutVal, cOutTarget, 'kcal')
+  const cOutHasValue = cOutVal != null && cOutVal !== ''
 
   return (
     <section className="section r r-4">
@@ -62,26 +81,38 @@ export default function BodySection({
 
         <FieldCard
           label="Steps"
-          targetRef="From Whoop"
-          value=""
+          targetRef={stepsTarget?.value ? `Target ${stepsTarget.value} steps` : null}
+          value={stepsVal}
+          onChange={v => onField('body', 'steps', v)}
           unit="steps"
-          disabled
-          stub
-          progress={{ pct: 0, variant: 'slate' }}
-          helper={{ stubText: 'From Whoop — sync coming soon' }}
+          inputMode="numeric"
+          placeholder="—"
+          progress={{
+            pct:     stepsBand?.pct ?? 0,
+            variant: fillVariantForBand(stepsBand?.band),
+          }}
+          helper={stepsHelper}
           rowIndex={1}
+          saved={recentlySaved && stepsHasValue && !saving}
+          saving={saving && stepsHasValue}
         />
 
         <FieldCard
           label="Calories burnt"
-          targetRef="From Whoop"
-          value=""
+          targetRef={cOutTarget?.value ? `Target ${cOutTarget.value} kcal` : null}
+          value={cOutVal}
+          onChange={v => onField('body', 'caloriesOut', v)}
           unit="kcal"
-          disabled
-          stub
-          progress={{ pct: 0, variant: 'slate' }}
-          helper={{ stubText: 'From Whoop — sync coming soon' }}
+          inputMode="numeric"
+          placeholder="—"
+          progress={{
+            pct:     cOutBand?.pct ?? 0,
+            variant: fillVariantForBand(cOutBand?.band),
+          }}
+          helper={cOutHelper}
           rowIndex={2}
+          saved={recentlySaved && cOutHasValue && !saving}
+          saving={saving && cOutHasValue}
         />
 
       </div>
