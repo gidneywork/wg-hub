@@ -1,15 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import SaveStatus from './daily/SaveStatus'
+import DateNav from './daily/DateNav'
 import { todayIso } from './daily/dailyHelpers'
 
 /**
  * Cadence — Daily Data page.
  *
  * Mockup: design/mockups/cadence-daily-data.html
- * Scaffold only. Subsequent commits add CSS, the save-status pill,
- * date navigation, synced tiles, body + nutrition with auto-save,
- * and the Phase 2 stubs for lifts and how-it-landed.
+ * Page head, save-status pill, and date nav are wired.
+ * Synced tiles, body + nutrition with auto-save, and the
+ * Phase 2 stubs for lifts and how-it-landed arrive next.
  */
 export default function Daily({
   logs,
@@ -19,6 +21,12 @@ export default function Daily({
   activities,
 }) {
   const [date, setDate] = useState(todayIso())
+
+  // Auto-save state — wired into the input flow in commit 5. For
+  // commit 3 the pill renders at idle with the page-load timestamp so
+  // the pulse animation runs and the layout is visible end-to-end.
+  const [saveState, setSaveState] = useState('idle')
+  const [savedAt, setSavedAt] = useState(() => new Date())
 
   return (
     <div className="daily-page">
@@ -30,24 +38,11 @@ export default function Daily({
           <h1>Daily data<span style={{ color: 'var(--moss)' }}>.</span></h1>
           <p className="sub">Body, nutrition, lifts, and how it landed.</p>
         </div>
-        <div className="save-status">
-          <span className="dot" />
-          <span className="text">Save-status pill — wired in commit 3.</span>
-        </div>
+        <SaveStatus state={saveState} savedAt={savedAt} />
       </header>
 
-      {/* ===== Date nav — arrows + date text + Today + week strip ===== */}
-      <section className="date-nav r r-2">
-        <div className="date-display">
-          <button type="button" className="nav-arrow" aria-label="Previous day">‹</button>
-          <div className="date-text">{date}</div>
-          <button type="button" className="nav-arrow" aria-label="Next day" disabled>›</button>
-          <button type="button" className="today-btn hidden">Today</button>
-        </div>
-        <div className="week-strip">
-          {/* 7-day week strip — wired in commit 3 */}
-        </div>
-      </section>
+      {/* ===== Date nav ===== */}
+      <DateNav date={date} setDate={setDate} logs={logs} />
 
       {/* ===== Synced — read-only Whoop + Strava tiles ===== */}
       <section className="section r r-3">
