@@ -96,6 +96,122 @@ export function fmtHoursColon(hoursDecimal) {
   return `${h}:${m.toString().padStart(2, '0')}`
 }
 
+// ── Form scaffolding (shape mirrors the legacy mkEmpty in WGHub.jsx)
+export function mkEmptyForm() {
+  return {
+    body:      { rhr: '', hrv: '', weight: '', weightTime: '' },
+    sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '', bedTime: '' },
+    nutrition: { calories: '', protein: '', carbs: '' },
+  }
+}
+
+// Hydrate a fresh form from a persisted log entry (or empty when absent).
+// Defensive against partial logs missing one of the sub-objects.
+export function loadFormFromLog(log) {
+  const empty = mkEmptyForm()
+  if (!log) return empty
+  return {
+    body:      { ...empty.body,      ...(log.body      || {}) },
+    sleep:     { ...empty.sleep,     ...(log.sleep     || {}) },
+    nutrition: { ...empty.nutrition, ...(log.nutrition || {}) },
+  }
+}
+
+// ── Target band + percentage (mirrors settings/targetState behaviour
+// but kept Daily-local so the two pages can drift independently).
+//   isWeight       — ±0.5 tolerance band, amber within 2 kg either way
+//   lowerIsBetter  — RHR-style
+//   default        — higher-is-better
+// Returns { band: 'on'|'amber'|'off', pct: number } or null.
+export function targetBand(actual, def) {
+  const a = parseFloat(actual)
+  const t = parseFloat(def?.value)
+  if (!isFinite(a) || !isFinite(t) || t === 0) return null
+  if (def.isWeight) {
+    const diff = Math.abs(a - t)
+    const band = diff <= 0.5 ? 'on' : diff <= 2 ? 'amber' : 'off'
+    const pct = Math.max(0, 100 - (diff / t) * 500)
+    return { band, pct }
+  }
+  const lower = !!def.lowerIsBetter
+  const pct = lower
+    ? Math.min(100, (t / a) * 100)
+    : Math.min(100, (a / t) * 100)
+  const met = lower ? a <= t : a >= t
+  const band = met ? 'on' : pct >= 85 ? 'amber' : 'off'
+  return { band, pct }
+}
+
+// Bar fill variant — moss (no class) for on-target, sand for amber,
+// clay for off-target. Returns null for the default moss when band='on'
+// so the CSS class string stays clean.
+export function fillVariantForBand(band) {
+  if (band === 'amber') return 'sand'
+  if (band === 'off')   return 'clay'
+  return null
+}
+
+// Week-over-week weight delta — actual minus 7-day-ago.
+// Returns null if either point is missing.
+export function weeklyWeightDelta(date, logs) {
+  const today = parseFloat(logs?.[date]?.body?.weight)
+  if (!isFinite(today)) return null
+  const prev = shiftIso(date, -7)
+  if (!prev) return null
+  const before = parseFloat(logs?.[prev]?.body?.weight)
+  if (!isFinite(before)) return null
+  return today - before
+}
+
+// Weight helper text — chevron + week delta + above/below target.
+// Returns { chevron, tone, text } or null when there's no weight yet.
+//   chevron — "▲ 1.4 kg" / "▼ 0.8 kg" / null
+//   tone    — 'up' | 'down' | 'flat' (drives the .pct colour)
+//   text    — "this week · 5.2 kg above target" / similar
+export function buildWeightHelper(actualStr, target, weekDelta) {
+  const a = parseFloat(actualStr)
+  if (!isFinite(a) || !target?.value) return null
+  const diff = a - parseFloat(target.value)
+  const above = diff > 0.5
+    ? `${diff.toFixed(1)} kg above target`
+    : diff < -0.5
+      ? `${Math.abs(diff).toFixed(1)} kg below target`
+      : 'on target'
+
+  let chevron = null
+  let tone = 'flat'
+  if (weekDelta != null && Math.abs(weekDelta) > 0.1) {
+    // For a goal-weight metric, dropping (▼) toward target is positive,
+    // gaining away from target is negative. We don't know the user's
+    // direction, so colour the chevron by raw direction: gain → clay,
+    // loss → moss. The mockup uses ▼ down=clay for above-target gain.
+    chevron = weekDelta > 0
+      ? `▲ ${weekDelta.toFixed(1)} kg`
+      : `▼ ${Math.abs(weekDelta).toFixed(1)} kg`
+    tone = weekDelta > 0 ? 'down' : 'up'
+  }
+  return { chevron, tone, text: `this week · ${above}` }
+}
+
+// Macro helper text — "97% · 5 g short" / "102% · 12 g over" / "on target".
+export function buildMacroHelper(actualStr, target, unit) {
+  const a = parseFloat(actualStr)
+  const t = parseFloat(target?.value)
+  if (!isFinite(a) || !isFinite(t) || t === 0) return null
+  const pct = Math.round((a / t) * 100)
+  const diff = t - a
+  let suffix
+  if (Math.abs(diff) < 1) {
+    suffix = 'on target'
+  } else if (diff > 0) {
+    suffix = `${Math.round(diff)} ${unit} short`
+  } else {
+    suffix = `${Math.abs(Math.round(diff))} ${unit} over`
+  }
+  const tone = pct >= 95 ? 'up' : pct >= 85 ? 'up' : 'down'
+  return { chevron: `${pct}%`, tone, text: `of target · ${suffix}` }
+}
+
 // Activity-tile summary for one date. Counts runs and sums their
 // distance in km; falls back to a generic "N activities" line when
 // the day has no runs but does have other activity types. Returns

@@ -2833,7 +2833,8 @@
   border-radius: 2px;
   transition: width 600ms var(--ease);
 }
-[data-cadence] .daily-page .field-card .progress .fill.clay { background: var(--clay); }
+[data-cadence] .daily-page .field-card .progress .fill.sand  { background: var(--sand); }
+[data-cadence] .daily-page .field-card .progress .fill.clay  { background: var(--clay); }
 [data-cadence] .daily-page .field-card .progress .fill.slate { background: var(--slate); }
 
 [data-cadence] .daily-page .field-card .helper {

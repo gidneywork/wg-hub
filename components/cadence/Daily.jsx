@@ -1,19 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SaveStatus from './daily/SaveStatus'
 import DateNav from './daily/DateNav'
 import SyncedTiles from './daily/SyncedTiles'
-import { todayIso } from './daily/dailyHelpers'
+import BodySection from './daily/BodySection'
+import NutritionSection from './daily/NutritionSection'
+import {
+  todayIso,
+  mkEmptyForm,
+  loadFormFromLog,
+} from './daily/dailyHelpers'
 
 /**
  * Cadence — Daily Data page.
  *
  * Mockup: design/mockups/cadence-daily-data.html
- * Page head, save-status pill, and date nav are wired.
- * Synced tiles, body + nutrition with auto-save, and the
- * Phase 2 stubs for lifts and how-it-landed arrive next.
+ * Page head + date nav + synced tiles + body + nutrition with
+ * debounced auto-save are wired. Lifts and how-it-landed (Phase 2
+ * stubs) arrive next, footer + self-check after.
  */
+const DEBOUNCE_MS = 700
+const RECENT_SAVE_MS = 2000
+
 export default function Daily({
   logs,
   saveLog,
@@ -24,17 +33,105 @@ export default function Daily({
   onStravaConnectionChange,
 }) {
   const [date, setDate] = useState(todayIso())
+  const [form, setForm] = useState(() => loadFormFromLog(logs?.[date]))
 
-  // Auto-save state — wired into the input flow in commit 5. For
-  // commit 3 the pill renders at idle with the page-load timestamp so
-  // the pulse animation runs and the layout is visible end-to-end.
-  const [saveState, setSaveState] = useState('idle')
-  const [savedAt, setSavedAt] = useState(() => new Date())
+  // Auto-save state surfaced to the SaveStatus pill.
+  const [saveState, setSaveState] = useState('idle')   // 'idle' | 'saving'
+  const [savedAt,   setSavedAt]   = useState(() => new Date())
+  const [recentlySaved, setRecentlySaved] = useState(false)
+
+  // ── Auto-save plumbing
+  // Refs so the timer callback always reads the latest values without
+  // re-creating the debounce on every keystroke. pendingRef holds the
+  // most recent { date, form } snapshot; the timer fires once after the
+  // user stops typing for DEBOUNCE_MS.
+  const pendingRef    = useRef(null)
+  const timerRef      = useRef(null)
+  const inFlightRef   = useRef(false)
+  const dateRef       = useRef(date)
+  const recentTimerRef = useRef(null)
+
+  useEffect(() => { dateRef.current = date }, [date])
+
+  const fireSave = async () => {
+    if (inFlightRef.current) return
+    if (!pendingRef.current) return
+    const { date: snapDate, form: snapForm } = pendingRef.current
+    pendingRef.current = null
+    inFlightRef.current = true
+    setSaveState('saving')
+    try {
+      // weightTime is auto-stamped on every save (T7 ruling: option b).
+      const toSave = {
+        ...snapForm,
+        body: { ...snapForm.body, weightTime: new Date().toISOString() },
+      }
+      await saveLog(snapDate, toSave)
+      setSavedAt(new Date())
+      setRecentlySaved(true)
+      clearTimeout(recentTimerRef.current)
+      recentTimerRef.current = setTimeout(() => setRecentlySaved(false), RECENT_SAVE_MS)
+    } catch (e) {
+      // Surface failures silently for now — the pill returns to idle
+      // and the next keystroke will retry.
+      console.error('Daily save failed:', e)
+    } finally {
+      inFlightRef.current = false
+      setSaveState('idle')
+      // If new edits arrived while the save was in flight, schedule
+      // another debounce window from now.
+      if (pendingRef.current) scheduleSave()
+    }
+  }
+
+  const scheduleSave = () => {
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(fireSave, DEBOUNCE_MS)
+  }
+
+  const onField = (section, key, value) => {
+    setForm(prev => {
+      const next = { ...prev, [section]: { ...prev[section], [key]: value } }
+      pendingRef.current = { date: dateRef.current, form: next }
+      return next
+    })
+    scheduleSave()
+  }
+
+  // ── Date change
+  // When the user navigates to a different date, flush any pending save
+  // for the OLD date FIRST, then re-populate the form from logs[newDate].
+  // We don't depend on `logs` here so realtime updates from Supabase
+  // don't stomp local typing — only the explicit date change re-loads.
+  const prevDateRef = useRef(date)
+  useEffect(() => {
+    if (prevDateRef.current === date) return
+    // Flush pending — pendingRef already carries the old date snapshot.
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      if (pendingRef.current) fireSave()
+    }
+    prevDateRef.current = date
+    setForm(loadFormFromLog(logs?.[date]))
+    // Reset the "recently saved" tick state — it shouldn't leak across
+    // days; the new day starts in a neutral state.
+    setRecentlySaved(false)
+  }, [date])
+
+  // Initial mount: if logs hydrates after first render, load it into
+  // the form. Subsequent log changes don't override local typing.
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (hydratedRef.current) return
+    if (logs && Object.keys(logs).length > 0) {
+      setForm(loadFormFromLog(logs[date]))
+      hydratedRef.current = true
+    }
+  }, [logs, date])
 
   return (
     <div className="daily-page">
 
-      {/* ===== Page head — title + save-status pill ===== */}
       <header className="page-head r r-1">
         <div>
           <div className="eyebrow">Entry</div>
@@ -44,7 +141,6 @@ export default function Daily({
         <SaveStatus state={saveState} savedAt={savedAt} />
       </header>
 
-      {/* ===== Date nav ===== */}
       <DateNav date={date} setDate={setDate} logs={logs} />
 
       <SyncedTiles
@@ -55,27 +151,23 @@ export default function Daily({
         onSynced={onStravaConnectionChange}
       />
 
-      {/* ===== Body — manual entry with targets ===== */}
-      <section className="section r r-4">
-        <div className="section-head">
-          <span className="title">Body</span>
-          <span className="meta">3 fields · manual entry</span>
-        </div>
-        <div className="field-grid">
-          {/* Weight + Steps + Calories burnt — wired in commit 5 */}
-        </div>
-      </section>
+      <BodySection
+        date={date}
+        form={form}
+        logs={logs}
+        settings={settings}
+        onField={onField}
+        recentlySaved={recentlySaved}
+        saveState={saveState}
+      />
 
-      {/* ===== Nutrition — manual entry with targets ===== */}
-      <section className="section r r-5">
-        <div className="section-head">
-          <span className="title">Nutrition</span>
-          <span className="meta">Manual entry · target shown on each</span>
-        </div>
-        <div className="field-grid">
-          {/* Calories + Protein + Carbs — wired in commit 5 */}
-        </div>
-      </section>
+      <NutritionSection
+        form={form}
+        settings={settings}
+        onField={onField}
+        recentlySaved={recentlySaved}
+        saveState={saveState}
+      />
 
       {/* ===== Lifts — Phase 2 stub ===== */}
       <section className="section r r-6">
@@ -99,7 +191,6 @@ export default function Daily({
         </div>
       </section>
 
-      {/* ===== Day footer — keyboard hints + entry count ===== */}
       <div className="day-footer r r-8">
         <div className="keyhint">Footer wired in commit 7.</div>
         <div>—</div>
