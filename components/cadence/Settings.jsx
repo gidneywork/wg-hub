@@ -7,6 +7,7 @@ import InfoBanner from './settings/InfoBanner'
 import StravaCard from './settings/StravaCard'
 import TargetSection from './settings/TargetSection'
 import WhoopUpload from './settings/WhoopUpload'
+import ActivityLog from './settings/ActivityLog'
 import {
   currentValues,
   SECTION_LAYOUT,
@@ -125,11 +126,7 @@ export default function Settings({
 
       <WhoopUpload onAuditWritten={bumpAudit} />
 
-      {/* ===== Activity log ===== */}
-      <section className="settings-section r r-10">
-        <div className="section-head"><span className="section-label">Activity log</span></div>
-        <div className="section-body">Audit log wired in commit 6.</div>
-      </section>
+      <ActivityLog auditVersion={auditVersion} />
     </div>
   )
 }

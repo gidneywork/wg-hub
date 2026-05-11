@@ -2363,6 +2363,10 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
+[data-cadence] .settings-page .log-empty {
+  padding: 28px 0 12px;
+  text-align: center;
+}
 
 /* -----------------------------------------------------------------
    EMPTY STATE — for sidebar nav targets that don't yet exist.
