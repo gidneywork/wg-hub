@@ -70,3 +70,52 @@ export function shiftIso(iso, delta) {
   if (delta > 0 && next > todayIso()) return null
   return next
 }
+
+// "Nm ago" / "Nh ago" / "Nd ago" — for the Synced section meta line.
+// Includes minute granularity, unlike the Settings timeAgo helper.
+// Pass `null` and you get "—" (no source has reported a sync).
+export function fmtRelativeAgo(iso) {
+  if (!iso) return '—'
+  const ms = Date.now() - new Date(iso).getTime()
+  if (ms < 0) return 'Just now'
+  const mins = Math.floor(ms / 60000)
+  if (mins < 1)  return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
+
+// "H:MM" — used in the Sleep synced tile to format the hours-slept
+// decimal (e.g. 7.3 → "7:18").
+export function fmtHoursColon(hoursDecimal) {
+  if (hoursDecimal == null || isNaN(parseFloat(hoursDecimal))) return null
+  const h = Math.floor(hoursDecimal)
+  const m = Math.round((hoursDecimal - h) * 60)
+  return `${h}:${m.toString().padStart(2, '0')}`
+}
+
+// Activity-tile summary for one date. Counts runs and sums their
+// distance in km; falls back to a generic "N activities" line when
+// the day has no runs but does have other activity types. Returns
+// `null` when the day has nothing.
+export function activitySummary(activities, isoDate) {
+  if (!activities || !isoDate) return null
+  const dayActs = activities.filter(a => (a.start_date || '').startsWith(isoDate))
+  if (!dayActs.length) return null
+  const runs = dayActs.filter(a => (a.custom_type || a.strava_type) === 'run')
+  if (runs.length > 0) {
+    const km = runs.reduce((s, a) => s + (a?.data?.distance || 0), 0) / 1000
+    return {
+      count: runs.length,
+      noun:  runs.length === 1 ? 'run' : 'runs',
+      km:    km > 0 ? km : null,
+    }
+  }
+  return {
+    count: dayActs.length,
+    noun:  dayActs.length === 1 ? 'activity' : 'activities',
+    km:    null,
+  }
+}

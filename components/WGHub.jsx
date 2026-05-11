@@ -269,6 +269,8 @@ export default function WGHub({ onSignOut }) {
           settings={settings}
           whoopData={whoopData}
           activities={activities}
+          stravaConnection={stravaConnection}
+          onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
         />
       ) : view === 'settings' ? (
         <CadenceSettings

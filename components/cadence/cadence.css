@@ -2717,6 +2717,11 @@
   color: var(--text-faint);
   margin-top: 6px;
 }
+[data-cadence] .daily-page .synced-tile .value .em-dash {
+  font-family: var(--display);
+  font-style: italic;
+  color: var(--text-faint);
+}
 
 /* Field cards (Body + Nutrition) ------------------------------------- */
 [data-cadence] .daily-page .field-grid {

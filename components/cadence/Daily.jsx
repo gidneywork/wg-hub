@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import SaveStatus from './daily/SaveStatus'
 import DateNav from './daily/DateNav'
+import SyncedTiles from './daily/SyncedTiles'
 import { todayIso } from './daily/dailyHelpers'
 
 /**
@@ -19,6 +20,8 @@ export default function Daily({
   settings,
   whoopData,
   activities,
+  stravaConnection,
+  onStravaConnectionChange,
 }) {
   const [date, setDate] = useState(todayIso())
 
@@ -44,16 +47,13 @@ export default function Daily({
       {/* ===== Date nav ===== */}
       <DateNav date={date} setDate={setDate} logs={logs} />
 
-      {/* ===== Synced — read-only Whoop + Strava tiles ===== */}
-      <section className="section r r-3">
-        <div className="section-head">
-          <span className="title">Synced</span>
-          <span className="meta">From Whoop · Strava · — · ↻ Sync now</span>
-        </div>
-        <div className="synced-grid">
-          {/* 5 tiles wired in commit 4 */}
-        </div>
-      </section>
+      <SyncedTiles
+        date={date}
+        whoopData={whoopData}
+        activities={activities}
+        stravaConnection={stravaConnection}
+        onSynced={onStravaConnectionChange}
+      />
 
       {/* ===== Body — manual entry with targets ===== */}
       <section className="section r r-4">
