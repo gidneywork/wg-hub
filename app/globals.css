@@ -1,3 +1,4 @@
+/* Legacy WG Hub font stack (kept for [data-legacy] views) */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
 
 *, *::before, *::after {
@@ -8,19 +9,21 @@
 
 html, body {
   height: 100%;
-  background: #07090f;
-  color: #e8edf5;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 
 /* Thin custom scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #07090f; }
-::-webkit-scrollbar-thumb { background: #21293a; border-radius: 2px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Shared form element styles - components add specifics inline */
-input, select, textarea {
+/* Legacy form element styles — scoped so they don't touch Cadence views */
+[data-legacy] input,
+[data-legacy] select,
+[data-legacy] textarea {
   background: #21293a;
   border: 1px solid rgba(255,255,255,0.12);
   color: #e8edf5;
@@ -32,22 +35,24 @@ input, select, textarea {
   width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-input:focus, select:focus, textarea:focus {
+[data-legacy] input:focus,
+[data-legacy] select:focus,
+[data-legacy] textarea:focus {
   border-color: #00e676;
   box-shadow: 0 0 0 3px rgba(0,230,118,0.12);
 }
-input[type="checkbox"] {
+[data-legacy] input[type="checkbox"] {
   width: 17px; height: 17px; min-width: 17px;
   accent-color: #00e676;
   cursor: pointer; padding: 0;
 }
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
-input[type="range"] { padding: 0; background: transparent; border: none; box-shadow: none; cursor: pointer; }
-select { cursor: pointer; }
-textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+[data-legacy] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-legacy] input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+[data-legacy] input[type="range"] { padding: 0; background: transparent; border: none; box-shadow: none; cursor: pointer; }
+[data-legacy] select { cursor: pointer; }
+[data-legacy] textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
 
 @keyframes fadeUp   { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
 @keyframes spin     { to{transform:rotate(360deg);} }
 @keyframes pulse    { 0%,100%{opacity:1;}50%{opacity:0.4;} }
-.fade { animation: fadeUp 0.25s ease forwards; }
+[data-legacy] .fade { animation: fadeUp 0.25s ease forwards; }

@@ -7,6 +7,8 @@ import {
 } from 'recharts'
 import { db } from '../lib/db'
 import WorkoutHistory from './WorkoutHistory'
+import DashboardShell from './cadence/DashboardShell'
+import CadenceDashboard from './cadence/Dashboard'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -89,8 +91,11 @@ const mkEmpty    = () => ({
 })
 const TT = {background:'#131722',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontFamily:'var(--font-mono)',fontSize:12,color:'#e8edf5',padding:'8px 12px'}
 
+// Legacy tokens are scoped to [data-legacy] so they don't override the
+// Cadence tokens loaded from design/cadence-tokens.css at :root. The
+// legacy WGHub views still render under [data-legacy="true"] wrappers.
 const CSS_VARS = `
-  :root {
+  [data-legacy] {
     --bg:#07090f; --s1:#0d1018; --s2:#131722; --s3:#1a2030; --s4:#21293a;
     --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
     --accent:#00e676; --accent-dim:rgba(0,230,118,0.12);
@@ -100,22 +105,26 @@ const CSS_VARS = `
     --font-mono:'IBM Plex Mono','Courier New',monospace;
     --font-body:'DM Sans',system-ui,sans-serif;
     --r:10px; --r-lg:14px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100%;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .fade { animation: fadeIn 0.2s ease; }
+  [data-legacy] .fade { animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 
   /* ── Mobile layout ─────────────────────────────────────────── */
   @media (max-width: 768px) {
-    nav { padding: 0 12px !important; gap: 8px !important; overflow-x: auto; }
-    nav::-webkit-scrollbar { display: none; }
-    .mobile-hide { display: none !important; }
-    .mobile-stack { grid-template-columns: 1fr !important; }
-    .mobile-2col { grid-template-columns: 1fr 1fr !important; }
-    .mobile-full { padding: 14px 16px !important; max-width: 100% !important; }
-    input, select, textarea { font-size: 16px !important; } /* prevent iOS zoom */
+    [data-legacy] nav { padding: 0 12px !important; gap: 8px !important; overflow-x: auto; }
+    [data-legacy] nav::-webkit-scrollbar { display: none; }
+    [data-legacy] .mobile-hide { display: none !important; }
+    [data-legacy] .mobile-stack { grid-template-columns: 1fr !important; }
+    [data-legacy] .mobile-2col { grid-template-columns: 1fr 1fr !important; }
+    [data-legacy] .mobile-full { padding: 14px 16px !important; max-width: 100% !important; }
+    [data-legacy] input, [data-legacy] select, [data-legacy] textarea { font-size: 16px !important; } /* prevent iOS zoom */
   }
 `
 
@@ -239,83 +248,31 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
-  const planDayIndex     = new Date().getDay()===0?6:new Date().getDay()-1
-  const todayPlan        = plan?.[planDayIndex]
-  const todayRunSession  = todayPlan?.sessions?.find(s=>s.type==='run')
-  const todayIsRest      = todayPlan?.sessions?.some(s=>s.type==='rest')
-
-  const [workoutPopup, setWorkoutPopup] = useState(false)
+  const LEGACY_VIEWS = ['log','history','plan','planner','finance','settings','tv']
+  const isLegacy = LEGACY_VIEWS.includes(view)
 
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',fontFamily:'var(--font-body)'}}>
-      <style>{CSS_VARS}</style>
-
-      {/* ── TODAY'S WORKOUTS POPUP ── */}
-      {workoutPopup&&todayPlan&&(
-        <div onClick={()=>setWorkoutPopup(false)} style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'flex-start',justifyContent:'flex-end',padding:'70px 24px 0'}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'var(--s1)',border:'1px solid var(--border2)',borderRadius:'var(--r-lg)',padding:20,minWidth:320,maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-              <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:todayPlan.accent,letterSpacing:'1.5px',fontWeight:600}}>TODAY'S WORKOUTS · {todayPlan.day.toUpperCase()}</div>
-              <button onClick={()=>setWorkoutPopup(false)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:18,lineHeight:1}}>×</button>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {todayPlan.sessions.map(s=>{
-                const color=typeColor(s.type), lines=s.details.split('\n').filter(Boolean)
-                return (
-                  <div key={s.id} style={{background:'var(--s2)',borderLeft:`3px solid ${color}`,borderRadius:8,padding:'10px 14px'}}>
-                    <div style={{fontFamily:'var(--font-mono)',fontSize:9,color,letterSpacing:'1.5px',marginBottom:6,fontWeight:600}}>{typeLabel(s.type).toUpperCase()}</div>
-                    {lines.map((line,i)=><div key={i} style={{fontSize:12,color:'var(--text)',marginBottom:i<lines.length-1?3:0}}>{lines.length>1?'• '+line:line}</div>)}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+    <DashboardShell view={view} setView={setView} userName="Will" onSignOut={onSignOut}>
+      {!ready ? (
+        <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
+      ) : view === 'dashboard' ? (
+        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
+      ) : isLegacy ? (
+        <div data-legacy="true">
+          <style>{CSS_VARS}</style>
+          {view==='log'      ? <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities} whoopData={whoopData}/>
+           :view==='history' ? <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); const a=await db.loadActivities(); setActivities(a); }}/>
+           :view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
+           :view==='planner' ? <PlannerPage/>
+           :view==='finance' ? <FinancePage/>
+           :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
+           :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
+          }
         </div>
+      ) : (
+        <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Coming soon</div>
       )}
-
-      {/* ── NAV ── */}
-      <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:200,background:'rgba(7,9,15,0.95)',backdropFilter:'blur(16px)',borderBottom:'1px solid var(--border)',height:60,display:'flex',alignItems:'center',padding:'0 24px',gap:22}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:6,marginRight:6,flexShrink:0}}>
-          <span style={{fontFamily:'var(--font-head)',fontSize:24,color:'var(--accent)',letterSpacing:1}}>WG</span>
-          <span style={{fontFamily:'var(--font-head)',fontSize:24,letterSpacing:1}}>HUB</span>
-          <span style={{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--muted)',marginLeft:4}}>PERFORMANCE</span>
-        </div>
-        {[{k:'dashboard',l:'DASHBOARD'},{k:'log',l:'DAILY DATA'},{k:'history',l:'HISTORY'},{k:'plan',l:'TRAINING PLAN'},{k:'planner',l:'PLANNER'},{k:'finance',l:'FINANCE'}].map(({k,l})=>(
-          <button key={k} onClick={()=>setView(k)} style={{background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font-mono)',fontSize:11,letterSpacing:'1.5px',color:view===k?'var(--accent)':'var(--muted)',paddingBottom:2,borderBottom:`2px solid ${view===k?'var(--accent)':'transparent'}`,transition:'color 0.15s',whiteSpace:'nowrap'}}>{l}</button>
-        ))}
-        <button onClick={()=>setView('tv')} style={{background:view==='tv'?'var(--accent)':'var(--s2)',color:view==='tv'?'var(--bg)':'var(--muted)',border:'1px solid var(--border2)',borderRadius:7,padding:'5px 13px',fontFamily:'var(--font-mono)',fontSize:10,cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>TV MODE</button>
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
-          <div style={{textAlign:'right'}}>
-            <div style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--accent)'}}>{new Date().toLocaleDateString('en-US',{weekday:'long'}).toUpperCase()}</div>
-            <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)'}}>{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
-          </div>
-          {todayPlan&&(
-            <button onClick={()=>setWorkoutPopup(p=>!p)} style={{background:workoutPopup?`${todayPlan.accent}22`:'var(--s2)',border:`1px solid ${workoutPopup?todayPlan.accent+'55':'var(--border)'}`,borderRadius:7,padding:'5px 14px',fontFamily:'var(--font-mono)',fontSize:10,color:workoutPopup?todayPlan.accent:'var(--muted)',cursor:'pointer',letterSpacing:1,transition:'all 0.15s',whiteSpace:'nowrap'}}>
-              TODAY'S WORKOUTS {workoutPopup?'▲':'▼'}
-            </button>
-          )}
-          <button onClick={onSignOut} style={{background:'none',border:'1px solid var(--border)',borderRadius:7,padding:'5px 12px',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',cursor:'pointer',letterSpacing:1,whiteSpace:'nowrap'}}>SIGN OUT</button>
-          <button onClick={()=>setView('settings')} title='Settings' style={{background:view==='settings'?'var(--accent-dim)':'none',border:`1px solid ${view==='settings'?'var(--accent)':'var(--border)'}`,borderRadius:7,padding:'5px 9px',cursor:'pointer',color:view==='settings'?'var(--accent)':'var(--muted)',fontSize:16,lineHeight:1,display:'flex',alignItems:'center'}}>⚙</button>
-        </div>
-      </nav>
-
-      <div style={{paddingTop:60}}>
-        {!ready?(
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'calc(100vh - 60px)',gap:12}}>
-            <div style={{width:20,height:20,border:'2px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
-            <span style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--muted)'}}>Loading training data...</span>
-          </div>
-        ):view==='dashboard'?<Dashboard  logs={logs} settings={settings} activities={activities} whoopData={whoopData} setView={setView}/>
-         :view==='log'?      <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities} whoopData={whoopData}/>
-         :view==='history'?  <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); const a=await db.loadActivities(); setActivities(a); }}/>
-         :view==='plan'?     <TrainingPlan plan={plan} savePlan={savePlan}/>
-         :view==='planner'?  <PlannerPage/>
-         :view==='finance'?  <FinancePage/>
-         :view==='settings'? <SettingsPage settings={settings} saveSettings={saveSettings} stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}/>
-         :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
-        }
-      </div>
-    </div>
+    </DashboardShell>
   )
 }
 
