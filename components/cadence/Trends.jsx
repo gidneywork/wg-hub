@@ -192,6 +192,67 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
   )
 }
 
+// ─── Chart: Steps & calories out ────────────────────────────────────
+// Dual-metric chart mirroring the HRV/RHR pattern: primary moss line
+// (Steps, left axis) with fade fill, secondary slate dashed line
+// (Calories out, right axis). Reads logs only — no Whoop merge since
+// neither field has a Whoop sync today.
+function StepsCaloriesOutChart({ logs, days, prevDays }) {
+  const stepsValues = days.map(d => parseFloat(logs?.[d]?.body?.steps))
+  const coutValues  = days.map(d => parseFloat(logs?.[d]?.body?.caloriesOut))
+  const stepsCurr   = stepsValues[stepsValues.length - 1]
+  const coutCurr    = coutValues[coutValues.length - 1]
+  const stepsAvg    = mean(stepsValues)
+  const coutAvg     = mean(coutValues)
+  const stepsPrev   = mean(prevDays.map(d => parseFloat(logs?.[d]?.body?.steps)))
+  const coutPrev    = mean(prevDays.map(d => parseFloat(logs?.[d]?.body?.caloriesOut)))
+
+  const stepsLine = buildLine(stepsValues, 0, 15000)
+  const coutLine  = buildLine(coutValues,  0, 4000)
+  const ticks = xAxisTicks(days)
+
+  const sd = stepsAvg != null && stepsPrev != null ? deltaStr(stepsAvg, stepsPrev, { suffix: ' steps' }) : null
+  const cd = coutAvg  != null && coutPrev  != null ? deltaStr(coutAvg,  coutPrev,  { suffix: ' kcal' })  : null
+  const deltaLine = [sd, cd].filter(Boolean).join(' · ')
+
+  return (
+    <div className="chart-card">
+      <div className="chart-head">
+        <div>
+          <div className="label">Steps &amp; calories out</div>
+          <div className="value">
+            {isFinite(stepsCurr) ? Math.round(stepsCurr) : '—'}
+            <span className="unit">steps · {isFinite(coutCurr) ? Math.round(coutCurr) : '—'} kcal</span>
+          </div>
+        </div>
+        <div className="meta-right">
+          {deltaLine && <div className="delta-line">{deltaLine}</div>}
+          <div className="meta-sub">vs prev period</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 560 170" preserveAspectRatio="none" style={{ overflow: 'visible', width: '100%', height: 'auto' }}>
+        <defs>
+          <linearGradient id="cadStepsFade" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" style={{ stopColor: 'var(--moss)', stopOpacity: 0.18 }} />
+            <stop offset="100%" style={{ stopColor: 'var(--moss)', stopOpacity: 0 }} />
+          </linearGradient>
+        </defs>
+        <GridLines />
+        <YAxisLeft  labels={['15k','10k','5k']} />
+        <YAxisRight labels={['4k','3k','2k']} />
+        {stepsLine.fillPath && <path className="draw-fill trend" d={stepsLine.fillPath} fill="url(#cadStepsFade)" />}
+        {stepsLine.linePath && <path className="draw-line trend" pathLength="1" d={stepsLine.linePath} style={{ stroke: 'var(--moss)',  fill: 'none' }} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
+        {coutLine.linePath  && <path className="draw-line trend" pathLength="1" d={coutLine.linePath}  style={{ stroke: 'var(--slate)', fill: 'none' }} strokeWidth="1.5"  strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 3" />}
+        <XAxisLabels ticks={ticks} />
+      </svg>
+      <div className="legend">
+        <span className="item"><span className="swatch moss"  />Steps · count</span>
+        <span className="item"><span className="swatch slate" />Calories out · kcal</span>
+      </div>
+    </div>
+  )
+}
+
 // ─── Chart: Weekly running · km ─────────────────────────────────────
 function WeeklyKmChart({ logs, activities, settings }) {
   // Build last 6 weeks of km (current week is the 6th, in-progress).
@@ -634,12 +695,13 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
       </div>
 
       <div className="charts-grid">
-        <HrvRhrChart        logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
-        <WeeklyKmChart      logs={logs} activities={activities} settings={settings} />
-        <SleepRecoveryChart logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
-        <CaloriesWeightChart logs={logs} activities={activities} days={days} prevDays={prevDays} />
-        <AdherenceChart     plan={plan} activities={activities} />
-        <NutritionChart     logs={logs} days={days} />
+        <HrvRhrChart            logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
+        <WeeklyKmChart          logs={logs} activities={activities} settings={settings} />
+        <SleepRecoveryChart     logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
+        <CaloriesWeightChart    logs={logs} activities={activities} days={days} prevDays={prevDays} />
+        <AdherenceChart         plan={plan} activities={activities} />
+        <NutritionChart         logs={logs} days={days} />
+        <StepsCaloriesOutChart  logs={logs} days={days} prevDays={prevDays} />
       </div>
     </section>
   )
