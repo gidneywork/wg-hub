@@ -133,7 +133,7 @@ export const TARGET_SPECS = {
     actual: v => `${numFmt(v)} km logged`,
   },
   dailySteps: {
-    label: 'Daily steps target',
+    label: 'Daily steps',
     pill: null,
     unit: 'steps',
     step: 100,
@@ -141,7 +141,7 @@ export const TARGET_SPECS = {
     actual: v => `avg ${numFmt(v)} steps`,
   },
   dailyCaloriesOut: {
-    label: 'Daily calories burnt target',
+    label: 'Daily calories burnt',
     pill: null,
     unit: 'kcal',
     step: 50,
