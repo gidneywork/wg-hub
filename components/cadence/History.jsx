@@ -2,17 +2,23 @@
 
 import { useState } from 'react'
 import SummaryStrip from './history/SummaryStrip'
+import Filters from './history/Filters'
 import { fmtLastSync } from './history/historyHelpers'
 
 /**
  * Cadence — History page.
  *
  * Mockup: design/mockups/cadence-history.html
- * Page head + summary strip are wired to real activity data here.
- * Filters, grouping, PB heuristic and load-more arrive in later commits.
+ * Page head, summary strip and filters bar are wired.
+ * Grouping, PB heuristic, load-more, footer count and empty state
+ * arrive in the next commit.
  */
 export default function History({ activities = [], stravaConnection = null }) {
   const [range, setRange] = useState('this-month')
+  const [rangeOpen, setRangeOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
 
   const lastSync = fmtLastSync(stravaConnection?.last_synced_at)
   const totalSessions = activities.length
@@ -37,35 +43,13 @@ export default function History({ activities = [], stravaConnection = null }) {
       <SummaryStrip activities={activities} />
 
       {/* ===== Filters ===== */}
-      <section className="filters r r-3">
-        <div className="search-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input className="search-input" type="text" placeholder="Search by name, type, or note…" disabled />
-        </div>
-
-        <div className="filter-group" data-filter="type">
-          <span className="gl">Type</span>
-          <button type="button" className="filter-pill active">All</button>
-          <button type="button" className="filter-pill"><span className="pip run" />Run</button>
-          <button type="button" className="filter-pill"><span className="pip strength" />Strength</button>
-          <button type="button" className="filter-pill"><span className="pip recovery" />Recovery</button>
-        </div>
-
-        <div className="filter-group" data-filter="source">
-          <span className="gl">Source</span>
-          <button type="button" className="filter-pill active">All</button>
-          <button type="button" className="filter-pill">Strava</button>
-          <button type="button" className="filter-pill">Whoop</button>
-          <button type="button" className="filter-pill">Manual</button>
-        </div>
-
-        <div className="range-picker">
-          <button type="button" className="range-btn">
-            <span>This month</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-          </button>
-        </div>
-      </section>
+      <Filters
+        search={search} setSearch={setSearch}
+        typeFilter={typeFilter} setTypeFilter={setTypeFilter}
+        sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
+        range={range} setRange={setRange}
+        rangeOpen={rangeOpen} setRangeOpen={setRangeOpen}
+      />
 
       {/* ===== Empty state (hidden by default) ===== */}
       <div className="empty-state">
