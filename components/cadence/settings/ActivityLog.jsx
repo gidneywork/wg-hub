@@ -122,7 +122,9 @@ export default function ActivityLog({ auditVersion = 0 }) {
 
       {entries.length === 0 && !loading ? (
         <div className="log-empty">
-          <span className="no-data">No matching activity</span>
+          <span className="no-data">
+            {typeFilter === 'all' && !debouncedSearch ? 'No activity yet' : 'No matching activity'}
+          </span>
         </div>
       ) : (
         entries.map(e => (
