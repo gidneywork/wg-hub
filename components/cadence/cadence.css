@@ -19,6 +19,9 @@
   --chart-axis:       #8A867D;
   --chart-highlight:  #1B1B1F;
   --chart-axis-slate: #4A5F6E;
+
+  /* Settings target-bar grow duration. Mockup-specific motion token. */
+  --t-bar: 1100ms;
 }
 [data-theme="dark"] {
   --border-soft:      #1B1B22;
@@ -1805,6 +1808,547 @@
   color: var(--text-quiet);
 }
 
+/* =====================================================================
+   SETTINGS PAGE
+   All rules scoped under [data-cadence] .settings-page so bare class
+   names from the mockup (.btn, .status-badge, .target-row, .log-entry,
+   .section-label, .section-sub, .section-body, .upload-zone, etc.)
+   don't collide with the Dashboard's existing rules.
+   Mockup: design/mockups/cadence-settings.html
+   ===================================================================== */
+
+[data-cadence] .settings-page .settings-section,
+[data-cadence] .settings-page .upload-zone,
+[data-cadence] .settings-page .target-field,
+[data-cadence] .settings-page .btn,
+[data-cadence] .settings-page .target-bar,
+[data-cadence] .settings-page .target-fill,
+[data-cadence] .settings-page .info-banner,
+[data-cadence] .settings-page .log-search,
+[data-cadence] .settings-page .log-filter {
+  transition: background-color var(--t-theme) var(--ease),
+              border-color var(--t-theme) var(--ease),
+              color var(--t-theme) var(--ease);
+}
+
+/* Page header --------------------------------------------------------- */
+[data-cadence] .settings-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 36px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+  gap: 24px;
+}
+[data-cadence] .settings-page .page-title {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+[data-cadence] .settings-page .page-title em {
+  font-style: italic;
+  font-weight: 360;
+  color: var(--moss-deep);
+  font-variation-settings: "opsz" 144, "SOFT" 80;
+}
+[data-theme="dark"] [data-cadence] .settings-page .page-title em { color: var(--moss); }
+[data-cadence] .settings-page .page-sub {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-quiet);
+}
+[data-cadence] .settings-page .header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Buttons (scoped to settings-page) ----------------------------------- */
+[data-cadence] .settings-page .btn {
+  font-family: var(--sans);
+  font-size: var(--type-12);
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  letter-spacing: 0;
+}
+[data-cadence] .settings-page .btn-primary {
+  background: var(--moss);
+  color: var(--on-moss);
+}
+[data-cadence] .settings-page .btn-primary:hover { background: var(--moss-deep); }
+[data-theme="dark"] [data-cadence] .settings-page .btn-primary:hover {
+  background: var(--moss);
+  opacity: 0.88;
+}
+[data-cadence] .settings-page .btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+[data-cadence] .settings-page .btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+[data-cadence] .settings-page .btn-danger {
+  background: transparent;
+  color: var(--clay-deep);
+  border-color: var(--border);
+}
+[data-theme="dark"] [data-cadence] .settings-page .btn-danger { color: var(--clay); }
+[data-cadence] .settings-page .btn-danger:hover { border-color: var(--clay); }
+[data-cadence] .settings-page .btn-lg {
+  padding: 11px 22px;
+  font-size: var(--type-13);
+}
+
+/* Info banner --------------------------------------------------------- */
+[data-cadence] .settings-page .info-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--moss);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 32px;
+  align-items: center;
+}
+[data-cadence] .settings-page .info-banner-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--moss-deep);
+  font-weight: 500;
+  white-space: nowrap;
+}
+[data-theme="dark"] [data-cadence] .settings-page .info-banner-eyebrow { color: var(--moss); }
+[data-cadence] .settings-page .info-banner-body {
+  font-size: var(--type-13);
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+[data-cadence] .settings-page .info-states {
+  display: inline-flex;
+  gap: 18px;
+  margin-left: 14px;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  align-items: center;
+}
+[data-cadence] .settings-page .info-states .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-cadence] .settings-page .info-states .pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+[data-cadence] .settings-page .info-states .pip.moss { background: var(--moss); }
+[data-cadence] .settings-page .info-states .pip.sand { background: var(--sand); }
+[data-cadence] .settings-page .info-states .pip.clay { background: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .settings-page .info-states .pip.clay { background: var(--clay); }
+
+/* Settings section card ---------------------------------------------- */
+[data-cadence] .settings-page .settings-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--moss);
+  border-radius: var(--radius-md);
+  padding: 26px 30px;
+  margin-bottom: 14px;
+}
+[data-cadence] .settings-page .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+[data-cadence] .settings-page .section-label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--moss-deep);
+  font-weight: 500;
+}
+[data-theme="dark"] [data-cadence] .settings-page .section-label { color: var(--moss); }
+[data-cadence] .settings-page .section-sub {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  color: var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+[data-cadence] .settings-page .section-body { margin-top: 18px; }
+[data-cadence] .settings-page .section-blurb {
+  font-size: var(--type-13);
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+
+/* Status badge -------------------------------------------------------- */
+[data-cadence] .settings-page .status-badge {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 4px 9px;
+  border-radius: 2px;
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  font-weight: 500;
+}
+[data-theme="dark"] [data-cadence] .settings-page .status-badge { color: var(--moss); }
+[data-cadence] .settings-page .status-badge.warning {
+  background: var(--clay-soft);
+  color: var(--clay-deep);
+}
+[data-theme="dark"] [data-cadence] .settings-page .status-badge.warning { color: var(--clay); }
+
+/* Strava integration body -------------------------------------------- */
+[data-cadence] .settings-page .integration-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+  margin-top: 18px;
+}
+[data-cadence] .settings-page .integration-name {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: var(--tracking-h2);
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+[data-cadence] .settings-page .integration-loc {
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+[data-cadence] .settings-page .integration-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 8px;
+}
+[data-cadence] .settings-page .integration-stat .label {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-quiet);
+  margin-bottom: 4px;
+}
+[data-cadence] .settings-page .integration-stat .value {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .settings-page .integration-info p {
+  font-size: var(--type-13);
+  color: var(--text-soft);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  max-width: 44ch;
+}
+
+/* Target row --------------------------------------------------------- */
+[data-cadence] .settings-page .target-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 1.2fr;
+  gap: 40px;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--border);
+  align-items: center;
+}
+[data-cadence] .settings-page .target-row:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+[data-cadence] .settings-page .target-row:first-child { padding-top: 4px; }
+[data-cadence] .settings-page .target-label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-cadence] .settings-page .target-pill {
+  display: inline-block;
+  padding: 2px 6px;
+  font-family: var(--mono);
+  font-size: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border-radius: 2px;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+}
+[data-cadence] .settings-page .target-pill.clay-flag {
+  background: var(--clay-soft);
+  color: var(--clay-deep);
+}
+[data-theme="dark"] [data-cadence] .settings-page .target-pill.clay-flag { color: var(--clay); }
+[data-cadence] .settings-page .input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+[data-cadence] .settings-page .target-field {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  width: 100px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+[data-cadence] .settings-page .target-field::-webkit-outer-spin-button,
+[data-cadence] .settings-page .target-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+[data-cadence] .settings-page .target-field:focus {
+  outline: none;
+  border-color: var(--moss);
+}
+[data-cadence] .settings-page .target-unit {
+  font-family: var(--mono);
+  font-size: var(--type-12);
+  color: var(--text-muted);
+}
+[data-cadence] .settings-page .target-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+[data-cadence] .settings-page .target-bar {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+[data-cadence] .settings-page .target-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--moss);
+  border-radius: 2px;
+  transition: width var(--t-bar) var(--ease);
+}
+[data-cadence] .settings-page .target-fill.amber { background: var(--sand); }
+[data-cadence] .settings-page .target-fill.off { background: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .settings-page .target-fill.off { background: var(--clay); }
+
+[data-cadence] .settings-page .target-helper {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+[data-cadence] .settings-page .target-helper .state {
+  color: var(--moss-deep);
+  font-weight: 500;
+}
+[data-theme="dark"] [data-cadence] .settings-page .target-helper .state { color: var(--moss); }
+[data-cadence] .settings-page .target-helper .state.amber {
+  color: var(--sand);
+  font-weight: 500;
+}
+[data-cadence] .settings-page .target-helper .state.off {
+  color: var(--clay-deep);
+  font-weight: 500;
+}
+[data-theme="dark"] [data-cadence] .settings-page .target-helper .state.off { color: var(--clay); }
+
+/* "No data yet" — italic Fraunces for missing live values */
+[data-cadence] .settings-page .target-helper .no-data {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-13);
+  letter-spacing: -0.005em;
+  color: var(--text-muted);
+  text-transform: none;
+}
+
+/* Save row ----------------------------------------------------------- */
+[data-cadence] .settings-page .save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 24px 0 36px;
+}
+
+/* Whoop upload ------------------------------------------------------- */
+[data-cadence] .settings-page .section-sub.italic {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-13);
+  letter-spacing: -0.005em;
+  color: var(--text-muted);
+  text-transform: none;
+}
+[data-cadence] .settings-page .upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+[data-cadence] .settings-page .upload-zone {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  background: var(--bg-paper);
+  cursor: pointer;
+  transition: all var(--t-ui) var(--ease);
+}
+[data-cadence] .settings-page .upload-zone:hover {
+  border-color: var(--moss);
+  background: var(--moss-fill-soft);
+}
+[data-cadence] .settings-page .upload-zone.has-file {
+  border-style: solid;
+  border-color: var(--moss);
+}
+[data-cadence] .settings-page .upload-filename {
+  font-family: var(--mono);
+  font-size: var(--type-12);
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+[data-cadence] .settings-page .upload-desc {
+  font-size: var(--type-12);
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+[data-cadence] .settings-page .upload-action {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .settings-page .upload-action { color: var(--moss); }
+[data-cadence] .settings-page .upload-import-row { margin-top: 16px; }
+
+/* Activity log ------------------------------------------------------- */
+[data-cadence] .settings-page .log-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 18px;
+  margin-bottom: 16px;
+}
+[data-cadence] .settings-page .log-search {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+  max-width: 280px;
+}
+[data-cadence] .settings-page .log-search::placeholder { color: var(--text-quiet); }
+[data-cadence] .settings-page .log-search:focus {
+  outline: none;
+  border-color: var(--moss);
+}
+[data-cadence] .settings-page .log-filter {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+  cursor: pointer;
+}
+[data-cadence] .settings-page .log-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-quiet);
+}
+[data-cadence] .settings-page .log-entry {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 140px auto 1fr;
+  gap: 18px;
+  align-items: baseline;
+}
+[data-cadence] .settings-page .log-entry:last-child { border-bottom: none; }
+[data-cadence] .settings-page .log-time {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+[data-cadence] .settings-page .log-type {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 3px 8px;
+  border-radius: 2px;
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  font-weight: 500;
+  justify-self: start;
+}
+[data-theme="dark"] [data-cadence] .settings-page .log-type { color: var(--moss); }
+[data-cadence] .settings-page .log-message {
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+}
+[data-cadence] .settings-page .log-message .meta {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  color: var(--text-quiet);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
 /* -----------------------------------------------------------------
    EMPTY STATE — for sidebar nav targets that don't yet exist.
    Single italic Fraunces line, lowercase, no full stop, centred.
@@ -1891,4 +2435,29 @@
   [data-cadence] .history .activity-row .title-cell { grid-column: 1 / -1; }
   [data-cadence] .history .activity-row .metric { font-size: 15px; }
   [data-cadence] .history .activity-row .chevron { display: none; }
+}
+
+/* Settings — two breakpoints inherited verbatim from the mockup */
+@media (max-width: 1100px) {
+  [data-cadence] .settings-page .integration-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  [data-cadence] .settings-page .target-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  [data-cadence] .settings-page .upload-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  [data-cadence] .settings-page .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  [data-cadence] .settings-page .info-banner {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  [data-cadence] .settings-page .info-states { margin-left: 0; }
 }
