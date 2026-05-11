@@ -27,6 +27,13 @@
   --chart-axis:       #6F6B62;
   --chart-highlight:  #F5F2EC;
   --chart-axis-slate: #6B8398;
+
+  /* History source-pill borders — softened (40% alpha) on dark only.
+     The mockup uses these explicit rgba values; no equivalent exists
+     in the canonical token set. Light theme uses moss-soft / slate
+     directly. */
+  --pill-moss-border-dark:  rgba(141, 160, 117, 0.4);
+  --pill-slate-border-dark: rgba(107, 131, 152, 0.4);
 }
 
 /* -----------------------------------------------------------------
@@ -1718,11 +1725,11 @@
 }
 [data-theme="dark"] [data-cadence] .history .activity-row .source-pill.strava {
   color: var(--moss);
-  border-color: var(--moss-soft);
+  border-color: var(--pill-moss-border-dark);
 }
 [data-theme="dark"] [data-cadence] .history .activity-row .source-pill.whoop {
   color: var(--slate);
-  border-color: var(--slate);
+  border-color: var(--pill-slate-border-dark);
 }
 [data-cadence] .history .activity-row .chevron {
   color: var(--text-faint);
