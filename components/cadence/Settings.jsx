@@ -89,6 +89,15 @@ export default function Settings({
     await onStravaConnectionChange?.()
   }
 
+  // After a manual Strava sync: refresh the stored connection (so the
+  // last_synced_at / activity_count stats update on the card) and bump
+  // the audit version so the activity log refetches its new strava_sync
+  // row without a page reload.
+  const handleSynced = async () => {
+    await onStravaConnectionChange?.()
+    bumpAudit()
+  }
+
   return (
     <div className="settings-page">
 
@@ -96,7 +105,11 @@ export default function Settings({
 
       <InfoBanner />
 
-      <StravaCard stravaConnection={stravaConnection} onDisconnect={handleDisconnect} />
+      <StravaCard
+        stravaConnection={stravaConnection}
+        onDisconnect={handleDisconnect}
+        onSynced={handleSynced}
+      />
 
       {(() => {
         // Thread an absolute row index across sections so the bar

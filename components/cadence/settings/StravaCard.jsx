@@ -12,8 +12,10 @@ import { timeAgo } from './settingsHelpers'
  * content inside the new chrome — no new disconnected design exists
  * in the mockups yet.
  */
-export default function StravaCard({ stravaConnection, onDisconnect }) {
+export default function StravaCard({ stravaConnection, onDisconnect, onSynced }) {
   const [disconnecting, setDisconnecting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
   const connected = !!stravaConnection
 
   const handleDisconnect = async () => {
@@ -21,6 +23,31 @@ export default function StravaCard({ stravaConnection, onDisconnect }) {
         !window.confirm('Disconnect Strava? Your synced activities will remain in the database.')) return
     setDisconnecting(true)
     try { await onDisconnect?.() } finally { setDisconnecting(false) }
+  }
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/strava/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.error) {
+        setSyncResult({ error: data.error })
+      } else {
+        const n = data.new ?? 0
+        setSyncResult({
+          ok: true,
+          message: n > 0
+            ? `Synced ${n} activit${n === 1 ? 'y' : 'ies'}`
+            : 'No new activities',
+        })
+        await onSynced?.()
+      }
+    } catch (e) {
+      setSyncResult({ error: e.message })
+    } finally {
+      setSyncing(false)
+    }
   }
 
   return (
@@ -58,14 +85,29 @@ export default function StravaCard({ stravaConnection, onDisconnect }) {
           </div>
           <div className="integration-info">
             <p>Strava is connected. Activities sync to History automatically. Custom names and session types you've set are always preserved.</p>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={handleDisconnect}
-              disabled={disconnecting}
-            >
-              {disconnecting ? 'Disconnecting…' : 'Disconnect Strava'}
-            </button>
+            <div className="strava-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSync}
+                disabled={syncing}
+              >
+                {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+              >
+                {disconnecting ? 'Disconnecting…' : 'Disconnect Strava'}
+              </button>
+              {syncResult ? (
+                <span className={`upload-result${syncResult.error ? ' error' : ''}`}>
+                  {syncResult.error ? `Sync failed — ${syncResult.error}` : syncResult.message}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : (

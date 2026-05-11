@@ -2076,6 +2076,12 @@
   margin-bottom: 16px;
   max-width: 44ch;
 }
+[data-cadence] .settings-page .strava-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 [data-cadence] .settings-page .integration-info-p {
   font-size: var(--type-13);
   color: var(--text-soft);
