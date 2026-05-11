@@ -2,6 +2,8 @@
 
 import Hero from './Hero'
 import StatRow from './StatRow'
+import WeekGrid from './WeekGrid'
+import TodayCards from './TodayCards'
 
 /**
  * Cadence dashboard.
@@ -36,15 +38,9 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <StatRow logs={logs} whoopData={whoopData} settings={settings} activities={activities} />
 
-      <section className="week r r-5" aria-label="This week">
-        <div className="section-head"><h2>This week</h2></div>
-        {/* Phase D — 7-day plan grid */}
-      </section>
+      <WeekGrid plan={plan} />
 
-      <section className="section r r-6" aria-label="Today">
-        <div className="section-head"><h2>Today</h2></div>
-        {/* Phase D — scheduled / fuel / journal cards */}
-      </section>
+      <TodayCards plan={plan} logs={logs} activities={activities} setView={setView} />
 
       <section className="section r r-7" aria-label="Trends">
         <div className="section-head"><h2>Trends</h2></div>
