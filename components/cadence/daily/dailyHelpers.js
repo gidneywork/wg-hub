@@ -97,9 +97,15 @@ export function fmtHoursColon(hoursDecimal) {
 }
 
 // ── Form scaffolding (shape mirrors the legacy mkEmpty in WGHub.jsx)
+//   body.steps + body.caloriesOut were added when those two fields
+//   moved from Phase 2 stub to real manual inputs. Whoop-sync of these
+//   fields remains future work; today they're manual-entry only.
 export function mkEmptyForm() {
   return {
-    body:      { rhr: '', hrv: '', weight: '', weightTime: '' },
+    body: {
+      rhr: '', hrv: '', weight: '', weightTime: '',
+      steps: '', caloriesOut: '',
+    },
     sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '', bedTime: '' },
     nutrition: { calories: '', protein: '', carbs: '' },
   }
