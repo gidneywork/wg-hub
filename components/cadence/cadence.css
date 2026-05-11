@@ -1770,6 +1770,15 @@
   color: var(--text);
   border-style: solid;
 }
+[data-cadence] .history .load-more:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+[data-cadence] .history .load-more:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+  border-style: dashed;
+}
 
 [data-cadence] .history .empty-state {
   padding: 48px 24px;
