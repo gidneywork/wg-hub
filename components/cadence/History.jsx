@@ -1,16 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import SummaryStrip from './history/SummaryStrip'
+import { fmtLastSync } from './history/historyHelpers'
 
 /**
  * Cadence — History page.
  *
  * Mockup: design/mockups/cadence-history.html
- * Scaffold only. Subsequent commits add CSS, real data wiring, filters,
- * grouping, the PB heuristic, and the load-more behaviour.
+ * Page head + summary strip are wired to real activity data here.
+ * Filters, grouping, PB heuristic and load-more arrive in later commits.
  */
 export default function History({ activities = [], stravaConnection = null }) {
   const [range, setRange] = useState('this-month')
+
+  const lastSync = fmtLastSync(stravaConnection?.last_synced_at)
+  const totalSessions = activities.length
 
   return (
     <div className="history" data-range={range}>
@@ -24,42 +29,12 @@ export default function History({ activities = [], stravaConnection = null }) {
         </div>
         <div className="meta">
           <span className="dot" />
-          <span>{activities.length} total · Last sync —</span>
+          <span>{totalSessions} total · {lastSync}</span>
         </div>
       </header>
 
       {/* ===== Summary strip — density tile + 3 stat tiles ===== */}
-      <section className="summary r r-2">
-        <div className="density-card">
-          <div className="top">
-            <span className="label">Distance · this month</span>
-            <span className="scope">—</span>
-          </div>
-          <div>
-            <div className="value">—<span className="unit">km</span></div>
-            <div className="desc">Density block coming next commit.</div>
-          </div>
-          <svg className="density-viz" viewBox="0 0 600 56" preserveAspectRatio="none" />
-        </div>
-
-        <div className="stat-tile">
-          <div className="label">Sessions <span className="scope">this month</span></div>
-          <div className="value">—</div>
-          <div className="delta"><span>vs prev 30d</span></div>
-        </div>
-
-        <div className="stat-tile">
-          <div className="label">Time <span className="scope">this month</span></div>
-          <div className="value">—<span className="unit">h</span></div>
-          <div className="delta"><span>longest —</span></div>
-        </div>
-
-        <div className="stat-tile">
-          <div className="label">Avg HR <span className="scope">running</span></div>
-          <div className="value">—<span className="unit">bpm</span></div>
-          <div className="delta"><span>peak — · low —</span></div>
-        </div>
-      </section>
+      <SummaryStrip activities={activities} />
 
       {/* ===== Filters ===== */}
       <section className="filters r r-3">
