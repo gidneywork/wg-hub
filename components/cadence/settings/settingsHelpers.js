@@ -219,3 +219,35 @@ export const SECTION_LAYOUT = [
 export function stateWord(band) {
   return band === 'on' ? 'on target' : band === 'amber' ? 'approaching' : 'off target'
 }
+
+// ── Target-changed diff for audit writes
+// Compares two settings objects and returns an array of change records,
+// one per target whose .value differs. Used by the save flow to write
+// target_updated audit_log rows — one row per changed key.
+export function diffTargets(prev, next) {
+  const changes = []
+  Object.keys(next || {}).forEach(key => {
+    const spec = TARGET_SPECS[key]
+    if (!spec) return
+    const oldVal = parseFloat(prev?.[key]?.value)
+    const newVal = parseFloat(next?.[key]?.value)
+    if (!isFinite(oldVal) || !isFinite(newVal)) return
+    if (oldVal === newVal) return
+    changes.push({
+      key,
+      oldValue: oldVal,
+      newValue: newVal,
+      unit: next[key]?.unit || '',
+      label: spec.label,
+    })
+  })
+  return changes
+}
+
+// "Updated weekly running target: 90 → 100 km"
+// Lowercases the label, joins the unit with a space when present.
+export function fmtAuditDetail(change) {
+  const labelLower = change.label.toLowerCase()
+  const unitSuffix = change.unit ? ` ${change.unit}` : ''
+  return `Updated ${labelLower}: ${change.oldValue} → ${change.newValue}${unitSuffix}`
+}

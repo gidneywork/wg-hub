@@ -1,11 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { db } from '../../lib/db'
 import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import StravaCard from './settings/StravaCard'
 import TargetSection from './settings/TargetSection'
-import { currentValues, SECTION_LAYOUT } from './settings/settingsHelpers'
+import {
+  currentValues,
+  SECTION_LAYOUT,
+  diffTargets,
+  fmtAuditDetail,
+} from './settings/settingsHelpers'
 
 /**
  * Cadence — Settings page.
@@ -48,10 +54,25 @@ export default function Settings({
     }
   }
 
-  // Audit writes for changed targets land in commit 4.5; for now the
-  // save simply persists the local copy.
+  // Save persists the local copy and writes one target_updated audit
+  // row per changed target. Multiple changes in one save = multiple
+  // rows. If save fails we don't write audits.
   const handleSave = async () => {
+    const changes = diffTargets(settings, local)
     await saveSettings(local)
+    for (const change of changes) {
+      await db.writeAuditLog(
+        'target_updated',
+        change.label,
+        fmtAuditDetail(change),
+        {
+          setting_key: change.key,
+          old_value:   change.oldValue,
+          new_value:   change.newValue,
+          unit:        change.unit,
+        }
+      )
+    }
   }
 
   const handleDisconnect = async () => {
