@@ -6,6 +6,9 @@ import DateNav from './daily/DateNav'
 import SyncedTiles from './daily/SyncedTiles'
 import BodySection from './daily/BodySection'
 import NutritionSection from './daily/NutritionSection'
+import LiftsSection from './daily/LiftsSection'
+import FeelingsSection from './daily/FeelingsSection'
+import DayFooter from './daily/DayFooter'
 import {
   todayIso,
   mkEmptyForm,
@@ -169,32 +172,14 @@ export default function Daily({
         saveState={saveState}
       />
 
-      {/* ===== Lifts — Phase 2 stub ===== */}
-      <section className="section r r-6">
-        <div className="section-head">
-          <span className="title">Lifts</span>
-          <span className="meta">Optional</span>
-        </div>
-        <div className="lifts-card">
-          <div className="lift-empty">Lifts section scaffold — wired in commit 6.</div>
-        </div>
-      </section>
+      <LiftsSection />
 
-      {/* ===== How it landed — Phase 2 stub ===== */}
-      <section className="section r r-7">
-        <div className="section-head">
-          <span className="title">How it landed</span>
-          <span className="meta">Optional</span>
-        </div>
-        <div className="feelings-card">
-          {/* Mood pips + journal — wired in commit 6 */}
-        </div>
-      </section>
+      <FeelingsSection />
 
-      <div className="day-footer r r-8">
-        <div className="keyhint">Footer wired in commit 7.</div>
-        <div>—</div>
-      </div>
+      <DayFooter
+        entryCount={logs ? Object.keys(logs).length : 0}
+        savedAt={savedAt}
+      />
     </div>
   )
 }
