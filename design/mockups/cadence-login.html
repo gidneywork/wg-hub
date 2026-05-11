@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadence — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30..100&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script>
+  (function() {
+    var stored = localStorage.getItem('cadence-theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
+<style>
+  /* ============================================================
+     CADENCE — THEME TOKENS (shared system)
+  ============================================================ */
+  :root {
+    --bg:             #F5F2EC;
+    --bg-card:        #FBFAF5;
+    --bg-paper:       #FFFFFF;
+    --bg-elevated:    #EDE9E0;
+    --border:         #DCD7CB;
+    --border-strong:  #B8B3A7;
+    --text:           #1B1B1F;
+    --text-soft:      #2E2E33;
+    --text-muted:     #5F5C55;
+    --text-quiet:     #8A867D;
+    --text-faint:     #B8B3A7;
+    --moss:           #6B7A5A;
+    --moss-deep:      #4F5A42;
+    --moss-soft:      #C9CFB9;
+    --moss-glow:      rgba(107, 122, 90, 0.10);
+    --clay:           #B96A4D;
+    --clay-deep:      #A3493D;
+    --clay-soft:      #E8C7B5;
+    --on-moss:        #F5F2EC;
+
+    --display: "Fraunces", ui-serif, Georgia, serif;
+    --sans:    "Geist", "Söhne", ui-sans-serif, -apple-system, system-ui, sans-serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --ease:    cubic-bezier(0.2, 0.7, 0.2, 1);
+    --t-paint: 900ms;
+    --t-theme: 320ms;
+    --t-ui:    240ms;
+  }
+
+  [data-theme="dark"] {
+    --bg:             #13141A;
+    --bg-card:        #1B1B22;
+    --bg-paper:       #25262E;
+    --bg-elevated:    #2E2F38;
+    --border:         #25262E;
+    --border-strong:  #2E2F38;
+    --text:           #F5F2EC;
+    --text-soft:      #E8E4DA;
+    --text-muted:     #A09C92;
+    --text-quiet:     #6F6B62;
+    --text-faint:     #4A4843;
+    --moss:           #8DA075;
+    --moss-deep:      #6B7A5A;
+    --moss-soft:      rgba(141, 160, 117, 0.28);
+    --moss-glow:      rgba(141, 160, 117, 0.10);
+    --clay:           #C97E62;
+    --clay-deep:      #B96A4D;
+    --clay-soft:      rgba(201, 126, 98, 0.22);
+    --on-moss:        #13141A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    overflow: hidden;
+    transition: background-color var(--t-theme) var(--ease), color var(--t-theme) var(--ease);
+  }
+
+  /* Ambient gradient — calmer than the radial on TV mode */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(107, 122, 90, 0.06), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(74, 95, 110, 0.03), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--t-theme) var(--ease);
+  }
+  [data-theme="dark"] body::before {
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(141, 160, 117, 0.06), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(107, 131, 152, 0.04), transparent 70%);
+  }
+
+  /* ============================================================
+     SHELL
+  ============================================================ */
+  .signin-shell {
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ============================================================
+     BRAND
+  ============================================================ */
+  .brand {
+    margin-bottom: 56px;
+  }
+  .wordmark {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 64px;
+    letter-spacing: -0.015em; /* starts open, tightens during entrance */
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+    color: var(--text);
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+    animation: wordmarkTighten 1200ms var(--ease) 200ms forwards;
+  }
+  .wordmark .dot {
+    width: 8px; height: 8px;
+    background: var(--moss);
+    border-radius: 50%;
+    margin-left: 4px;
+    margin-bottom: 8px;
+    /* The dot is the punctuation — it lands after the wordmark settles, then breathes. */
+    opacity: 0;
+    transform: scale(0);
+    transform-origin: center;
+    --pulse-from: rgba(107, 122, 90, 0.35);
+    --pulse-to:   rgba(107, 122, 90, 0);
+    animation:
+      dotLand  400ms var(--ease)  700ms forwards,
+      dotPulse 2500ms var(--ease) 1500ms infinite;
+  }
+  [data-theme="dark"] .wordmark .dot {
+    --pulse-from: rgba(141, 160, 117, 0.45);
+    --pulse-to:   rgba(141, 160, 117, 0);
+  }
+  @keyframes wordmarkTighten {
+    to { letter-spacing: -0.045em; }
+  }
+  @keyframes dotLand {
+    0%   { opacity: 0; transform: scale(0); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes dotPulse {
+    0%   { box-shadow: 0 0 0 0   var(--pulse-from); }
+    60%  { box-shadow: 0 0 0 16px var(--pulse-to); }
+    100% { box-shadow: 0 0 0 0   var(--pulse-to); }
+  }
+  .tagline {
+    margin-top: 14px;
+    font-family: var(--display);
+    font-style: italic;
+    font-weight: 360;
+    font-size: 17px;
+    color: var(--text-muted);
+    letter-spacing: -0.005em;
+  }
+
+  /* ============================================================
+     FORM
+  ============================================================ */
+  .signin-form {
+    text-align: left;
+  }
+  .field {
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .field .label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .field input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--t-ui) var(--ease),
+                box-shadow var(--t-ui) var(--ease),
+                background-color var(--t-theme) var(--ease);
+  }
+  .field input:focus {
+    border-color: var(--moss);
+    box-shadow: 0 0 0 3px var(--moss-glow);
+  }
+  .field input::placeholder { color: var(--text-faint); }
+
+  /* Error state — engineers can toggle .error on .field */
+  .field.error input { border-color: var(--clay); }
+  .field.error input:focus { box-shadow: 0 0 0 3px rgba(185, 106, 77, 0.15); }
+  .field .err-msg {
+    display: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--clay-deep);
+    margin-top: 7px;
+  }
+  [data-theme="dark"] .field .err-msg { color: var(--clay); }
+  .field.error .err-msg { display: block; }
+
+  /* ============================================================
+     PRIMARY BUTTON
+  ============================================================ */
+  .btn-primary {
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--moss);
+    color: var(--on-moss);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+    margin-top: 18px;
+    transition: background-color var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-primary:hover { background: var(--moss-deep); }
+  [data-theme="dark"] .btn-primary:hover {
+    background: var(--moss);
+    filter: brightness(1.1);
+  }
+  .btn-primary:active { transform: scale(0.99); }
+  .btn-primary svg {
+    width: 12px; height: 12px;
+    opacity: 0.85;
+    transition: transform var(--t-ui) var(--ease);
+  }
+  .btn-primary:hover svg { transform: translateX(2px); }
+
+  /* Loading state — engineers can toggle .loading on the button */
+  .btn-primary.loading { pointer-events: none; opacity: 0.7; }
+  .btn-primary.loading .arrow { display: none; }
+  .btn-primary.loading::after {
+    content: "";
+    width: 12px; height: 12px;
+    border: 1.5px solid var(--on-moss);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============================================================
+     LINKS
+  ============================================================ */
+  .forgot {
+    display: block;
+    margin-top: 28px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    text-decoration: none;
+    text-align: center;
+  }
+  .forgot:hover { color: var(--text); }
+
+  /* ============================================================
+     THEME TOGGLE — top right
+  ============================================================ */
+  .theme-toggle {
+    position: fixed;
+    top: 24px; right: 24px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background-color var(--t-theme) var(--ease),
+                border-color var(--t-theme) var(--ease),
+                color var(--t-theme) var(--ease);
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+  .theme-toggle svg { width: 14px; height: 14px; }
+  .theme-toggle .t-icon { display: none; }
+  [data-theme="light"] .theme-toggle .t-moon { display: block; }
+  [data-theme="dark"] .theme-toggle .t-sun { display: block; }
+
+  /* ============================================================
+     FOOTER
+  ============================================================ */
+  .footer {
+    position: fixed;
+    bottom: 24px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    z-index: 1;
+  }
+  .footer .sep { margin: 0 8px; opacity: 0.5; }
+
+  /* ============================================================
+     ANIMATION SYSTEM (shared)
+  ============================================================ */
+  body { opacity: 0; animation: pageFadeIn 600ms var(--ease) forwards; }
+  @keyframes pageFadeIn { to { opacity: 1; } }
+
+  .r { opacity: 0; transform: translateY(10px); animation: rise var(--t-paint) var(--ease) forwards; }
+  .r-1 { animation-delay: 120ms; }
+  .r-2 { animation-delay: 280ms; }
+  .r-3 { animation-delay: 440ms; }
+  .r-4 { animation-delay: 600ms; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  /* ============================================================
+     RESPONSIVE
+  ============================================================ */
+  @media (max-width: 480px) {
+    .wordmark { font-size: 52px; }
+    .tagline { font-size: 16px; }
+    .brand { margin-bottom: 44px; }
+  }
+</style>
+</head>
+<body>
+
+  <button class="theme-toggle r r-1" onclick="cadenceToggleTheme()" aria-label="Toggle theme">
+    <svg class="t-icon t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <svg class="t-icon t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+
+  <div class="signin-shell">
+
+    <div class="brand r r-1">
+      <div class="wordmark">cadence<span class="dot"></span></div>
+      <div class="tagline">Welcome back.</div>
+    </div>
+
+    <form class="signin-form r r-2" onsubmit="event.preventDefault(); cadenceFakeSignin();">
+
+      <div class="field">
+        <label class="label" for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" autofocus />
+        <div class="err-msg">Check the email address and try again.</div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" />
+        <div class="err-msg">Wrong password.</div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="signinBtn">
+        <span class="label-text">Sign in</span>
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </button>
+
+      <a href="#" class="forgot">Forgot password</a>
+
+    </form>
+
+  </div>
+
+  <div class="footer r r-4">
+    <span>Cadence</span>
+    <span class="sep">·</span>
+    <span>v1.0</span>
+  </div>
+
+<script>
+  function cadenceToggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('cadence-theme', next);
+  }
+
+  // Fake sign-in flow — engineers replace with real Supabase auth call
+  function cadenceFakeSignin() {
+    var btn = document.getElementById('signinBtn');
+    btn.classList.add('loading');
+    setTimeout(function() {
+      btn.classList.remove('loading');
+      // In real impl: success → navigate to /dashboard; error → toggle .error on relevant .field
+    }, 1200);
+  }
+</script>
+
+</body>
+</html>

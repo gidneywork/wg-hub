@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadence — TV Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30..100&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script>
+  (function() {
+    var stored = localStorage.getItem('cadence-theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
+<style>
+  /* ============================================================
+     THEME TOKENS — shared with dashboard
+  ============================================================ */
+  :root {
+    --bg:             #F5F2EC;
+    --bg-card:        #FBFAF5;
+    --bg-paper:       #FFFFFF;
+    --bg-elevated:    #EDE9E0;
+    --border:         #DCD7CB;
+    --border-strong:  #B8B3A7;
+    --text:           #1B1B1F;
+    --text-soft:      #2E2E33;
+    --text-muted:     #5F5C55;
+    --text-quiet:     #8A867D;
+    --text-faint:     #B8B3A7;
+    --moss:           #6B7A5A;
+    --moss-deep:      #4F5A42;
+    --moss-soft:      #C9CFB9;
+    --moss-glow:      rgba(107, 122, 90, 0.10);
+    --clay:           #B96A4D;
+    --clay-deep:      #A3493D;
+    --slate:          #4A5F6E;
+    --sand:           #C9A24E;
+    --on-moss:        #F5F2EC;
+    --ambient-1:      rgba(107, 122, 90, 0.05);
+    --ambient-2:      rgba(74, 95, 110, 0.03);
+
+    --display: "Fraunces", ui-serif, Georgia, serif;
+    --sans:    "Geist", "Söhne", ui-sans-serif, -apple-system, system-ui, sans-serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --ease:    cubic-bezier(0.2, 0.7, 0.2, 1);
+    --t-paint: 1200ms;
+    --t-theme: 320ms;
+    --t-cycle: 20s;  /* auto-advance interval */
+    --t-fade:  280ms;
+  }
+
+  [data-theme="dark"] {
+    --bg:             #13141A;
+    --bg-card:        #1B1B22;
+    --bg-paper:       #25262E;
+    --bg-elevated:    #2E2F38;
+    --border:         #25262E;
+    --border-strong:  #2E2F38;
+    --text:           #F5F2EC;
+    --text-soft:      #E8E4DA;
+    --text-muted:     #A09C92;
+    --text-quiet:     #6F6B62;
+    --text-faint:     #4A4843;
+    --moss:           #8DA075;
+    --moss-deep:      #6B7A5A;
+    --moss-soft:      rgba(141, 160, 117, 0.28);
+    --moss-glow:      rgba(141, 160, 117, 0.10);
+    --clay:           #C97E62;
+    --clay-deep:      #B96A4D;
+    --slate:          #6B8398;
+    --sand:           #D4B265;
+    --on-moss:        #13141A;
+    --ambient-1:      rgba(141, 160, 117, 0.04);
+    --ambient-2:      rgba(107, 131, 152, 0.03);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color var(--t-theme) var(--ease), color var(--t-theme) var(--ease);
+    /* Page-load fade — happens before staggered .r reveals begin */
+    opacity: 0;
+    animation: pageFadeIn 700ms var(--ease) forwards;
+  }
+  @keyframes pageFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .stat-tile, .panel, .training-pill, .theme-toggle, .nut-row .track, .tv-range button {
+    transition: background-color var(--t-theme) var(--ease),
+                border-color var(--t-theme) var(--ease),
+                color var(--t-theme) var(--ease);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, var(--ambient-1), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, var(--ambient-2), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--t-theme) var(--ease);
+  }
+
+  .tv-shell {
+    position: relative;
+    z-index: 1;
+    padding: 56px 72px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ============================================================
+     TOP BAR — 3 column grid
+  ============================================================ */
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    gap: 32px;
+    margin-bottom: 56px;
+  }
+  .top > .brand { justify-self: start; }
+  .top > .tv-range { justify-self: center; margin-top: 6px; }
+  .top > .clock-area { justify-self: end; }
+
+  .brand .wordmark {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 32px;
+    letter-spacing: -0.045em;
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+    display: inline-flex;
+    align-items: baseline;
+    color: var(--text);
+    line-height: 1;
+  }
+  .brand .wordmark .dot {
+    width: 8px; height: 8px;
+    background: var(--moss);
+    border-radius: 50%;
+    margin-left: 4px;
+    margin-bottom: 6px;
+  }
+  .brand .tagline {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-quiet);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand .tagline .pulse {
+    width: 6px; height: 6px;
+    background: var(--moss);
+    border-radius: 50%;
+    animation: pulse 2.5s var(--ease) infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 var(--moss-glow); }
+    70%  { box-shadow: 0 0 0 10px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
+  /* ============================================================
+     RANGE TOGGLE
+  ============================================================ */
+  .tv-range {
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .tv-range button {
+    background: transparent;
+    border: none;
+    padding: 9px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    overflow: hidden;
+  }
+  .tv-range button:last-child { border-right: none; }
+  .tv-range button:hover { color: var(--text); }
+  .tv-range button.active {
+    background: var(--moss-soft);
+    color: var(--moss-deep);
+  }
+  [data-theme="dark"] .tv-range button.active { color: var(--moss); }
+
+  /* Progress bar on active button — auto-cycle indicator */
+  .tv-range button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 0%;
+    background: var(--moss);
+    animation: rangeProgress var(--t-cycle) linear forwards;
+  }
+  .tv-range.paused button.active::after {
+    animation-play-state: paused;
+  }
+  @keyframes rangeProgress {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+
+  /* ============================================================
+     CLOCK + THEME TOGGLE
+  ============================================================ */
+  .clock-area {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .clock { text-align: right; }
+  .clock .time {
+    font-family: var(--display);
+    font-weight: 320;
+    font-size: 96px;
+    line-height: 0.9;
+    letter-spacing: -0.045em;
+    font-variation-settings: "opsz" 144, "SOFT" 65;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .clock .date {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-top: 14px;
+  }
+
+  .theme-toggle {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+  .theme-toggle .t-icon { display: none; }
+  [data-theme="light"] .theme-toggle .t-moon { display: block; }
+  [data-theme="dark"] .theme-toggle .t-sun { display: block; }
+
+  /* ============================================================
+     STAT GRID
+  ============================================================ */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .stat-tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 30px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .stat-tile .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-quiet);
+    margin-bottom: 4px;
+  }
+  .stat-tile .sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    opacity: 0.7;
+  }
+  .stat-tile .value {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    margin: 14px 0;
+  }
+  .stat-tile .value .unit {
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-left: 4px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .stat-tile .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .stat-tile .status {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--moss-deep);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  [data-theme="dark"] .stat-tile .status { color: var(--moss); }
+  .stat-tile .status.down { color: var(--clay-deep); }
+  [data-theme="dark"] .stat-tile .status.down { color: var(--clay); }
+  .stat-tile .status.flat { color: var(--text-muted); }
+  .stat-tile .spark { flex-shrink: 0; opacity: 0.75; }
+
+  /* ============================================================
+     BOTTOM ROW
+  ============================================================ */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.25fr 1fr;
+    gap: 14px;
+    flex: 1;
+    min-height: 280px;
+  }
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel .head {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-quiet);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .panel .head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .panel .sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-quiet);
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    margin-bottom: 24px;
+  }
+
+  .km-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .km-hero .num {
+    font-family: var(--display);
+    font-weight: 320;
+    font-size: 144px;
+    line-height: 0.85;
+    letter-spacing: -0.05em;
+    font-variation-settings: "opsz" 144, "SOFT" 70;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .km-hero .unit-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    margin-top: 14px;
+  }
+  .km-hero .ctx {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text-muted);
+    margin-top: 18px;
+    font-weight: 360;
+    letter-spacing: -0.005em;
+    max-width: 22ch;
+    line-height: 1.4;
+  }
+
+  .nut-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 160px;
+    gap: 18px;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .nut-row:last-child { border-bottom: none; }
+  .nut-row .nut-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-muted);
+  }
+  .nut-row .track {
+    height: 6px;
+    background: var(--bg-elevated);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  .nut-row .track .fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 700ms var(--ease);
+  }
+  .nut-row .track .fill.moss { background: var(--moss); }
+  .nut-row .track .fill.clay { background: var(--clay); }
+  .nut-row .track .fill.slate { background: var(--slate); }
+  .nut-row .nut-val {
+    text-align: right;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .nut-row .nut-val .unit {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-quiet);
+    margin-left: 3px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .nut-row .nut-val .daily {
+    display: block;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-quiet);
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  .training-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+  }
+  .training-pill {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .training-pill .pip {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .training-pill .pip.run { background: var(--moss); }
+  .training-pill .pip.strength { background: var(--clay); }
+  .training-pill .pip.recovery { background: var(--slate); }
+  .training-pill .pip.calendar { background: var(--sand); }
+  .training-pill .name {
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    color: var(--text);
+    flex: 1;
+  }
+  .training-pill .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .training-pill.primary {
+    background: var(--moss-soft);
+    border-color: var(--moss);
+  }
+  [data-theme="dark"] .training-pill.primary {
+    border-color: rgba(141, 160, 117, 0.35);
+  }
+
+  /* ============================================================
+     DATA-CYCLE FADE — applied during range transitions
+  ============================================================ */
+  .cycleable {
+    transition: opacity var(--t-fade) var(--ease), transform var(--t-fade) var(--ease);
+  }
+  body.data-changing .cycleable {
+    opacity: 0.15;
+    transform: translateY(-4px);
+  }
+
+  /* Target reference below progress bar */
+  .nut-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .nut-bar .bar-foot {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nut-bar .bar-foot .target-pct {
+    color: var(--moss-deep);
+  }
+  [data-theme="dark"] .nut-bar .bar-foot .target-pct { color: var(--moss); }
+  .nut-bar .bar-foot .dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-faint);
+  }
+
+  /* Reveal on first paint */
+  .r { opacity: 0; transform: translateY(10px); animation: rise var(--t-paint) var(--ease) forwards; }
+  .r-1 { animation-delay: 80ms; } .r-2 { animation-delay: 200ms; } .r-3 { animation-delay: 320ms; }
+  .r-4 { animation-delay: 440ms; } .r-5 { animation-delay: 560ms; } .r-6 { animation-delay: 680ms; }
+  .r-7 { animation-delay: 800ms; } .r-8 { animation-delay: 920ms; } .r-9 { animation-delay: 1040ms; }
+  .r-10 { animation-delay: 1160ms; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  .exit-hint {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-quiet);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    opacity: 0.5;
+    z-index: 10;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  .exit-hint:hover { opacity: 1; }
+  .exit-hint kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-right: 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 1500px) {
+    .tv-shell { padding: 48px 56px; }
+    .clock .time { font-size: 80px; }
+    .stat-tile .value { font-size: 54px; }
+    .km-hero .num { font-size: 120px; }
+  }
+  @media (max-width: 1300px) {
+    .top {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+    }
+    .top > .tv-range {
+      grid-column: 1 / -1;
+      order: 2;
+      margin-top: 24px;
+    }
+  }
+  @media (max-width: 1200px) {
+    .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .bottom-grid { grid-template-columns: 1fr 1fr; }
+    .bottom-grid .panel:nth-child(3) { grid-column: 1 / -1; }
+  }
+  @media (max-width: 800px) {
+    .tv-shell { padding: 32px; }
+    .top { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+    .top > .brand, .top > .clock-area, .top > .tv-range { justify-self: start; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .bottom-grid { grid-template-columns: 1fr; }
+    .clock .time { font-size: 64px; }
+    .stat-tile { padding: 20px; min-height: 140px; }
+    .stat-tile .value { font-size: 40px; }
+    .km-hero .num { font-size: 88px; }
+    .tv-range button { padding: 8px 12px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tv-shell">
+
+  <header class="top">
+
+    <div class="brand r r-1">
+      <div class="wordmark">cadence<span class="dot"></span></div>
+      <div class="tagline"><span class="pulse"></span>Performance display · auto-refreshes every 30s</div>
+    </div>
+
+    <div class="tv-range r r-1" role="tablist">
+      <button data-range="7D" class="active">7D</button>
+      <button data-range="30D">30D</button>
+      <button data-range="6M">6M</button>
+      <button data-range="1Y">1Y</button>
+      <button data-range="YTD">YTD</button>
+    </div>
+
+    <div class="clock-area r r-2">
+      <div class="clock">
+        <div class="time">09:42</div>
+        <div class="date">Monday · 11 May 2026</div>
+      </div>
+      <button class="theme-toggle" onclick="cadenceToggleTheme()" aria-label="Toggle theme" title="Toggle light/dark">
+        <svg class="t-icon t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="t-icon t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+
+  </header>
+
+  <section class="stat-grid">
+
+    <div class="stat-tile r r-3">
+      <div><div class="label">Weight</div><div class="sub cycleable" data-key="periodSub">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="weight">75.2<span class="unit">kg</span></div>
+      <div class="footer">
+        <span class="status down cycleable" data-key="weightStatus">▼ 1.4 kg · target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="weightSpark" d="M 0 4 L 10 6 L 20 8 L 30 10 L 40 12 L 50 14 L 60 15" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div class="stat-tile r r-4">
+      <div><div class="label">HRV</div><div class="sub cycleable" data-key="periodSub2">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="hrv">52<span class="unit">ms</span></div>
+      <div class="footer">
+        <span class="status cycleable" data-key="hrvStatus">▲ 4 · 91% target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="hrvSpark" d="M 0 14 L 10 11 L 20 13 L 30 9 L 40 7 L 50 8 L 60 5" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div class="stat-tile r r-5">
+      <div><div class="label">Resting HR</div><div class="sub cycleable" data-key="periodSub3">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="rhr">58<span class="unit">bpm</span></div>
+      <div class="footer">
+        <span class="status cycleable" data-key="rhrStatus">▼ 2 · on target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="rhrSpark" d="M 0 8 L 10 10 L 20 7 L 30 12 L 40 9 L 50 11 L 60 14" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div class="stat-tile r r-6">
+      <div><div class="label">Sleep score</div><div class="sub cycleable" data-key="periodSub4">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="sleep">68<span class="unit">/100</span></div>
+      <div class="footer">
+        <span class="status flat cycleable" data-key="sleepStatus">● 80% target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="sleepSpark" d="M 0 10 L 10 8 L 20 12 L 30 9 L 40 7 L 50 10 L 60 8" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div class="stat-tile r r-7">
+      <div><div class="label">Recovery</div><div class="sub cycleable" data-key="periodSub5">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="recovery">71<span class="unit">/100</span></div>
+      <div class="footer">
+        <span class="status cycleable" data-key="recoveryStatus">▲ 6 · 88% target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="recoverySpark" d="M 0 14 L 10 12 L 20 11 L 30 8 L 40 9 L 50 6 L 60 5" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div class="stat-tile r r-8">
+      <div><div class="label">Hours slept</div><div class="sub cycleable" data-key="periodSub6">avg · 7 days</div></div>
+      <div class="value cycleable" data-key="hours">7:18<span class="unit">h</span></div>
+      <div class="footer">
+        <span class="status flat cycleable" data-key="hoursStatus">● 95% target</span>
+        <svg class="spark cycleable" width="60" height="20" viewBox="0 0 60 20"><path data-key="hoursSpark" d="M 0 9 L 10 11 L 20 7 L 30 9 L 40 8 L 50 6 L 60 8" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="bottom-grid">
+
+    <div class="panel r r-9">
+      <div class="head cycleable" data-key="kmHeader">Km run · last 7 days</div>
+      <div class="sub">running · all surfaces</div>
+      <div class="km-hero">
+        <div class="num cycleable" data-key="kmNum">38.6</div>
+        <div class="unit-line cycleable" data-key="kmUnitLine">kilometres · 4 sessions</div>
+        <div class="ctx cycleable" data-key="kmCtx">On pace for 76 km by Sunday — your best block in eight weeks.</div>
+      </div>
+    </div>
+
+    <div class="panel r r-9">
+      <div class="head cycleable" data-key="nutHeader">Nutrition totals · last 7 days</div>
+      <div class="sub cycleable" data-key="nutSub">4 days logged · 3 pending</div>
+      <div class="nut-row">
+        <div class="nut-label">Calories</div>
+        <div class="nut-bar">
+          <div class="track"><div class="fill moss" data-key="nutCalFill" style="width: 95%;"></div></div>
+          <div class="bar-foot">
+            <span><span class="target-pct cycleable" data-key="nutCalPct">95%</span> of target</span>
+            <span class="dot"></span>
+            <span class="cycleable" data-key="nutCalTarget">3,000 kcal/day</span>
+          </div>
+        </div>
+        <div class="nut-val cycleable" data-key="nutCal">20,020<span class="unit">kcal</span><span class="daily">2,860/day avg</span></div>
+      </div>
+      <div class="nut-row">
+        <div class="nut-label">Protein</div>
+        <div class="nut-bar">
+          <div class="track"><div class="fill clay" data-key="nutProteinFill" style="width: 97%;"></div></div>
+          <div class="bar-foot">
+            <span><span class="target-pct cycleable" data-key="nutProteinPct">97%</span> of target</span>
+            <span class="dot"></span>
+            <span class="cycleable" data-key="nutProteinTarget">180 g/day</span>
+          </div>
+        </div>
+        <div class="nut-val cycleable" data-key="nutProtein">1,225<span class="unit">g</span><span class="daily">175/day avg</span></div>
+      </div>
+      <div class="nut-row">
+        <div class="nut-label">Carbs</div>
+        <div class="nut-bar">
+          <div class="track"><div class="fill slate" data-key="nutCarbsFill" style="width: 97%;"></div></div>
+          <div class="bar-foot">
+            <span><span class="target-pct cycleable" data-key="nutCarbsPct">97%</span> of target</span>
+            <span class="dot"></span>
+            <span class="cycleable" data-key="nutCarbsTarget">400 g/day</span>
+          </div>
+        </div>
+        <div class="nut-val cycleable" data-key="nutCarbs">2,716<span class="unit">g</span><span class="daily">388/day avg</span></div>
+      </div>
+    </div>
+
+    <div class="panel r r-10">
+      <div class="head">Today · Monday</div>
+      <div class="sub">2 planned · 1 calendar</div>
+      <div class="training-list">
+        <div class="training-pill primary">
+          <span class="pip run"></span>
+          <span class="name">Long run · Z2 endurance</span>
+          <span class="meta">1h 45m · 20km</span>
+        </div>
+        <div class="training-pill">
+          <span class="pip recovery"></span>
+          <span class="name">Mobility · evening</span>
+          <span class="meta">15m</span>
+        </div>
+        <div class="training-pill">
+          <span class="pip calendar"></span>
+          <span class="name">Coffee with Sam</span>
+          <span class="meta">10:00</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<a class="exit-hint" href="cadence-dashboard-v5.html"><kbd>ESC</kbd>Exit TV mode</a>
+
+<script>
+  // ============================================================
+  // Theme toggle
+  // ============================================================
+  function cadenceToggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('cadence-theme', next);
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') window.location.href = 'cadence-dashboard-v5.html';
+  });
+
+  // ============================================================
+  // Range cycle data
+  // ============================================================
+  const RANGE_DATA = {
+    '7D': {
+      periodSub: 'avg · 7 days',
+      kmHeader: 'Km run · last 7 days',
+      nutHeader: 'Nutrition totals · last 7 days',
+      nutSub: '4 days logged · 3 pending',
+      weight: '75.2<span class="unit">kg</span>',
+      weightStatus: '▼ 1.4 kg · target',
+      weightStatusClass: 'down',
+      weightSpark: 'M 0 4 L 10 6 L 20 8 L 30 10 L 40 12 L 50 14 L 60 15',
+      hrv: '52<span class="unit">ms</span>',
+      hrvStatus: '▲ 4 · 91% target',
+      hrvStatusClass: '',
+      hrvSpark: 'M 0 14 L 10 11 L 20 13 L 30 9 L 40 7 L 50 8 L 60 5',
+      rhr: '58<span class="unit">bpm</span>',
+      rhrStatus: '▼ 2 · on target',
+      rhrStatusClass: '',
+      rhrSpark: 'M 0 8 L 10 10 L 20 7 L 30 12 L 40 9 L 50 11 L 60 14',
+      sleep: '68<span class="unit">/100</span>',
+      sleepStatus: '● 80% target',
+      sleepStatusClass: 'flat',
+      sleepSpark: 'M 0 10 L 10 8 L 20 12 L 30 9 L 40 7 L 50 10 L 60 8',
+      recovery: '71<span class="unit">/100</span>',
+      recoveryStatus: '▲ 6 · 88% target',
+      recoveryStatusClass: '',
+      recoverySpark: 'M 0 14 L 10 12 L 20 11 L 30 8 L 40 9 L 50 6 L 60 5',
+      hours: '7:18<span class="unit">h</span>',
+      hoursStatus: '● 95% target',
+      hoursStatusClass: 'flat',
+      hoursSpark: 'M 0 9 L 10 11 L 20 7 L 30 9 L 40 8 L 50 6 L 60 8',
+      kmNum: '38.6',
+      kmUnitLine: 'kilometres · 4 sessions',
+      kmCtx: 'On pace for 76 km by Sunday — your best block in eight weeks.',
+      nutCal: '20,020<span class="unit">kcal</span><span class="daily">2,860/day avg</span>',
+      nutCalFill: 95,
+      nutCalPct: '95%',
+      nutCalTarget: '3,000 kcal/day',
+      nutProtein: '1,225<span class="unit">g</span><span class="daily">175/day avg</span>',
+      nutProteinFill: 97,
+      nutProteinPct: '97%',
+      nutProteinTarget: '180 g/day',
+      nutCarbs: '2,716<span class="unit">g</span><span class="daily">388/day avg</span>',
+      nutCarbsFill: 97,
+      nutCarbsPct: '97%',
+      nutCarbsTarget: '400 g/day'
+    },
+    '30D': {
+      periodSub: 'avg · 30 days',
+      kmHeader: 'Km run · last 30 days',
+      nutHeader: 'Nutrition totals · last 30 days',
+      nutSub: '28 days logged · 2 missed',
+      weight: '75.6<span class="unit">kg</span>',
+      weightStatus: '▼ 2.1 kg · prev 30d',
+      weightStatusClass: 'down',
+      weightSpark: 'M 0 3 L 10 5 L 20 7 L 30 6 L 40 9 L 50 12 L 60 15',
+      hrv: '50<span class="unit">ms</span>',
+      hrvStatus: '▲ 2 · 88% target',
+      hrvStatusClass: '',
+      hrvSpark: 'M 0 15 L 10 12 L 20 14 L 30 10 L 40 11 L 50 8 L 60 6',
+      rhr: '59<span class="unit">bpm</span>',
+      rhrStatus: '▼ 1 · on target',
+      rhrStatusClass: '',
+      rhrSpark: 'M 0 6 L 10 9 L 20 8 L 30 11 L 40 10 L 50 12 L 60 13',
+      sleep: '65<span class="unit">/100</span>',
+      sleepStatus: '● 76% target',
+      sleepStatusClass: 'flat',
+      sleepSpark: 'M 0 11 L 10 9 L 20 13 L 30 10 L 40 8 L 50 11 L 60 9',
+      recovery: '68<span class="unit">/100</span>',
+      recoveryStatus: '▲ 3 · 84% target',
+      recoveryStatusClass: '',
+      recoverySpark: 'M 0 13 L 10 14 L 20 12 L 30 10 L 40 11 L 50 8 L 60 7',
+      hours: '7:24<span class="unit">h</span>',
+      hoursStatus: '● 98% target',
+      hoursStatusClass: 'flat',
+      hoursSpark: 'M 0 10 L 10 8 L 20 9 L 30 10 L 40 9 L 50 7 L 60 8',
+      kmNum: '156.8',
+      kmUnitLine: 'kilometres · 18 sessions',
+      kmCtx: 'Highest mileage month since the autumn — stay patient on the long ones.',
+      nutCal: '87,600<span class="unit">kcal</span><span class="daily">2,920/day avg</span>',
+      nutCalFill: 97,
+      nutCalPct: '97%',
+      nutCalTarget: '3,000 kcal/day',
+      nutProtein: '5,460<span class="unit">g</span><span class="daily">182/day avg</span>',
+      nutProteinFill: 100,
+      nutProteinPct: '101%',
+      nutProteinTarget: '180 g/day',
+      nutCarbs: '11,850<span class="unit">g</span><span class="daily">395/day avg</span>',
+      nutCarbsFill: 99,
+      nutCarbsPct: '99%',
+      nutCarbsTarget: '400 g/day'
+    },
+    '6M': {
+      periodSub: 'avg · 6 months',
+      kmHeader: 'Km run · last 6 months',
+      nutHeader: 'Nutrition totals · last 6 months',
+      nutSub: '168 days logged · 12 missed',
+      weight: '76.8<span class="unit">kg</span>',
+      weightStatus: '▼ 4.2 kg · prev 6m',
+      weightStatusClass: 'down',
+      weightSpark: 'M 0 2 L 10 4 L 20 6 L 30 9 L 40 11 L 50 13 L 60 16',
+      hrv: '48<span class="unit">ms</span>',
+      hrvStatus: '▼ 1 · 84% target',
+      hrvStatusClass: 'down',
+      hrvSpark: 'M 0 8 L 10 10 L 20 12 L 30 11 L 40 13 L 50 12 L 60 14',
+      rhr: '61<span class="unit">bpm</span>',
+      rhrStatus: '▼ 3 · on target',
+      rhrStatusClass: '',
+      rhrSpark: 'M 0 4 L 10 6 L 20 7 L 30 10 L 40 11 L 50 13 L 60 14',
+      sleep: '64<span class="unit">/100</span>',
+      sleepStatus: '● 74% target',
+      sleepStatusClass: 'flat',
+      sleepSpark: 'M 0 10 L 10 12 L 20 9 L 30 11 L 40 9 L 50 10 L 60 8',
+      recovery: '66<span class="unit">/100</span>',
+      recoveryStatus: '▲ 2 · 81% target',
+      recoveryStatusClass: '',
+      recoverySpark: 'M 0 12 L 10 13 L 20 11 L 30 12 L 40 10 L 50 9 L 60 7',
+      hours: '7:12<span class="unit">h</span>',
+      hoursStatus: '● 92% target',
+      hoursStatusClass: 'flat',
+      hoursSpark: 'M 0 11 L 10 9 L 20 10 L 30 11 L 40 9 L 50 8 L 60 10',
+      kmNum: '892.4',
+      kmUnitLine: 'kilometres · 96 sessions',
+      kmCtx: 'Solid base. The hill repeats are showing in the long-run pace.',
+      nutCal: '522,240<span class="unit">kcal</span><span class="daily">2,880/day avg</span>',
+      nutCalFill: 96,
+      nutCalPct: '96%',
+      nutCalTarget: '3,000 kcal/day',
+      nutProtein: '32,278<span class="unit">g</span><span class="daily">178/day avg</span>',
+      nutProteinFill: 99,
+      nutProteinPct: '99%',
+      nutProteinTarget: '180 g/day',
+      nutCarbs: '70,720<span class="unit">g</span><span class="daily">390/day avg</span>',
+      nutCarbsFill: 98,
+      nutCarbsPct: '98%',
+      nutCarbsTarget: '400 g/day'
+    },
+    '1Y': {
+      periodSub: 'avg · last 12 months',
+      kmHeader: 'Km run · last 12 months',
+      nutHeader: 'Nutrition totals · last 12 months',
+      nutSub: '336 days logged · 29 missed',
+      weight: '78.4<span class="unit">kg</span>',
+      weightStatus: '▼ 5.6 kg · from peak',
+      weightStatusClass: 'down',
+      weightSpark: 'M 0 2 L 10 3 L 20 5 L 30 8 L 40 10 L 50 13 L 60 17',
+      hrv: '46<span class="unit">ms</span>',
+      hrvStatus: '▼ 2 · 81% target',
+      hrvStatusClass: 'down',
+      hrvSpark: 'M 0 6 L 10 9 L 20 11 L 30 13 L 40 12 L 50 14 L 60 13',
+      rhr: '63<span class="unit">bpm</span>',
+      rhrStatus: '▼ 5 · vs lifetime',
+      rhrStatusClass: '',
+      rhrSpark: 'M 0 3 L 10 5 L 20 7 L 30 9 L 40 11 L 50 13 L 60 15',
+      sleep: '63<span class="unit">/100</span>',
+      sleepStatus: '● 72% target',
+      sleepStatusClass: 'flat',
+      sleepSpark: 'M 0 12 L 10 10 L 20 11 L 30 12 L 40 10 L 50 11 L 60 9',
+      recovery: '64<span class="unit">/100</span>',
+      recoveryStatus: '● 79% target',
+      recoveryStatusClass: 'flat',
+      recoverySpark: 'M 0 13 L 10 12 L 20 13 L 30 11 L 40 12 L 50 10 L 60 9',
+      hours: '7:08<span class="unit">h</span>',
+      hoursStatus: '● 89% target',
+      hoursStatusClass: 'flat',
+      hoursSpark: 'M 0 12 L 10 10 L 20 11 L 30 12 L 40 11 L 50 10 L 60 11',
+      kmNum: '1,724.6',
+      kmUnitLine: 'kilometres · 184 sessions',
+      kmCtx: 'Two thousand kilometres of running. Ready for what comes next.',
+      nutCal: '1,036,600<span class="unit">kcal</span><span class="daily">2,840/day avg</span>',
+      nutCalFill: 95,
+      nutCalPct: '95%',
+      nutCalTarget: '3,000 kcal/day',
+      nutProtein: '63,875<span class="unit">g</span><span class="daily">175/day avg</span>',
+      nutProteinFill: 97,
+      nutProteinPct: '97%',
+      nutProteinTarget: '180 g/day',
+      nutCarbs: '139,430<span class="unit">g</span><span class="daily">382/day avg</span>',
+      nutCarbsFill: 96,
+      nutCarbsPct: '96%',
+      nutCarbsTarget: '400 g/day'
+    },
+    'YTD': {
+      periodSub: 'avg · year to date',
+      kmHeader: 'Km run · year to date',
+      nutHeader: 'Nutrition totals · year to date',
+      nutSub: '128 days logged · 3 missed',
+      weight: '76.2<span class="unit">kg</span>',
+      weightStatus: '▼ 3.4 kg · since Jan',
+      weightStatusClass: 'down',
+      weightSpark: 'M 0 3 L 10 5 L 20 7 L 30 9 L 40 11 L 50 14 L 60 16',
+      hrv: '49<span class="unit">ms</span>',
+      hrvStatus: '▲ 1 · 86% target',
+      hrvStatusClass: '',
+      hrvSpark: 'M 0 12 L 10 13 L 20 11 L 30 9 L 40 10 L 50 8 L 60 7',
+      rhr: '60<span class="unit">bpm</span>',
+      rhrStatus: '▼ 4 · since Jan',
+      rhrStatusClass: '',
+      rhrSpark: 'M 0 5 L 10 7 L 20 8 L 30 10 L 40 12 L 50 13 L 60 14',
+      sleep: '64<span class="unit">/100</span>',
+      sleepStatus: '● 74% target',
+      sleepStatusClass: 'flat',
+      sleepSpark: 'M 0 11 L 10 10 L 20 12 L 30 9 L 40 10 L 50 9 L 60 10',
+      recovery: '67<span class="unit">/100</span>',
+      recoveryStatus: '▲ 4 · 83% target',
+      recoveryStatusClass: '',
+      recoverySpark: 'M 0 13 L 10 12 L 20 13 L 30 10 L 40 11 L 50 8 L 60 7',
+      hours: '7:15<span class="unit">h</span>',
+      hoursStatus: '● 94% target',
+      hoursStatusClass: 'flat',
+      hoursSpark: 'M 0 10 L 10 11 L 20 9 L 30 10 L 40 8 L 50 9 L 60 8',
+      kmNum: '738.2',
+      kmUnitLine: 'kilometres · 78 sessions',
+      kmCtx: 'Five months in, on track for a 2,000 km year.',
+      nutCal: '385,140<span class="unit">kcal</span><span class="daily">2,940/day avg</span>',
+      nutCalFill: 98,
+      nutCalPct: '98%',
+      nutCalTarget: '3,000 kcal/day',
+      nutProtein: '24,104<span class="unit">g</span><span class="daily">184/day avg</span>',
+      nutProteinFill: 100,
+      nutProteinPct: '102%',
+      nutProteinTarget: '180 g/day',
+      nutCarbs: '52,138<span class="unit">g</span><span class="daily">398/day avg</span>',
+      nutCarbsFill: 100,
+      nutCarbsPct: '100%',
+      nutCarbsTarget: '400 g/day'
+    }
+  };
+
+  // ============================================================
+  // Range cycle controller
+  // ============================================================
+  const RANGES = ['7D', '30D', '6M', '1Y', 'YTD'];
+  let currentRangeIdx = 0;
+  let autoTimer = null;
+
+  function applyRangeData(rangeKey) {
+    const d = RANGE_DATA[rangeKey];
+    if (!d) return;
+
+    // Sub labels share content but have unique data-keys to avoid duplicate queries
+    ['periodSub', 'periodSub2', 'periodSub3', 'periodSub4', 'periodSub5', 'periodSub6'].forEach(k => {
+      const el = document.querySelector(`[data-key="${k}"]`);
+      if (el) el.textContent = d.periodSub;
+    });
+
+    Object.keys(d).forEach(key => {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      if (!el) return;
+
+      // Sparkline paths get their `d` attribute updated
+      if (key.endsWith('Spark')) {
+        el.setAttribute('d', d[key]);
+        return;
+      }
+
+      // Status classes — control colour
+      if (key.endsWith('StatusClass')) {
+        const baseKey = key.replace('StatusClass', 'Status');
+        const target = document.querySelector(`[data-key="${baseKey}"]`);
+        if (target) {
+          target.classList.remove('up', 'down', 'flat');
+          if (d[key]) target.classList.add(d[key]);
+        }
+        return;
+      }
+
+      // Fill bar widths
+      if (key.endsWith('Fill')) {
+        el.style.width = d[key] + '%';
+        return;
+      }
+
+      // Default: HTML content
+      el.innerHTML = d[key];
+    });
+  }
+
+  function setActiveButton(rangeKey) {
+    document.querySelectorAll('.tv-range button').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const activeBtn = document.querySelector(`.tv-range button[data-range="${rangeKey}"]`);
+    if (activeBtn) {
+      // Force reflow to restart the progress animation
+      void activeBtn.offsetWidth;
+      activeBtn.classList.add('active');
+    }
+  }
+
+  function setRange(rangeKey) {
+    currentRangeIdx = RANGES.indexOf(rangeKey);
+    setActiveButton(rangeKey);
+
+    // Fade out → swap data → fade back in (breathing motion)
+    document.body.classList.add('data-changing');
+    setTimeout(() => {
+      applyRangeData(rangeKey);
+      document.body.classList.remove('data-changing');
+    }, 280);
+
+    // Reset auto-advance timer
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(advanceRange, 20000);
+  }
+
+  function advanceRange() {
+    const nextIdx = (currentRangeIdx + 1) % RANGES.length;
+    setRange(RANGES[nextIdx]);
+  }
+
+  // Wire up manual clicks
+  document.querySelectorAll('.tv-range button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const range = btn.dataset.range;
+      if (range) setRange(range);
+    });
+  });
+
+  // Start the cycle on load
+  setRange('7D');
+
+  // Live clock (since this is meant for ambient TV display)
+  function updateClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const timeEl = document.querySelector('.clock .time');
+    if (timeEl) timeEl.textContent = hh + ':' + mm;
+
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dateStr = days[now.getDay()] + ' · ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+    const dateEl = document.querySelector('.clock .date');
+    if (dateEl) dateEl.textContent = dateStr;
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+</script>
+
+</body>
+</html>

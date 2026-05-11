@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadence — History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30..100&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script>
+  (function() {
+    var stored = localStorage.getItem('cadence-theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
+<style>
+  /* ============================================================
+     CADENCE — THEME TOKENS (shared system)
+  ============================================================ */
+  :root {
+    --bg:             #F5F2EC;
+    --bg-card:        #FBFAF5;
+    --bg-paper:       #FFFFFF;
+    --bg-elevated:    #EDE9E0;
+    --border:         #DCD7CB;
+    --border-strong:  #B8B3A7;
+    --text:           #1B1B1F;
+    --text-soft:      #2E2E33;
+    --text-muted:     #5F5C55;
+    --text-quiet:     #8A867D;
+    --text-faint:     #B8B3A7;
+    --moss:           #6B7A5A;
+    --moss-deep:      #4F5A42;
+    --moss-soft:      #C9CFB9;
+    --moss-glow:      rgba(107, 122, 90, 0.10);
+    --clay:           #B96A4D;
+    --clay-deep:      #A3493D;
+    --clay-soft:      #E8C7B5;
+    --slate:          #4A5F6E;
+    --sand:           #C9A24E;
+    --on-moss:        #F5F2EC;
+    --chart-grid:     #DCD7CB;
+    --chart-baseline: #B8B3A7;
+
+    --display: "Fraunces", ui-serif, Georgia, serif;
+    --sans:    "Geist", "Söhne", ui-sans-serif, -apple-system, system-ui, sans-serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --ease:    cubic-bezier(0.2, 0.7, 0.2, 1);
+    --t-paint: 900ms;
+    --t-theme: 320ms;
+    --t-ui:    240ms;
+  }
+
+  [data-theme="dark"] {
+    --bg:             #13141A;
+    --bg-card:        #1B1B22;
+    --bg-paper:       #25262E;
+    --bg-elevated:    #2E2F38;
+    --border:         #25262E;
+    --border-strong:  #2E2F38;
+    --text:           #F5F2EC;
+    --text-soft:      #E8E4DA;
+    --text-muted:     #A09C92;
+    --text-quiet:     #6F6B62;
+    --text-faint:     #4A4843;
+    --moss:           #8DA075;
+    --moss-deep:      #6B7A5A;
+    --moss-soft:      rgba(141, 160, 117, 0.28);
+    --moss-glow:      rgba(141, 160, 117, 0.10);
+    --clay:           #C97E62;
+    --clay-deep:      #B96A4D;
+    --clay-soft:      rgba(201, 126, 98, 0.22);
+    --slate:          #6B8398;
+    --sand:           #D4B265;
+    --on-moss:        #13141A;
+    --chart-grid:     #2E2F38;
+    --chart-baseline: #4A4843;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    transition: background-color var(--t-theme) var(--ease), color var(--t-theme) var(--ease);
+  }
+  .sidebar, .nav-list a, .theme-toggle, .stat-tile, .filter-pill,
+  .activity-row, .week-head, .search-input, .source-toggle button,
+  .range-btn, .load-more, .density-card {
+    transition: background-color var(--t-theme) var(--ease),
+                border-color var(--t-theme) var(--ease),
+                color var(--t-theme) var(--ease);
+  }
+  svg rect, svg path {
+    transition: fill var(--t-theme) var(--ease), stroke var(--t-theme) var(--ease);
+  }
+
+  /* ============================================================
+     LAYOUT
+  ============================================================ */
+  .shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    background: var(--bg);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .wordmark {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 24px;
+    letter-spacing: -0.04em;
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+    display: inline-flex;
+    align-items: baseline;
+    padding-left: 8px;
+    margin-bottom: 28px;
+  }
+  .wordmark .dot {
+    width: 6px; height: 6px;
+    background: var(--moss);
+    border-radius: 50%;
+    margin-left: 3px;
+    margin-bottom: 4px;
+  }
+  .nav-section { margin-bottom: 22px; }
+  .nav-eyebrow {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-quiet);
+    padding: 0 8px 8px;
+  }
+  .nav-list { list-style: none; }
+  .nav-list li { margin-bottom: 1px; }
+  .nav-list a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-list a:hover { background: var(--bg-elevated); color: var(--text); }
+  .nav-list a.active { background: var(--bg-elevated); color: var(--text); font-weight: 500; }
+  .nav-list a svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; stroke-width: 1.5; }
+  .nav-list a.active svg { opacity: 1; }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .sidebar-user {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+  }
+  .theme-toggle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+  .theme-toggle svg { width: 13px; height: 13px; }
+  .theme-toggle .t-icon { display: none; }
+  [data-theme="light"] .theme-toggle .t-moon { display: block; }
+  [data-theme="dark"] .theme-toggle .t-sun { display: block; }
+
+  main {
+    padding: 36px 56px 80px;
+    max-width: 1400px;
+  }
+
+  /* ============================================================
+     PAGE HEAD
+  ============================================================ */
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 36px;
+    gap: 24px;
+  }
+  .page-head .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-quiet);
+    margin-bottom: 10px;
+  }
+  .page-head h1 {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 56px;
+    letter-spacing: -0.04em;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .page-head .sub {
+    font-family: var(--display);
+    font-style: italic;
+    font-weight: 360;
+    font-size: 17px;
+    color: var(--text-muted);
+    letter-spacing: -0.005em;
+  }
+  .page-head .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 4px;
+  }
+  .page-head .meta .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--moss);
+  }
+
+  /* ============================================================
+     SUMMARY GRID — hero density tile + 3 stat tiles
+  ============================================================ */
+  .summary {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+  }
+  .stat-tile .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-quiet);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .stat-tile .label .scope {
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+  .stat-tile .value {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 56px;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    margin: 6px 0 12px;
+  }
+  .stat-tile .value .unit {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-left: 4px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .stat-tile .delta {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-tile .delta .pct.up    { color: var(--moss-deep); }
+  .stat-tile .delta .pct.down  { color: var(--clay-deep); }
+  .stat-tile .delta .pct.flat  { color: var(--text-muted); }
+  [data-theme="dark"] .stat-tile .delta .pct.up   { color: var(--moss); }
+  [data-theme="dark"] .stat-tile .delta .pct.down { color: var(--clay); }
+
+  /* Hero density tile */
+  .density-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 24px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+  }
+  .density-card .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .density-card .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-quiet);
+  }
+  .density-card .scope {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-faint);
+  }
+  .density-card .value {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 56px;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    margin-bottom: 4px;
+  }
+  .density-card .value .unit {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-left: 4px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .density-card .desc {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    letter-spacing: -0.005em;
+  }
+  .density-viz {
+    width: 100%;
+    height: 56px;
+    overflow: visible;
+  }
+  .density-viz .bar {
+    fill: var(--moss);
+    opacity: 0.85;
+    transform-box: fill-box;
+    transform-origin: bottom;
+    transform: scaleY(0);
+    animation: growBar 700ms var(--ease) forwards;
+  }
+  .density-viz .bar.rest { fill: var(--border); opacity: 1; }
+  .density-viz .bar.today { fill: var(--clay); opacity: 0.4; }
+  @keyframes growBar { to { transform: scaleY(1); } }
+  .density-viz .axis-line {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+  }
+
+  /* ============================================================
+     FILTERS BAR
+  ============================================================ */
+  .filters {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 260px;
+    max-width: 360px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-quiet);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px 10px 38px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--text-faint); }
+  .search-input:focus { border-color: var(--moss); box-shadow: 0 0 0 3px var(--moss-glow); }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .filter-group .gl {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-quiet);
+    padding: 0 8px 0 6px;
+  }
+  .filter-pill {
+    background: transparent;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .filter-pill:hover { color: var(--text); }
+  .filter-pill.active {
+    background: var(--text);
+    color: var(--bg);
+  }
+  [data-theme="dark"] .filter-pill.active {
+    background: var(--moss);
+    color: var(--on-moss);
+  }
+  .filter-pill .pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .filter-pill .pip.run { background: var(--moss); }
+  .filter-pill .pip.strength { background: var(--clay); }
+  .filter-pill .pip.recovery { background: var(--slate); }
+
+  .range-btn {
+    margin-left: auto;
+    padding: 9px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .range-btn:hover { border-color: var(--border-strong); }
+  .range-btn svg { width: 12px; height: 12px; opacity: 0.7; transition: transform var(--t-ui) var(--ease); }
+
+  /* Range picker dropdown */
+  .range-picker { position: relative; margin-left: auto; }
+  .range-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px;
+    min-width: 180px;
+    z-index: 50;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+  }
+  [data-theme="dark"] .range-menu { box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
+  .range-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .range-picker.open .range-btn svg { transform: rotate(180deg); }
+  .range-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 9px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    position: relative;
+  }
+  .range-menu button:hover { background: var(--bg-elevated); color: var(--text); }
+  .range-menu button.active { color: var(--text); }
+  .range-menu button.active::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--moss);
+  }
+
+  /* ============================================================
+     YEAR BANNERS, MONTH DIVIDERS, ARCHIVE STUB
+     Shown conditionally based on main[data-range] value.
+  ============================================================ */
+  .year-banner {
+    display: none;
+    align-items: center;
+    gap: 18px;
+    margin: 40px 0 24px;
+  }
+  .year-banner:first-of-type { margin-top: 0; }
+  .year-banner .line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .year-banner .num {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 42px;
+    letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .year-banner .scope {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-quiet);
+  }
+
+  .month-divider {
+    display: none;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 28px 0 16px;
+    padding: 0 0 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .month-divider:first-of-type { margin-top: 0; }
+  .month-divider .name {
+    font-family: var(--display);
+    font-weight: 380;
+    font-size: 26px;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .month-divider .totals {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .month-divider .totals .sep { width: 1px; height: 10px; background: var(--border); }
+  .month-divider .totals .km { color: var(--moss-deep); }
+  [data-theme="dark"] .month-divider .totals .km { color: var(--moss); }
+
+  .archive-stub {
+    display: none;
+    margin-top: 32px;
+    padding: 36px 28px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    text-align: center;
+  }
+  .archive-stub .year {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 40px;
+    letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+  .archive-stub .text {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .archive-stub .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+  }
+
+  /* Visibility rules based on selected range */
+  main[data-range="3-months"]  .month-divider,
+  main[data-range="this-year"] .month-divider,
+  main[data-range="all-time"]  .month-divider { display: flex; }
+  main[data-range="this-year"] .year-banner,
+  main[data-range="all-time"]  .year-banner { display: flex; }
+  main[data-range="all-time"]  .archive-stub { display: block; }
+
+  /* ============================================================
+     WEEK GROUPS
+  ============================================================ */
+  .week {
+    margin-bottom: 28px;
+  }
+  .week-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    padding: 0 0 12px 14px;
+    border-left: 2px solid var(--moss);
+    margin-bottom: 10px;
+  }
+  .week-head .title {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 20px;
+    letter-spacing: -0.015em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .week-head .totals {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .week-head .totals .sep {
+    width: 1px; height: 10px;
+    background: var(--border);
+  }
+  .week-head .totals .km { color: var(--moss-deep); }
+  [data-theme="dark"] .week-head .totals .km { color: var(--moss); }
+
+  .activity-list {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .activity-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 100px 100px 90px 90px 80px 32px;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    cursor: pointer;
+    position: relative;
+  }
+  .activity-row + .activity-row { border-top: 1px dashed var(--border); }
+  .activity-row:hover { background: var(--bg-paper); }
+  .activity-row .date {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    font-variant-numeric: tabular-nums;
+  }
+  .activity-row .date .num {
+    color: var(--text);
+    margin-right: 4px;
+  }
+  .activity-row .title-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .activity-row .title-cell .pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .activity-row .title-cell .pip.run { background: var(--moss); }
+  .activity-row .title-cell .pip.long { background: var(--moss-deep); }
+  .activity-row .title-cell .pip.strength { background: var(--clay); }
+  .activity-row .title-cell .pip.recovery { background: var(--slate); }
+  .activity-row .title-cell .name {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 18px;
+    letter-spacing: -0.015em;
+    color: var(--text);
+    line-height: 1.15;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .activity-row .title-cell .name-wrap { min-width: 0; }
+  .activity-row .title-cell .sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+  }
+  .activity-row .title-cell .pb {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--moss-deep);
+    background: var(--moss-soft);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+  }
+  [data-theme="dark"] .activity-row .title-cell .pb { color: var(--moss); }
+  .activity-row .metric {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    text-align: right;
+  }
+  .activity-row .metric .unit,
+  .activity-row .metric .sub {
+    display: block;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-quiet);
+    margin-top: 4px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+  }
+  .activity-row .metric.muted { color: var(--text-faint); }
+  .activity-row .source-pill {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    text-align: center;
+    justify-self: end;
+  }
+  .activity-row .source-pill.strava { color: var(--moss-deep); border-color: var(--moss-soft); }
+  .activity-row .source-pill.whoop { color: var(--slate); border-color: var(--slate); }
+  .activity-row .source-pill.manual { color: var(--text-muted); }
+  [data-theme="dark"] .activity-row .source-pill.strava { color: var(--moss); border-color: rgba(141, 160, 117, 0.4); }
+  [data-theme="dark"] .activity-row .source-pill.whoop { color: var(--slate); border-color: rgba(107, 131, 152, 0.4); }
+  .activity-row .chevron {
+    color: var(--text-faint);
+    opacity: 0;
+    transition: opacity var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+  }
+  .activity-row:hover .chevron { opacity: 1; transform: translateX(3px); }
+  .activity-row .chevron svg { width: 14px; height: 14px; }
+
+  /* When row is filtered out via search */
+  .activity-row.hidden { display: none; }
+  .week.empty { display: none; }
+
+  /* ============================================================
+     LOAD MORE
+  ============================================================ */
+  .load-more {
+    display: block;
+    margin: 32px auto 0;
+    padding: 14px 28px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    cursor: pointer;
+  }
+  .load-more:hover { border-color: var(--moss); color: var(--text); border-style: solid; }
+
+  .empty-state {
+    padding: 48px 24px;
+    text-align: center;
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text-muted);
+    display: none;
+  }
+  .empty-state.show { display: block; }
+
+  /* ============================================================
+     FOOTER COUNT
+  ============================================================ */
+  .footer-count {
+    margin-top: 32px;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+  }
+
+  /* ============================================================
+     ANIMATIONS (shared system)
+  ============================================================ */
+  body { opacity: 0; animation: pageFadeIn 500ms var(--ease) forwards; }
+  @keyframes pageFadeIn { to { opacity: 1; } }
+  .r { opacity: 0; transform: translateY(8px); animation: rise var(--t-paint) var(--ease) forwards; }
+  .r-1 { animation-delay: 80ms; }  .r-2 { animation-delay: 160ms; }
+  .r-3 { animation-delay: 240ms; } .r-4 { animation-delay: 320ms; }
+  .r-5 { animation-delay: 400ms; } .r-6 { animation-delay: 480ms; }
+  .r-7 { animation-delay: 560ms; } .r-8 { animation-delay: 640ms; }
+  .r-9 { animation-delay: 720ms; } .r-10 { animation-delay: 800ms; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  /* ============================================================
+     RESPONSIVE
+  ============================================================ */
+  @media (max-width: 1300px) {
+    .summary { grid-template-columns: 1fr 1fr; }
+    .activity-row { grid-template-columns: 100px 1fr 90px 90px 80px 70px 24px; }
+    .activity-row .pace { display: none; }
+  }
+  @media (max-width: 1100px) {
+    main { padding: 28px 32px 60px; }
+    .activity-row { grid-template-columns: 90px 1fr 80px 80px 70px 24px; }
+    .activity-row .hr-cell { display: none; }
+  }
+  @media (max-width: 800px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px; flex-direction: row; gap: 16px; }
+    .sidebar .nav-section { display: none; }
+    .sidebar-footer { margin-left: auto; margin-top: 0; padding: 0; }
+    main { padding: 24px 20px 60px; }
+    .summary { grid-template-columns: 1fr; }
+    .filters { flex-direction: column; align-items: stretch; }
+    .range-btn { margin-left: 0; justify-content: center; }
+    .filter-group { overflow-x: auto; flex-wrap: nowrap; }
+    .activity-row { grid-template-columns: 1fr auto; gap: 6px; row-gap: 4px; }
+    .activity-row .date { grid-column: 1 / -1; font-size: 9px; }
+    .activity-row .title-cell { grid-column: 1 / -1; }
+    .activity-row .metric { font-size: 15px; }
+    .activity-row .chevron { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar">
+    <div class="wordmark">cadence<span class="dot"></span></div>
+
+    <div class="nav-section">
+      <div class="nav-eyebrow">Today</div>
+      <ul class="nav-list">
+        <li><a href="cadence-dashboard-v5.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dashboard</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Planner</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>Training</a></li>
+        <li><a href="cadence-daily-data.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Daily data</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-eyebrow">Analyse</div>
+      <ul class="nav-list">
+        <li><a href="cadence-charts.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l4-8 4 4 4-12 4 16h2"/></svg>Charts</a></li>
+        <li><a href="cadence-history.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-7"/></svg>History</a></li>
+        <li><a href="cadence-tv-mode-v4.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>TV mode</a></li>
+        <li><a href="cadence-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-eyebrow">Assistant</div>
+      <ul class="nav-list">
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>Talk to Cadence</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Messages</a></li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">WG</div>
+      <button class="theme-toggle" onclick="cadenceToggleTheme()" aria-label="Toggle theme">
+        <svg class="t-icon t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="t-icon t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <main data-range="this-month">
+
+    <!-- Page head -->
+    <header class="page-head r r-1">
+      <div>
+        <div class="eyebrow">Analyse</div>
+        <h1>History<span style="color: var(--moss);">.</span></h1>
+        <p class="sub">Every session, every source, sortable from this morning back to the beginning.</p>
+      </div>
+      <div class="meta">
+        <span class="dot"></span>
+        <span>262 total · Last sync 09:42</span>
+      </div>
+    </header>
+
+    <!-- Summary strip -->
+    <section class="summary r r-2">
+
+      <div class="density-card">
+        <div class="top">
+          <span class="label">Distance · this month</span>
+          <span class="scope">11 May → 11 Jun</span>
+        </div>
+        <div>
+          <div class="value">156.8<span class="unit">km</span></div>
+          <div class="desc">A heavy block. Long-run base climbing nicely.</div>
+        </div>
+        <svg class="density-viz" viewBox="0 0 600 56" preserveAspectRatio="none">
+          <line class="axis-line" x1="0" y1="50" x2="600" y2="50"/>
+          <!-- 30 day strip — each day a bar. height = relative km. animation-delay staggered. -->
+          <rect class="bar" x="0"   y="38" width="14" height="12"  style="animation-delay: 700ms"/>
+          <rect class="bar" x="20"  y="20" width="14" height="30"  style="animation-delay: 730ms"/>
+          <rect class="bar rest" x="40"  y="46" width="14" height="4" style="animation-delay: 760ms"/>
+          <rect class="bar" x="60"  y="28" width="14" height="22"  style="animation-delay: 790ms"/>
+          <rect class="bar" x="80"  y="14" width="14" height="36"  style="animation-delay: 820ms"/>
+          <rect class="bar rest" x="100" y="46" width="14" height="4" style="animation-delay: 850ms"/>
+          <rect class="bar" x="120" y="34" width="14" height="16"  style="animation-delay: 880ms"/>
+          <rect class="bar" x="140" y="6"  width="14" height="44"  style="animation-delay: 910ms"/>
+          <rect class="bar" x="160" y="32" width="14" height="18"  style="animation-delay: 940ms"/>
+          <rect class="bar" x="180" y="40" width="14" height="10"  style="animation-delay: 970ms"/>
+          <rect class="bar" x="200" y="24" width="14" height="26"  style="animation-delay: 1000ms"/>
+          <rect class="bar rest" x="220" y="46" width="14" height="4" style="animation-delay: 1030ms"/>
+          <rect class="bar" x="240" y="18" width="14" height="32"  style="animation-delay: 1060ms"/>
+          <rect class="bar" x="260" y="38" width="14" height="12"  style="animation-delay: 1090ms"/>
+          <rect class="bar" x="280" y="2"  width="14" height="48"  style="animation-delay: 1120ms"/>
+          <rect class="bar" x="300" y="40" width="14" height="10"  style="animation-delay: 1150ms"/>
+          <rect class="bar" x="320" y="42" width="14" height="8"   style="animation-delay: 1180ms"/>
+          <rect class="bar rest" x="340" y="46" width="14" height="4" style="animation-delay: 1210ms"/>
+          <rect class="bar" x="360" y="30" width="14" height="20"  style="animation-delay: 1240ms"/>
+          <rect class="bar" x="380" y="22" width="14" height="28"  style="animation-delay: 1270ms"/>
+          <rect class="bar" x="400" y="36" width="14" height="14"  style="animation-delay: 1300ms"/>
+          <rect class="bar" x="420" y="42" width="14" height="8"   style="animation-delay: 1330ms"/>
+          <rect class="bar" x="440" y="38" width="14" height="12"  style="animation-delay: 1360ms"/>
+          <rect class="bar rest" x="460" y="46" width="14" height="4" style="animation-delay: 1390ms"/>
+          <rect class="bar" x="480" y="10" width="14" height="40"  style="animation-delay: 1420ms"/>
+          <rect class="bar" x="500" y="42" width="14" height="8"   style="animation-delay: 1450ms"/>
+          <rect class="bar" x="520" y="44" width="14" height="6"   style="animation-delay: 1480ms"/>
+          <rect class="bar" x="540" y="28" width="14" height="22"  style="animation-delay: 1510ms"/>
+          <rect class="bar today" x="560" y="2"  width="14" height="48"  style="animation-delay: 1540ms"/>
+          <rect class="bar today" x="580" y="46" width="14" height="4"  style="animation-delay: 1570ms"/>
+        </svg>
+      </div>
+
+      <div class="stat-tile">
+        <div class="label">Sessions <span class="scope">this month</span></div>
+        <div class="value">18</div>
+        <div class="delta"><span class="pct up">▲ 4</span><span>vs prev 30d</span></div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="label">Time <span class="scope">this month</span></div>
+        <div class="value">18:42<span class="unit">h</span></div>
+        <div class="delta"><span class="pct up">▲ 2:08</span><span>longest 2:48</span></div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="label">Avg HR <span class="scope">running</span></div>
+        <div class="value">146<span class="unit">bpm</span></div>
+        <div class="delta"><span class="pct flat">● Z2 dominant</span></div>
+      </div>
+
+    </section>
+
+    <!-- Filters -->
+    <section class="filters r r-3">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="searchInput" type="text" placeholder="Search by name, type, or note…">
+      </div>
+
+      <div class="filter-group" data-filter="type">
+        <span class="gl">Type</span>
+        <button class="filter-pill active" data-val="all">All</button>
+        <button class="filter-pill" data-val="run"><span class="pip run"></span>Run</button>
+        <button class="filter-pill" data-val="strength"><span class="pip strength"></span>Strength</button>
+        <button class="filter-pill" data-val="recovery"><span class="pip recovery"></span>Recovery</button>
+      </div>
+
+      <div class="filter-group" data-filter="source">
+        <span class="gl">Source</span>
+        <button class="filter-pill active" data-val="all">All</button>
+        <button class="filter-pill" data-val="strava">Strava</button>
+        <button class="filter-pill" data-val="whoop">Whoop</button>
+        <button class="filter-pill" data-val="manual">Manual</button>
+      </div>
+
+      <div class="range-picker" id="rangePicker">
+        <button class="range-btn" id="rangeBtn">
+          <span id="rangeLabel">This month</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="range-menu" id="rangeMenu">
+          <button data-range="this-week">This week</button>
+          <button data-range="this-month" class="active">This month</button>
+          <button data-range="3-months">Last 3 months</button>
+          <button data-range="this-year">This year</button>
+          <button data-range="all-time">All time</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      Nothing matches. Try a wider date range or clear your filters.
+    </div>
+
+    <!-- Activity list — current week shown first if it has entries -->
+
+    <!-- Year banner — only shown in 'This year' and 'All time' ranges -->
+    <div class="year-banner">
+      <span class="num">2026</span>
+      <span class="line"></span>
+      <span class="scope">Jan 1 → today</span>
+    </div>
+
+    <!-- Month divider — shown for 3-months / this-year / all-time -->
+    <div class="month-divider">
+      <span class="name">May 2026</span>
+      <span class="totals">
+        <span>7 sessions</span><span class="sep"></span>
+        <span class="km">75.4 km</span><span class="sep"></span>
+        <span>9:04 hours</span><span class="sep"></span>
+        <span>1 PB</span>
+      </span>
+    </div>
+
+    <section class="week r r-4" data-week="2026-05-04">
+      <div class="week-head">
+        <span class="title">Week of 4 May</span>
+        <span class="totals">
+          <span>7 sessions</span><span class="sep"></span>
+          <span class="km">75.4 km</span><span class="sep"></span>
+          <span>9:04 hours</span>
+        </span>
+      </div>
+      <div class="activity-list">
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">10</span>SUN MAY</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2 endurance</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">6.2<span class="unit">km</span></div>
+          <div class="metric">35:08<span class="unit">duration</span></div>
+          <div class="metric hr-cell">138<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:40<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">09</span>SAT MAY</div>
+          <div class="title-cell">
+            <span class="pip long"></span>
+            <div class="name-wrap">
+              <div class="name">Long run · trail</div>
+              <div class="sub">Running · technical</div>
+            </div>
+          </div>
+          <div class="metric">28.6<span class="unit">km</span></div>
+          <div class="metric">2:48:24<span class="unit">duration</span></div>
+          <div class="metric hr-cell">146<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:53<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="strength" data-source="manual">
+          <div class="date"><span class="num">08</span>FRI MAY</div>
+          <div class="title-cell">
+            <span class="pip strength"></span>
+            <div class="name-wrap">
+              <div class="name">Back squat day<span class="pb">New PB</span></div>
+              <div class="sub">Strength · lower</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:18:42<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric pace">132.5<span class="unit">kg top set</span></div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">07</span>THU MAY</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">11.8<span class="unit">km</span></div>
+          <div class="metric">1:02:14<span class="unit">duration</span></div>
+          <div class="metric hr-cell">144<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:16<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="recovery" data-source="manual">
+          <div class="date"><span class="num">06</span>WED MAY</div>
+          <div class="title-cell">
+            <span class="pip recovery"></span>
+            <div class="name-wrap">
+              <div class="name">Mobility · hips and ankles</div>
+              <div class="sub">Recovery</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">30:00<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric muted pace">—</div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">05</span>TUE MAY</div>
+          <div class="title-cell">
+            <span class="pip long"></span>
+            <div class="name-wrap">
+              <div class="name">Long run · trail</div>
+              <div class="sub">Running · technical</div>
+            </div>
+          </div>
+          <div class="metric">22.4<span class="unit">km</span></div>
+          <div class="metric">2:14:08<span class="unit">duration</span></div>
+          <div class="metric hr-cell">148<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:59<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">04</span>MON MAY</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">6.4<span class="unit">km</span></div>
+          <div class="metric">36:12<span class="unit">duration</span></div>
+          <div class="metric hr-cell">138<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:39<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Month divider — April -->
+    <div class="month-divider">
+      <span class="name">April 2026</span>
+      <span class="totals">
+        <span>20 sessions</span><span class="sep"></span>
+        <span class="km">172.8 km</span><span class="sep"></span>
+        <span>23:54 hours</span><span class="sep"></span>
+        <span>1 PB</span>
+      </span>
+    </div>
+
+    <section class="week r r-5" data-week="2026-04-27">
+      <div class="week-head">
+        <span class="title">Week of 27 April</span>
+        <span class="totals">
+          <span>7 sessions</span><span class="sep"></span>
+          <span class="km">56.2 km</span><span class="sep"></span>
+          <span>8:14 hours</span>
+        </span>
+      </div>
+      <div class="activity-list">
+
+        <div class="activity-row" data-type="recovery" data-source="manual">
+          <div class="date"><span class="num">03</span>SUN MAY</div>
+          <div class="title-cell">
+            <span class="pip recovery"></span>
+            <div class="name-wrap">
+              <div class="name">Yoga · gentle flow</div>
+              <div class="sub">Recovery</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">25:00<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric muted pace">—</div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">02</span>SAT MAY</div>
+          <div class="title-cell">
+            <span class="pip long"></span>
+            <div class="name-wrap">
+              <div class="name">Long run · trail</div>
+              <div class="sub">Running · technical</div>
+            </div>
+          </div>
+          <div class="metric">26.2<span class="unit">km</span></div>
+          <div class="metric">2:38:14<span class="unit">duration</span></div>
+          <div class="metric hr-cell">148<span class="unit">bpm avg</span></div>
+          <div class="metric pace">6:02<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="strength" data-source="manual">
+          <div class="date"><span class="num">01</span>FRI MAY</div>
+          <div class="title-cell">
+            <span class="pip strength"></span>
+            <div class="name-wrap">
+              <div class="name">Back squat day</div>
+              <div class="sub">Strength · lower</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:24:18<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric pace">130<span class="unit">kg top set</span></div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">30</span>THU APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">9.4<span class="unit">km</span></div>
+          <div class="metric">52:48<span class="unit">duration</span></div>
+          <div class="metric hr-cell">142<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:37<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="strength" data-source="manual">
+          <div class="date"><span class="num">29</span>WED APR</div>
+          <div class="title-cell">
+            <span class="pip strength"></span>
+            <div class="name-wrap">
+              <div class="name">Pull day · back and biceps</div>
+              <div class="sub">Strength · upper</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:12:30<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric pace">8<span class="unit">exercises</span></div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">28</span>TUE APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Intervals · 6 × 800m</div>
+              <div class="sub">Running · quality</div>
+            </div>
+          </div>
+          <div class="metric">12.4<span class="unit">km</span></div>
+          <div class="metric">1:05:18<span class="unit">duration</span></div>
+          <div class="metric hr-cell">162<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:16<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">27</span>MON APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">8.2<span class="unit">km</span></div>
+          <div class="metric">47:32<span class="unit">duration</span></div>
+          <div class="metric hr-cell">140<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:48<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="week r r-6" data-week="2026-04-20">
+      <div class="week-head">
+        <span class="title">Week of 20 April</span>
+        <span class="totals">
+          <span>6 sessions</span><span class="sep"></span>
+          <span class="km">62.4 km</span><span class="sep"></span>
+          <span>7:48 hours</span>
+        </span>
+      </div>
+      <div class="activity-list">
+
+        <div class="activity-row" data-type="recovery" data-source="manual">
+          <div class="date"><span class="num">26</span>SUN APR</div>
+          <div class="title-cell">
+            <span class="pip recovery"></span>
+            <div class="name-wrap">
+              <div class="name">Long walk · recovery</div>
+              <div class="sub">Recovery</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:02:00<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric muted pace">—</div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">25</span>SAT APR</div>
+          <div class="title-cell">
+            <span class="pip long"></span>
+            <div class="name-wrap">
+              <div class="name">Long run · road</div>
+              <div class="sub">Running · base</div>
+            </div>
+          </div>
+          <div class="metric">32.4<span class="unit">km</span></div>
+          <div class="metric">3:12:28<span class="unit">duration</span></div>
+          <div class="metric hr-cell">144<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:56<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">23</span>THU APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">10.2<span class="unit">km</span></div>
+          <div class="metric">56:42<span class="unit">duration</span></div>
+          <div class="metric hr-cell">140<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:34<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="strength" data-source="manual">
+          <div class="date"><span class="num">22</span>WED APR</div>
+          <div class="title-cell">
+            <span class="pip strength"></span>
+            <div class="name-wrap">
+              <div class="name">Push day · chest and shoulders</div>
+              <div class="sub">Strength · upper</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:05:14<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric pace">9<span class="unit">exercises</span></div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">21</span>TUE APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Tempo · 12k at marathon pace</div>
+              <div class="sub">Running · quality</div>
+            </div>
+          </div>
+          <div class="metric">12.0<span class="unit">km</span></div>
+          <div class="metric">1:08:24<span class="unit">duration</span></div>
+          <div class="metric hr-cell">156<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:42<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">20</span>MON APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">7.4<span class="unit">km</span></div>
+          <div class="metric">42:18<span class="unit">duration</span></div>
+          <div class="metric hr-cell">138<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:43<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="week r r-7" data-week="2026-04-13">
+      <div class="week-head">
+        <span class="title">Week of 13 April</span>
+        <span class="totals">
+          <span>7 sessions</span><span class="sep"></span>
+          <span class="km">54.2 km</span><span class="sep"></span>
+          <span>7:52 hours</span>
+        </span>
+      </div>
+      <div class="activity-list">
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">19</span>SUN APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · recovery pace</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">5.8<span class="unit">km</span></div>
+          <div class="metric">33:14<span class="unit">duration</span></div>
+          <div class="metric hr-cell">138<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:44<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">18</span>SAT APR</div>
+          <div class="title-cell">
+            <span class="pip long"></span>
+            <div class="name-wrap">
+              <div class="name">Long run · trail</div>
+              <div class="sub">Running · technical</div>
+            </div>
+          </div>
+          <div class="metric">24.8<span class="unit">km</span></div>
+          <div class="metric">2:24:18<span class="unit">duration</span></div>
+          <div class="metric hr-cell">146<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:49<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="recovery" data-source="manual">
+          <div class="date"><span class="num">17</span>FRI APR</div>
+          <div class="title-cell">
+            <span class="pip recovery"></span>
+            <div class="name-wrap">
+              <div class="name">Stretch · post-squat</div>
+              <div class="sub">Recovery</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">25:00<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric muted pace">—</div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">16</span>THU APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">8.6<span class="unit">km</span></div>
+          <div class="metric">48:32<span class="unit">duration</span></div>
+          <div class="metric hr-cell">140<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:38<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="strength" data-source="manual">
+          <div class="date"><span class="num">15</span>WED APR</div>
+          <div class="title-cell">
+            <span class="pip strength"></span>
+            <div class="name-wrap">
+              <div class="name">Back squat day<span class="pb">New PB</span></div>
+              <div class="sub">Strength · lower</div>
+            </div>
+          </div>
+          <div class="metric muted">—</div>
+          <div class="metric">1:18:08<span class="unit">duration</span></div>
+          <div class="metric muted hr-cell">—</div>
+          <div class="metric pace">127.5<span class="unit">kg top set</span></div>
+          <div class="source-pill manual">Manual</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">14</span>TUE APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Hill repeats · 8 × 400m</div>
+              <div class="sub">Running · quality</div>
+            </div>
+          </div>
+          <div class="metric">8.6<span class="unit">km</span></div>
+          <div class="metric">58:24<span class="unit">duration</span></div>
+          <div class="metric hr-cell">158<span class="unit">bpm avg</span></div>
+          <div class="metric pace">6:48<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+        <div class="activity-row" data-type="run" data-source="strava">
+          <div class="date"><span class="num">13</span>MON APR</div>
+          <div class="title-cell">
+            <span class="pip run"></span>
+            <div class="name-wrap">
+              <div class="name">Easy run · Z2</div>
+              <div class="sub">Running · road</div>
+            </div>
+          </div>
+          <div class="metric">6.8<span class="unit">km</span></div>
+          <div class="metric">39:12<span class="unit">duration</span></div>
+          <div class="metric hr-cell">138<span class="unit">bpm avg</span></div>
+          <div class="metric pace">5:46<span class="unit">/km</span></div>
+          <div class="source-pill strava">Strava</div>
+          <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Archive stub — only shown in 'All time' range -->
+    <div class="archive-stub">
+      <div class="year">2025 ↓</div>
+      <div class="text">235 earlier sessions in the archive — December 2022 onward.</div>
+      <div class="meta">Use search or narrow the date range to find a specific session</div>
+    </div>
+
+    <button class="load-more r r-8" onclick="cadenceLoadEarlier()">Load earlier weeks</button>
+
+    <div class="footer-count r r-9">
+      <span>Showing 27 of 262 sessions</span>
+      <span>Synced from Strava, Whoop, manual entries</span>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Theme toggle
+  function cadenceToggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('cadence-theme', next);
+  }
+
+  // ============================================================
+  // Filter state — type + source + free-text search
+  // ============================================================
+  var filterState = { type: 'all', source: 'all', search: '' };
+
+  function applyFilters() {
+    var rows = document.querySelectorAll('.activity-row');
+    var anyVisible = false;
+    rows.forEach(function(row) {
+      var matchesType   = filterState.type   === 'all' || row.dataset.type   === filterState.type;
+      var matchesSource = filterState.source === 'all' || row.dataset.source === filterState.source;
+      var matchesSearch = filterState.search === '' ||
+        row.textContent.toLowerCase().indexOf(filterState.search.toLowerCase()) >= 0;
+      var show = matchesType && matchesSource && matchesSearch;
+      row.classList.toggle('hidden', !show);
+      if (show) anyVisible = true;
+    });
+
+    // Hide week groups with no visible rows
+    document.querySelectorAll('.week').forEach(function(week) {
+      var visible = week.querySelectorAll('.activity-row:not(.hidden)').length;
+      week.classList.toggle('empty', visible === 0);
+    });
+
+    document.getElementById('emptyState').classList.toggle('show', !anyVisible);
+  }
+
+  // Pill click handlers
+  document.querySelectorAll('.filter-group').forEach(function(group) {
+    var filterKey = group.dataset.filter;
+    group.querySelectorAll('.filter-pill').forEach(function(pill) {
+      pill.addEventListener('click', function() {
+        group.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+        filterState[filterKey] = pill.dataset.val;
+        applyFilters();
+      });
+    });
+  });
+
+  // Search input
+  document.getElementById('searchInput').addEventListener('input', function(e) {
+    filterState.search = e.target.value;
+    applyFilters();
+  });
+
+  // Fake load-more — appends a note rather than real data
+  function cadenceLoadEarlier() {
+    var btn = event.target;
+    btn.textContent = 'Loading…';
+    setTimeout(function() {
+      btn.textContent = 'You\'ve reached the start of this view · ' + 235 + ' earlier in the archive';
+      btn.disabled = true;
+      btn.style.cursor = 'default';
+    }, 700);
+  }
+
+  // ============================================================
+  // Range dropdown — open/close + selection
+  // ============================================================
+  var rangePicker = document.getElementById('rangePicker');
+  var rangeBtn    = document.getElementById('rangeBtn');
+  var rangeMenu   = document.getElementById('rangeMenu');
+  var rangeLabel  = document.getElementById('rangeLabel');
+  var mainEl      = document.querySelector('main');
+
+  rangeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var open = rangeMenu.classList.toggle('open');
+    rangePicker.classList.toggle('open', open);
+  });
+  document.addEventListener('click', function() {
+    rangeMenu.classList.remove('open');
+    rangePicker.classList.remove('open');
+  });
+  rangeMenu.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  rangeMenu.querySelectorAll('button').forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      rangeMenu.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+      opt.classList.add('active');
+      rangeLabel.textContent = opt.textContent;
+      mainEl.setAttribute('data-range', opt.dataset.range);
+      rangeMenu.classList.remove('open');
+      rangePicker.classList.remove('open');
+    });
+  });
+</script>
+
+</body>
+</html>

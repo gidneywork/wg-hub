@@ -1,0 +1,183 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "Cadence Design Tokens",
+  "version": "1.0",
+  "date": "2026-05",
+  "description": "Single source of truth for the Cadence visual system. Mirrors cadence-tokens.css.",
+
+  "themes": {
+
+    "light": {
+      "surface": {
+        "bg":          { "value": "#F5F2EC", "use": "Primary page background" },
+        "bg-card":     { "value": "#FBFAF5", "use": "Cards and sections" },
+        "bg-paper":    { "value": "#FFFFFF", "use": "Inputs, modals, highest elevation" },
+        "bg-elevated": { "value": "#EDE9E0", "use": "Hover states, subtle fills" }
+      },
+      "border": {
+        "border":        { "value": "#DCD7CB", "use": "Hairline dividers, default borders" },
+        "border-strong": { "value": "#B8B3A7", "use": "Hover borders, stronger separation" }
+      },
+      "text": {
+        "text":       { "value": "#1B1B1F", "use": "Primary text, headlines, hero numbers" },
+        "text-soft":  { "value": "#2E2E33", "use": "Body copy" },
+        "text-muted": { "value": "#5F5C55", "use": "Secondary text, helper text" },
+        "text-quiet": { "value": "#8A867D", "use": "Labels, metadata, axis labels" },
+        "text-faint": { "value": "#B8B3A7", "use": "Placeholder, disabled" }
+      },
+      "brand": {
+        "moss":      { "value": "#6B7A5A", "use": "Brand colour — non-text accents only on light" },
+        "moss-deep": { "value": "#4F5A42", "use": "Moss for text on light (AA at 14pt+)" },
+        "moss-soft": { "value": "#C9CFB9", "use": "Selected-state fills" },
+        "moss-glow": { "value": "rgba(107, 122, 90, 0.10)", "use": "Focus rings, pulse halos" }
+      },
+      "state": {
+        "clay":      { "value": "#B96A4D", "use": "Warnings, alerts, negative deltas" },
+        "clay-deep": { "value": "#A3493D", "use": "Clay for text on light (AA at 14pt+)" },
+        "clay-soft": { "value": "#E8C7B5", "use": "Alert backgrounds" },
+        "slate":     { "value": "#4A5F6E", "use": "Secondary data, baselines, comparison" },
+        "sand":      { "value": "#C9A24E", "use": "Approaching state, deload markers" },
+        "on-moss":   { "value": "#F5F2EC", "use": "Foreground on moss surfaces" }
+      },
+      "dataViz": {
+        "d1": { "value": "#6B7A5A", "use": "Primary series (moss)" },
+        "d2": { "value": "#B96A4D", "use": "Secondary series (clay)" },
+        "d3": { "value": "#4A5F6E", "use": "Tertiary series (slate)" },
+        "d4": { "value": "#C9A24E", "use": "Quaternary series (sand)" },
+        "d5": { "value": "#8A7396", "use": "5th series (mauve)" },
+        "d6": { "value": "#5F5C55", "use": "Historical / faded (stone)" },
+        "d7": { "value": "#A3493D", "use": "Extreme / negative-emphasis (brick)" }
+      },
+      "chart": {
+        "chart-grid":     { "value": "#DCD7CB", "use": "Dashed gridlines" },
+        "chart-baseline": { "value": "#B8B3A7", "use": "Solid axis baselines" },
+        "chart-target":   { "value": "#4A5F6E", "use": "Target / threshold lines" }
+      }
+    },
+
+    "dark": {
+      "surface": {
+        "bg":          { "value": "#13141A" },
+        "bg-card":     { "value": "#1B1B22" },
+        "bg-paper":    { "value": "#25262E" },
+        "bg-elevated": { "value": "#2E2F38" }
+      },
+      "border": {
+        "border":        { "value": "#25262E" },
+        "border-strong": { "value": "#2E2F38" }
+      },
+      "text": {
+        "text":       { "value": "#F5F2EC" },
+        "text-soft":  { "value": "#E8E4DA" },
+        "text-muted": { "value": "#A09C92" },
+        "text-quiet": { "value": "#6F6B62" },
+        "text-faint": { "value": "#4A4843" }
+      },
+      "brand": {
+        "moss":      { "value": "#8DA075", "use": "Lifted for contrast on dark" },
+        "moss-deep": { "value": "#6B7A5A" },
+        "moss-soft": { "value": "rgba(141, 160, 117, 0.28)" },
+        "moss-glow": { "value": "rgba(141, 160, 117, 0.10)" }
+      },
+      "state": {
+        "clay":      { "value": "#C97E62" },
+        "clay-deep": { "value": "#B96A4D" },
+        "clay-soft": { "value": "rgba(201, 126, 98, 0.22)" },
+        "slate":     { "value": "#6B8398" },
+        "sand":      { "value": "#D4B265" },
+        "on-moss":   { "value": "#13141A" }
+      },
+      "dataViz": {
+        "d1": { "value": "#8DA075" },
+        "d2": { "value": "#C97E62" },
+        "d3": { "value": "#6B8398" },
+        "d4": { "value": "#D4B265" },
+        "d5": { "value": "#A089AB" },
+        "d6": { "value": "#8A867D" },
+        "d7": { "value": "#C16E5F" }
+      },
+      "chart": {
+        "chart-grid":     { "value": "#2E2F38" },
+        "chart-baseline": { "value": "#4A4843" },
+        "chart-target":   { "value": "#6B8398" }
+      }
+    }
+
+  },
+
+  "typography": {
+    "families": {
+      "display": { "value": "Fraunces, ui-serif, Georgia, serif",                              "use": "Headlines, hero numbers, the wordmark" },
+      "sans":    { "value": "Geist, Söhne, ui-sans-serif, -apple-system, system-ui, sans-serif", "use": "Interface, body copy, labels" },
+      "mono":    { "value": "JetBrains Mono, ui-monospace, SF Mono, Menlo, monospace",         "use": "Metadata, timestamps, code, eyebrow labels" }
+    },
+    "scale": {
+      "type-9":   { "value": "9px",   "use": "Tiny meta — pip labels" },
+      "type-10":  { "value": "10px",  "use": "Meta — eyebrow labels, status pills" },
+      "type-11":  { "value": "11px",  "use": "Label — uppercase mono labels" },
+      "type-12":  { "value": "12px",  "use": "Caption — axis labels, timestamps" },
+      "type-13":  { "value": "13px",  "use": "Body small" },
+      "type-14":  { "value": "14px",  "use": "Body default" },
+      "type-17":  { "value": "17px",  "use": "Body large, lede" },
+      "type-20":  { "value": "20px",  "use": "H4 / week heading" },
+      "type-24":  { "value": "24px",  "use": "H3 / wordmark" },
+      "type-28":  { "value": "28px",  "use": "H2 / date displays" },
+      "type-36":  { "value": "36px",  "use": "Large stat / small H1" },
+      "type-44":  { "value": "44px",  "use": "H1 default" },
+      "type-56":  { "value": "56px",  "use": "H1 large / large stat" },
+      "type-64":  { "value": "64px",  "use": "Hero number, dashboard" },
+      "type-80":  { "value": "80px",  "use": "Display number, Charts page" },
+      "type-96":  { "value": "96px",  "use": "TV mode clock" },
+      "type-144": { "value": "144px", "use": "TV mode km hero" }
+    },
+    "tracking": {
+      "tracking-hero":    { "value": "-0.04em" },
+      "tracking-h1":      { "value": "-0.035em" },
+      "tracking-h2":      { "value": "-0.025em" },
+      "tracking-h3":      { "value": "-0.015em" },
+      "tracking-body":    { "value": "-0.005em" },
+      "tracking-caption": { "value": "0" },
+      "tracking-label":   { "value": "0.16em",  "use": "Uppercase mono labels" },
+      "tracking-meta":    { "value": "0.18em",  "use": "Tiny uppercase meta" }
+    }
+  },
+
+  "spacing": {
+    "space-1":  { "value": "4px" },
+    "space-2":  { "value": "8px" },
+    "space-3":  { "value": "12px" },
+    "space-4":  { "value": "16px" },
+    "space-5":  { "value": "20px" },
+    "space-6":  { "value": "24px" },
+    "space-7":  { "value": "28px" },
+    "space-8":  { "value": "32px" },
+    "space-9":  { "value": "40px" },
+    "space-10": { "value": "48px" },
+    "space-11": { "value": "56px" },
+    "space-12": { "value": "72px" }
+  },
+
+  "radius": {
+    "radius-sm": { "value": "3px", "use": "Pills, tags" },
+    "radius-md": { "value": "4px", "use": "Default — buttons, inputs" },
+    "radius-lg": { "value": "6px", "use": "Cards, sections" },
+    "radius-xl": { "value": "8px", "use": "Large surfaces (TV mode tiles)" }
+  },
+
+  "motion": {
+    "ease":    { "value": "cubic-bezier(0.2, 0.7, 0.2, 1)", "use": "Universal easing — slow in, quicker out" },
+    "t-ui":    { "value": "240ms",  "use": "UI changes — buttons, toggles, input focus" },
+    "t-fade":  { "value": "280ms",  "use": "Data-cycle fades (TV mode range switching)" },
+    "t-theme": { "value": "320ms",  "use": "Theme switching (light/dark crossfade)" },
+    "t-paint": { "value": "900ms",  "use": "First-paint reveals — staggered element rises" },
+    "t-cycle": { "value": "20s",    "use": "TV mode auto-advance interval" }
+  },
+
+  "zIndex": {
+    "z-base":     { "value": 1 },
+    "z-sticky":   { "value": 10 },
+    "z-dropdown": { "value": 50 },
+    "z-modal":    { "value": 100 },
+    "z-toast":    { "value": 200 }
+  }
+}

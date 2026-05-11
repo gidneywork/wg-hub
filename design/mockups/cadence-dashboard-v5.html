@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadence — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30..100&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Theme init: runs before first paint to prevent flash -->
+<script>
+  (function() {
+    var stored = localStorage.getItem('cadence-theme');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = stored || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
+<style>
+  /* ============================================================
+     CADENCE — THEME TOKENS
+     Semantic names that swap by data-theme attribute.
+     Light is the default; [data-theme="dark"] overrides.
+  ============================================================ */
+  :root {
+    /* Surfaces */
+    --bg:             #F5F2EC;
+    --bg-card:        #FBFAF5;
+    --bg-paper:       #FFFFFF;
+    --bg-elevated:    #EDE9E0;
+
+    /* Borders */
+    --border:         #DCD7CB;
+    --border-strong:  #B8B3A7;
+    --border-soft:    #EDE9E0;
+
+    /* Text */
+    --text:           #1B1B1F;
+    --text-soft:      #2E2E33;
+    --text-muted:     #5F5C55;
+    --text-quiet:     #8A867D;
+    --text-faint:     #B8B3A7;
+
+    /* Accents */
+    --moss:           #6B7A5A;
+    --moss-deep:      #4F5A42;
+    --moss-soft:      #C9CFB9;
+    --moss-fill:      rgba(107, 122, 90, 0.20);
+    --moss-fill-soft: rgba(107, 122, 90, 0.06);
+
+    --clay:           #B96A4D;
+    --clay-deep:      #A3493D;
+    --clay-soft:      #E8C7B5;
+
+    --slate:          #4A5F6E;
+    --sand:           #C9A24E;
+
+    /* Chart-specific */
+    --chart-grid:       #DCD7CB;
+    --chart-baseline:   #DCD7CB;
+    --chart-axis:       #8A867D;
+    --chart-highlight:  #1B1B1F;
+    --chart-axis-slate: #4A5F6E;
+
+    /* Functional */
+    --on-moss:        #F5F2EC;
+
+    /* Type */
+    --display: "Fraunces", ui-serif, Georgia, serif;
+    --sans:    "Geist", "Söhne", ui-sans-serif, -apple-system, system-ui, sans-serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    /* Motion */
+    --ease:    cubic-bezier(0.2, 0.7, 0.2, 1);
+    --t-ui:    240ms;
+    --t-paint: 900ms;
+    --t-theme: 320ms;
+  }
+
+  [data-theme="dark"] {
+    --bg:             #13141A;
+    --bg-card:        #1B1B22;
+    --bg-paper:       #25262E;
+    --bg-elevated:    #2E2F38;
+
+    --border:         #25262E;
+    --border-strong:  #2E2F38;
+    --border-soft:    #1B1B22;
+
+    --text:           #F5F2EC;
+    --text-soft:      #E8E4DA;
+    --text-muted:     #A09C92;
+    --text-quiet:     #6F6B62;
+    --text-faint:     #4A4843;
+
+    --moss:           #8DA075;
+    --moss-deep:      #6B7A5A;
+    --moss-soft:      rgba(141, 160, 117, 0.28);
+    --moss-fill:      rgba(141, 160, 117, 0.16);
+    --moss-fill-soft: rgba(141, 160, 117, 0.06);
+
+    --clay:           #C97E62;
+    --clay-deep:      #B96A4D;
+    --clay-soft:      rgba(201, 126, 98, 0.22);
+
+    --slate:          #6B8398;
+    --sand:           #D4B265;
+
+    --chart-grid:       #25262E;
+    --chart-baseline:   #2E2F38;
+    --chart-axis:       #6F6B62;
+    --chart-highlight:  #F5F2EC;
+    --chart-axis-slate: #6B8398;
+
+    --on-moss:        #13141A;
+  }
+
+  /* ============================================================
+     BASE
+  ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    transition: background-color var(--t-theme) var(--ease), color var(--t-theme) var(--ease);
+  }
+
+  /* Smooth theme transitions on all surfaces that change */
+  .sidebar, .card, .chart-card, .pb-tile, .day, .stat, .stat-row,
+  .toggle, .toggle button, .btn, .nav-list a, .day-session, .theme-toggle {
+    transition: background-color var(--t-theme) var(--ease),
+                border-color var(--t-theme) var(--ease),
+                color var(--t-theme) var(--ease);
+  }
+
+  /* SVG fills/strokes transition smoothly */
+  svg path, svg line, svg rect, svg circle, svg text, svg stop {
+    transition: stroke var(--t-theme) var(--ease),
+                fill var(--t-theme) var(--ease),
+                stop-color var(--t-theme) var(--ease);
+  }
+
+  .shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+
+  /* ============================================================
+     SIDEBAR
+  ============================================================ */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+  .wordmark {
+    font-family: var(--display);
+    font-weight: 380;
+    font-size: 22px;
+    letter-spacing: -0.045em;
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+    display: inline-flex;
+    align-items: baseline;
+    margin-bottom: 36px;
+    color: var(--text);
+  }
+  .wordmark .dot {
+    width: 6px; height: 6px;
+    background: var(--moss);
+    border-radius: 50%;
+    margin-left: 3px;
+    margin-bottom: 4px;
+  }
+  .nav-section { margin-bottom: 22px; }
+  .nav-eyebrow {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    margin-bottom: 8px;
+  }
+  .nav-list { list-style: none; }
+  .nav-list li { margin-bottom: 1px; }
+  .nav-list a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    margin: 0 -8px;
+    border-radius: 3px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-list a:hover { color: var(--text); }
+  .nav-list a.active { background: var(--moss-soft); color: var(--moss-deep); }
+  [data-theme="dark"] .nav-list a.active { color: var(--moss); }
+  .nav-list a svg { width: 14px; height: 14px; flex-shrink: 0; stroke-width: 1.5; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--moss);
+    color: var(--on-moss);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 12px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 12px; font-weight: 500; color: var(--text); }
+  .user-meta { font-family: var(--mono); font-size: 9px; color: var(--text-quiet); }
+
+  /* Theme toggle */
+  .theme-toggle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .theme-toggle svg { width: 13px; height: 13px; }
+  .theme-toggle .t-icon { display: none; }
+  [data-theme="light"] .theme-toggle .t-moon { display: block; }
+  [data-theme="dark"] .theme-toggle .t-sun { display: block; }
+
+  /* ============================================================
+     MAIN
+  ============================================================ */
+  main { padding: 24px 40px 56px; max-width: 1280px; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  .greeting {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 24px;
+    letter-spacing: -0.025em;
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    color: var(--text);
+  }
+  .greeting em {
+    font-style: italic;
+    font-weight: 360;
+    font-variation-settings: "opsz" 144, "SOFT" 80;
+    color: var(--text-muted);
+  }
+  .stamp {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-quiet);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: minmax(280px, 0.85fr) 1fr; gap: 40px; align-items: center; padding-bottom: 28px; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-quiet);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-label::before { content: ""; width: 16px; height: 1px; background: var(--border-strong); }
+  .hero-number {
+    font-family: var(--display);
+    font-weight: 360;
+    font-size: 88px;
+    line-height: 0.9;
+    letter-spacing: -0.045em;
+    font-variation-settings: "opsz" 144, "SOFT" 55;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 8px;
+  }
+  .hero-number .unit { font-size: 0.32em; color: var(--text-quiet); margin-left: 4px; letter-spacing: -0.02em; }
+  .hero-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--moss-deep);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 10px;
+  }
+  [data-theme="dark"] .hero-delta { color: var(--moss); }
+  .hero-delta .ticker {
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid var(--moss);
+  }
+  .hero-context {
+    font-family: var(--display);
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 380;
+    color: var(--text-soft);
+    letter-spacing: -0.005em;
+    max-width: 38ch;
+  }
+  .hero-chart { width: 100%; height: 120px; }
+
+  /* Stat row */
+  .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin-bottom: 36px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .stat { padding: 16px 20px 16px 0; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; padding-right: 0; }
+  .stat:not(:first-child) { padding-left: 20px; }
+  .stat .label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-quiet);
+    margin-bottom: 6px;
+  }
+  .stat .value {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variation-settings: "opsz" 144, "SOFT" 45;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .stat .value .unit { font-family: var(--sans); font-size: 11px; color: var(--text-quiet); margin-left: 3px; font-weight: 400; letter-spacing: 0; }
+  .stat .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .stat .delta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .stat .delta.up { color: var(--moss-deep); }
+  [data-theme="dark"] .stat .delta.up { color: var(--moss); }
+  .stat .delta.down { color: var(--clay-deep); }
+  [data-theme="dark"] .stat .delta.down { color: var(--clay); }
+  .stat .delta.flat { color: var(--text-muted); }
+
+  /* Week */
+  .week { margin-bottom: 36px; }
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .day {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+  }
+  .day:hover { border-color: var(--border-strong); }
+  .day.today {
+    background: var(--bg-paper);
+    border-color: var(--moss);
+    box-shadow: inset 0 0 0 1px var(--moss);
+  }
+  .day.rest { background: transparent; }
+  .day-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .day-name { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-quiet); }
+  .day.today .day-name { color: var(--moss-deep); }
+  [data-theme="dark"] .day.today .day-name { color: var(--moss); }
+  .day-num { font-family: var(--mono); font-size: 10px; color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+  .day-session { font-family: var(--display); font-size: 14px; font-weight: 400; letter-spacing: -0.012em; line-height: 1.15; color: var(--text); margin-bottom: auto; }
+  .day.rest .day-session { color: var(--text-quiet); }
+  .day-meta { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .day-meta .pip { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .day-meta .pip.run { background: var(--moss); }
+  .day-meta .pip.strength { background: var(--clay); }
+  .day-meta .pip.recovery { background: var(--slate); }
+  .day-meta .pip.rest { background: var(--border-strong); }
+
+  /* Sections */
+  .section { margin-bottom: 36px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); gap: 16px; }
+  .section-head h2 { font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: -0.018em; line-height: 1; color: var(--text); }
+  .section-head .right { display: flex; align-items: center; gap: 14px; }
+  .section-head .link { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-quiet); text-decoration: none; }
+  .section-head .link:hover { color: var(--text); }
+
+  /* Toggle */
+  .toggle { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: var(--bg-card); }
+  .toggle button { background: transparent; border: none; padding: 5px 11px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); cursor: pointer; border-right: 1px solid var(--border); }
+  .toggle button:last-child { border-right: none; }
+  .toggle button:hover { color: var(--text); }
+  .toggle button.active { background: var(--text); color: var(--bg); }
+
+  /* Today 3-up */
+  .today-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px; padding: 20px; }
+  .card:hover { border-color: var(--border-strong); }
+  .card-eyebrow { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-quiet); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .card-eyebrow .pip { width: 5px; height: 5px; border-radius: 50%; background: var(--moss); }
+  .card-eyebrow .pip.scheduled { background: var(--border-strong); }
+  .card-eyebrow .pip.live { background: var(--moss); }
+  .card-title { font-family: var(--display); font-weight: 400; font-size: 20px; line-height: 1.1; letter-spacing: -0.018em; color: var(--text); margin-bottom: 12px; }
+  .card-meta { display: flex; gap: 22px; margin-bottom: 14px; }
+  .card-meta .item { font-family: var(--mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; }
+  .card-meta .item strong { display: block; font-family: var(--display); font-size: 18px; font-weight: 400; letter-spacing: -0.015em; color: var(--text); margin-top: 3px; text-transform: none; font-variant-numeric: tabular-nums; }
+  .card-note { font-size: 12px; color: var(--text-soft); line-height: 1.5; border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 12px; }
+  .card-actions { display: flex; gap: 6px; margin-top: 14px; }
+  .btn { font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 3px; border: 1px solid transparent; cursor: pointer; letter-spacing: 0; }
+  .btn-primary { background: var(--moss); color: var(--on-moss); }
+  .btn-primary:hover { background: var(--moss-deep); }
+  [data-theme="dark"] .btn-primary:hover { background: var(--moss); opacity: 0.85; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* Fuel */
+  .fuel-card .balance { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .fuel-card .balance .num { font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: -0.025em; color: var(--text); font-variant-numeric: tabular-nums; }
+  .fuel-card .balance .label { font-family: var(--mono); font-size: 9px; color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.14em; }
+  .fuel-bars { display: grid; grid-template-columns: 36px 1fr 52px; gap: 10px; align-items: center; font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+  .fuel-bars .track { height: 5px; background: var(--bg-elevated); border-radius: 3px; position: relative; overflow: hidden; }
+  .fuel-bars .track .fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px; }
+  .fuel-bars .track .fill.in { background: var(--moss); }
+  .fuel-bars .track .fill.out { background: var(--clay); }
+  .fuel-bars .right { text-align: right; }
+
+  /* Journal */
+  .journal-card .mood-row { display: flex; gap: 16px; margin-bottom: 14px; }
+  .journal-card .mood { flex: 1; }
+  .journal-card .mood .label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-quiet); margin-bottom: 6px; }
+  .journal-card .mood .scale { display: flex; gap: 3px; }
+  .journal-card .mood .pip { flex: 1; height: 6px; background: var(--bg-elevated); border-radius: 2px; }
+  .journal-card .mood .pip.on { background: var(--moss); }
+  .journal-card .mood .pip.on.clay { background: var(--clay); }
+  .journal-card .entry-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-quiet); margin-bottom: 6px; }
+  .journal-card .entry { font-family: var(--display); font-style: italic; font-size: 13px; line-height: 1.5; color: var(--text-soft); font-weight: 380; }
+
+  /* Charts grid */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chart-card { background: var(--bg-paper); border: 1px solid var(--border); border-radius: 5px; padding: 20px 22px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; gap: 16px; }
+  .chart-head .label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-quiet); margin-bottom: 3px; }
+  .chart-head .value { font-family: var(--display); font-weight: 400; font-size: 38px; letter-spacing: -0.028em; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+  .chart-head .value .unit { font-family: var(--sans); font-size: 12px; color: var(--text-quiet); margin-left: 5px; font-weight: 400; letter-spacing: 0; }
+  .chart-head .meta-right { text-align: right; font-family: var(--mono); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .chart-head .meta-right .delta-line { color: var(--moss-deep); margin-bottom: 2px; }
+  [data-theme="dark"] .chart-head .meta-right .delta-line { color: var(--moss); }
+  .chart-head .meta-right .delta-line.down { color: var(--clay-deep); }
+  [data-theme="dark"] .chart-head .meta-right .delta-line.down { color: var(--clay); }
+  .chart-head .meta-right .meta-sub { color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.12em; font-size: 9px; }
+
+  .legend { display: flex; gap: 14px; margin-top: 8px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); flex-wrap: wrap; }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 10px; height: 2px; border-radius: 1px; display: inline-block; }
+  .legend .swatch.moss { background: var(--moss); }
+  .legend .swatch.clay { background: var(--clay); }
+  .legend .swatch.slate { background-image: linear-gradient(to right, var(--slate) 50%, transparent 50%); background-size: 4px 2px; height: 2px; }
+  .legend .swatch.moss-soft { background: var(--moss-soft); }
+
+  /* PB strip */
+  .pb-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .pb-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; }
+  .pb-tile:hover { border-color: var(--border-strong); }
+  .pb-tile .lift { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); margin-bottom: 8px; }
+  .pb-tile .val { font-family: var(--display); font-weight: 400; font-size: 26px; letter-spacing: -0.025em; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+  .pb-tile .val .unit { font-family: var(--sans); font-size: 12px; color: var(--text-quiet); margin-left: 3px; font-weight: 400; letter-spacing: 0; }
+  .pb-tile .delta { font-family: var(--mono); font-size: 10px; color: var(--moss-deep); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 5px; }
+  [data-theme="dark"] .pb-tile .delta { color: var(--moss); }
+  .pb-tile .delta.held { color: var(--text-quiet); }
+  .pb-tile .delta .age { color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.12em; font-size: 9px; }
+
+  /* Activity */
+  .activity { width: 100%; border-collapse: collapse; }
+  .activity th { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-quiet); text-align: left; padding: 6px 0 10px; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .activity th.r { text-align: right; }
+  .activity td { padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: baseline; }
+  .activity tr:last-child td { border-bottom: none; }
+  .activity td.r { text-align: right; font-family: var(--display); font-weight: 400; font-size: 16px; letter-spacing: -0.012em; font-variant-numeric: tabular-nums; color: var(--text); }
+  .activity td.r .unit { font-family: var(--sans); font-size: 11px; color: var(--text-quiet); margin-left: 3px; font-weight: 400; }
+  .activity td.date { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; width: 100px; }
+  .activity td.title { font-family: var(--display); font-weight: 400; font-size: 16px; letter-spacing: -0.012em; color: var(--text); }
+  .activity td.title .type { display: block; font-family: var(--mono); font-size: 9px; color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.14em; margin-top: 3px; }
+  .activity .pip { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .activity .pip.run { background: var(--moss); }
+  .activity .pip.strength { background: var(--clay); }
+  .activity .pip.recovery { background: var(--slate); }
+
+  /* ============================================================
+     CADENCE ANIMATION SYSTEM
+     Reusable across pages: page fade-in, staggered element reveal,
+     SVG line drawing, area fill-ins, bar growth, hero count-up.
+  ============================================================ */
+  body { opacity: 0; animation: pageFadeIn 500ms var(--ease) forwards; }
+  @keyframes pageFadeIn { to { opacity: 1; } }
+
+  .r { opacity: 0; transform: translateY(8px); animation: rise var(--t-paint) var(--ease) forwards; }
+  .r-1 { animation-delay: 60ms; } .r-2 { animation-delay: 140ms; } .r-3 { animation-delay: 220ms; }
+  .r-4 { animation-delay: 300ms; } .r-5 { animation-delay: 380ms; } .r-6 { animation-delay: 460ms; }
+  .r-7 { animation-delay: 540ms; } .r-8 { animation-delay: 620ms; } .r-9 { animation-delay: 700ms; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  /* SVG line drawing — paths use pathLength="1" for normalised dash math */
+  .draw-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: drawLine 1500ms var(--ease) forwards;
+    animation-delay: 700ms;
+  }
+  @keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+  .draw-line.hero-line { animation-delay: 380ms; animation-duration: 1400ms; }
+  .draw-line.trend { animation-delay: 900ms; }
+  .draw-line.trend-2 { animation-delay: 1000ms; }
+  .draw-line.trend-3 { animation-delay: 1100ms; }
+  .draw-line.trend-4 { animation-delay: 1200ms; }
+  .draw-line.trend-5 { animation-delay: 1300ms; }
+  .draw-line.trend-6 { animation-delay: 1400ms; }
+
+  /* Area fills fade in after their line begins drawing */
+  .draw-fill {
+    opacity: 0;
+    animation: fadeFillIn 800ms var(--ease) forwards;
+    animation-delay: 1100ms;
+  }
+  .draw-fill.hero-fill { animation-delay: 800ms; }
+  .draw-fill.trend { animation-delay: 1500ms; }
+  .draw-fill.trend-2 { animation-delay: 1600ms; }
+  .draw-fill.trend-3 { animation-delay: 1700ms; }
+  .draw-fill.trend-4 { animation-delay: 1800ms; }
+  @keyframes fadeFillIn { to { opacity: 1; } }
+
+  /* Bars grow from baseline */
+  .draw-bar {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    transform: scaleY(0);
+    animation: growBar 750ms var(--ease) forwards;
+    animation-delay: 950ms;
+  }
+  @keyframes growBar { to { transform: scaleY(1); } }
+
+  /* Sparklines in stat row */
+  .draw-spark {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: drawLine 900ms var(--ease) forwards;
+    animation-delay: 550ms;
+  }
+
+  /* Hero number is hidden until JS count-up starts */
+  .hero-number.count-up { opacity: 0; }
+  .hero-number.count-up.ready { opacity: 1; transition: opacity 200ms var(--ease); }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .today-grid { grid-template-columns: 1fr 1fr; }
+    .today-grid .card:nth-child(3) { grid-column: 1 / -1; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: repeat(3, 1fr); }
+    .pb-strip { grid-template-columns: repeat(3, 1fr); }
+    .week-grid { grid-template-columns: repeat(7, minmax(80px, 1fr)); overflow-x: auto; }
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; }
+    .hero { grid-template-columns: 1fr; gap: 16px; }
+    .today-grid { grid-template-columns: 1fr; }
+    .pb-strip { grid-template-columns: repeat(2, 1fr); }
+    main { padding: 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="wordmark">cadence<span class="dot"></span></div>
+    <div class="nav-section">
+      <div class="nav-eyebrow">Today</div>
+      <ul class="nav-list">
+        <li><a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dashboard</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Planner</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>Training</a></li>
+        <li><a href="cadence-daily-data.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Daily data</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-eyebrow">Analyse</div>
+      <ul class="nav-list">
+        <li><a href="cadence-charts.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l4-8 4 4 4-12 4 16h2"/></svg>Charts</a></li>
+        <li><a href="cadence-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-7"/></svg>History</a></li>
+        <li><a href="cadence-tv-mode-v4.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>TV mode</a></li>
+        <li><a href="cadence-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-eyebrow">Assistant</div>
+      <ul class="nav-list">
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>Talk to Cadence</a></li>
+        <li><a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Messages</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar">J</div>
+      <div class="user-info"><div class="user-name">James</div><div class="user-meta">PRO · GMT</div></div>
+      <button class="theme-toggle" onclick="cadenceToggleTheme()" aria-label="Toggle theme" title="Toggle light/dark">
+        <svg class="t-icon t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="t-icon t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="header r r-1">
+      <h1 class="greeting">Good morning, <em>James.</em></h1>
+      <span class="stamp">MON 11 MAY · 09:42 GMT</span>
+    </header>
+
+    <section class="hero">
+      <div class="r r-2">
+        <div class="hero-label">Recovery · today</div>
+        <div class="hero-number count-up" data-target="71">71<span class="unit">%</span></div>
+        <div class="hero-delta"><span class="ticker"></span>+4 vs 7-day avg · HRV 52ms · Sleep 7h 24m</div>
+        <div class="hero-context">A good day to push — your legs are ready, sleep was solid, HRV's lifted four points overnight.</div>
+      </div>
+      <div class="r r-3">
+        <svg class="hero-chart" viewBox="0 0 500 120" preserveAspectRatio="none" style="overflow: visible;">
+          <defs><linearGradient id="herofade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" style="stop-color: var(--moss); stop-opacity: 0.22"/><stop offset="100%" style="stop-color: var(--moss); stop-opacity: 0"/></linearGradient></defs>
+          <line x1="0" y1="20" x2="500" y2="20" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+          <line x1="0" y1="60" x2="500" y2="60" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+          <line x1="0" y1="100" x2="500" y2="100" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+          <text x="-6" y="24" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">90</text>
+          <text x="-6" y="64" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">60</text>
+          <text x="-6" y="104" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">30</text>
+          <path class="draw-fill hero-fill" d="M 0 75 L 71 65 L 142 80 L 213 50 L 284 62 L 355 45 L 426 58 L 500 40 L 500 100 L 0 100 Z" fill="url(#herofade)"/>
+          <path class="draw-line hero-line" pathLength="1" d="M 0 75 L 71 65 L 142 80 L 213 50 L 284 62 L 355 45 L 426 58 L 500 40" style="stroke: var(--moss); fill: none;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="500" cy="40" r="7" fill="none" style="stroke: var(--chart-highlight);" stroke-width="1" opacity="0.18"/>
+          <circle cx="500" cy="40" r="3" style="fill: var(--chart-highlight);"/>
+          <text x="0" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">MON</text>
+          <text x="80" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">TUE</text>
+          <text x="160" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">WED</text>
+          <text x="240" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">THU</text>
+          <text x="320" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">FRI</text>
+          <text x="400" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">SAT</text>
+          <text x="475" y="118" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">SUN</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="stat-row r r-4">
+      <div class="stat"><div class="label">Resting HR</div><div class="value">58<span class="unit">bpm</span></div><div class="row"><span class="delta down">▼ 2 · 30d</span><svg width="60" height="20" viewBox="0 0 60 20"><path class="draw-spark" pathLength="1" d="M 0 8 L 10 10 L 20 7 L 30 12 L 40 9 L 50 14 L 60 11" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+      <div class="stat"><div class="label">Weekly load</div><div class="value">342</div><div class="row"><span class="delta up">▲ 18 · wk</span><svg width="60" height="20" viewBox="0 0 60 20"><path class="draw-spark" pathLength="1" d="M 0 16 L 10 13 L 20 14 L 30 9 L 40 11 L 50 6 L 60 4" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+      <div class="stat"><div class="label">Sleep</div><div class="value">7:24<span class="unit">h</span></div><div class="row"><span class="delta flat">● target</span><svg width="60" height="20" viewBox="0 0 60 20"><path class="draw-spark" pathLength="1" d="M 0 10 L 10 8 L 20 12 L 30 9 L 40 7 L 50 10 L 60 8" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+      <div class="stat"><div class="label">HRV</div><div class="value">52<span class="unit">ms</span></div><div class="row"><span class="delta up">▲ 4 · 7d</span><svg width="60" height="20" viewBox="0 0 60 20"><path class="draw-spark" pathLength="1" d="M 0 13 L 10 11 L 20 14 L 30 10 L 40 8 L 50 6 L 60 5" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+      <div class="stat"><div class="label">Steps</div><div class="value">4,206</div><div class="row"><span class="delta flat">● 09:42</span><svg width="60" height="20" viewBox="0 0 60 20"><path class="draw-spark" pathLength="1" d="M 0 16 L 10 14 L 20 10 L 30 6 L 40 4 L 50 2 L 60 1" style="stroke: var(--clay); fill: none;" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/><path class="draw-spark" pathLength="1" d="M 0 16 L 10 14 L 20 10 L 30 8" style="stroke: var(--moss); fill: none;" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    </section>
+
+    <section class="week r r-5">
+      <div class="section-head"><h2>This week</h2><div class="right"><a href="#" class="link">Edit plan →</a></div></div>
+      <div class="week-grid">
+        <div class="day today"><div class="day-head"><span class="day-name">Mon</span><span class="day-num">11</span></div><div class="day-session">Long run · Z2</div><div class="day-meta"><span class="pip run"></span>1h 45m · 20km</div></div>
+        <div class="day"><div class="day-head"><span class="day-name">Tue</span><span class="day-num">12</span></div><div class="day-session">Upper body</div><div class="day-meta"><span class="pip strength"></span>55m · gym</div></div>
+        <div class="day"><div class="day-head"><span class="day-name">Wed</span><span class="day-num">13</span></div><div class="day-session">Easy run</div><div class="day-meta"><span class="pip run"></span>45m · 8km</div></div>
+        <div class="day"><div class="day-head"><span class="day-name">Thu</span><span class="day-num">14</span></div><div class="day-session">Threshold</div><div class="day-meta"><span class="pip run"></span>1h · 6×800m</div></div>
+        <div class="day rest"><div class="day-head"><span class="day-name">Fri</span><span class="day-num">15</span></div><div class="day-session">Rest</div><div class="day-meta"><span class="pip rest"></span>recovery</div></div>
+        <div class="day"><div class="day-head"><span class="day-name">Sat</span><span class="day-num">16</span></div><div class="day-session">Hill repeats</div><div class="day-meta"><span class="pip run"></span>1h 20m · trail</div></div>
+        <div class="day"><div class="day-head"><span class="day-name">Sun</span><span class="day-num">17</span></div><div class="day-session">Long run</div><div class="day-meta"><span class="pip run"></span>2h 30m · 28km</div></div>
+      </div>
+    </section>
+
+    <section class="section r r-6">
+      <div class="section-head"><h2>Today</h2><div class="right"><a href="#" class="link">Open planner →</a></div></div>
+      <div class="today-grid">
+        <div class="card">
+          <div class="card-eyebrow"><span class="pip scheduled"></span>Scheduled · training</div>
+          <div class="card-title">Long run · Z2 endurance</div>
+          <div class="card-meta">
+            <div class="item">Duration<strong>1h 45m</strong></div>
+            <div class="item">Target HR<strong>142–155</strong></div>
+            <div class="item">Distance<strong>~20km</strong></div>
+          </div>
+          <p class="card-note">Easy effort, breath through the nose where you can. Last week's same run was 1h 48m at 148 average — match it, don't chase it.</p>
+          <div class="card-actions"><button class="btn btn-primary">Start session</button><button class="btn btn-ghost">Move</button></div>
+        </div>
+        <div class="card fuel-card">
+          <div class="card-eyebrow"><span class="pip live"></span>Live · fuel</div>
+          <div class="balance"><span class="num">−620</span><span class="label">kcal · 09:42</span></div>
+          <div class="fuel-bars"><span>IN</span><div class="track"><div class="fill in" style="width: 42%;"></div></div><span class="right">1,180</span></div>
+          <div class="fuel-bars"><span>OUT</span><div class="track"><div class="fill out" style="width: 68%;"></div></div><span class="right">1,800</span></div>
+          <p class="card-note">Long run will add ~1,600 out. Aim for 2,900 in by tonight to land near maintenance — week's at a 2,100 deficit.</p>
+        </div>
+        <div class="card journal-card">
+          <div class="card-eyebrow"><span class="pip"></span>Logged · journal</div>
+          <div class="mood-row">
+            <div class="mood"><div class="label">Energy</div><div class="scale"><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip on"></span><span class="pip"></span></div></div>
+            <div class="mood"><div class="label">Soreness</div><div class="scale"><span class="pip on clay"></span><span class="pip on clay"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div></div>
+          </div>
+          <div class="entry-label">06:38 entry</div>
+          <p class="entry">"Slept well. Left calf feels tight but loosening. Coffee chat with Sam later — keep run earlier."</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section r r-7">
+      <div class="section-head">
+        <h2>Trends</h2>
+        <div class="right">
+          <div class="toggle">
+            <button>7D</button>
+            <button class="active">30D</button>
+            <button>6M</button>
+            <button>1Y</button>
+            <button>YTD</button>
+          </div>
+          <a href="#" class="link">All charts →</a>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+
+        <!-- HRV & RHR -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">HRV &amp; resting heart rate</div><div class="value">52<span class="unit">ms HRV · 58 bpm RHR</span></div></div>
+            <div class="meta-right"><div class="delta-line">▲ 4 ms · ▼ 2 bpm</div><div class="meta-sub">vs prev 30d</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <defs><linearGradient id="hrvfade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" style="stop-color: var(--moss); stop-opacity: 0.18"/><stop offset="100%" style="stop-color: var(--moss); stop-opacity: 0"/></linearGradient></defs>
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">70</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">50</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">30</text>
+            <text x="566" y="29" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">65</text>
+            <text x="566" y="79" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">58</text>
+            <text x="566" y="129" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">52</text>
+            <path class="draw-fill trend" d="M 0 95 L 19 90 L 38 100 L 56 95 L 75 82 L 94 90 L 112 78 L 131 72 L 150 88 L 168 70 L 187 80 L 206 65 L 224 75 L 243 82 L 262 62 L 280 55 L 299 70 L 318 50 L 336 65 L 355 45 L 374 60 L 392 52 L 411 70 L 430 60 L 448 78 L 467 65 L 486 85 L 504 70 L 523 90 L 542 78 L 560 75 L 560 150 L 0 150 Z" fill="url(#hrvfade)"/>
+            <path class="draw-line trend" pathLength="1" d="M 0 95 L 19 90 L 38 100 L 56 95 L 75 82 L 94 90 L 112 78 L 131 72 L 150 88 L 168 70 L 187 80 L 206 65 L 224 75 L 243 82 L 262 62 L 280 55 L 299 70 L 318 50 L 336 65 L 355 45 L 374 60 L 392 52 L 411 70 L 430 60 L 448 78 L 467 65 L 486 85 L 504 70 L 523 90 L 542 78 L 560 75" style="stroke: var(--moss); fill: none;" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend" pathLength="1" d="M 0 78 L 19 80 L 38 75 L 56 78 L 75 82 L 94 79 L 112 84 L 131 86 L 150 80 L 168 88 L 187 85 L 206 92 L 224 88 L 243 84 L 262 95 L 280 98 L 299 90 L 318 102 L 336 95 L 355 105 L 374 96 L 392 100 L 411 92 L 430 96 L 448 88 L 467 94 L 486 86 L 504 92 L 523 84 L 542 88 L 560 90" style="stroke: var(--slate); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
+            <text x="0" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">12 APR</text>
+            <text x="140" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">19 APR</text>
+            <text x="280" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">26 APR</text>
+            <text x="420" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">03 MAY</text>
+            <text x="525" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">11 MAY</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>HRV · ms</span><span class="item"><span class="swatch slate"></span>Resting HR · bpm</span></div>
+        </div>
+
+        <!-- Weekly Running KM -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">Weekly running · km</div><div class="value">76<span class="unit">km · this week</span></div></div>
+            <div class="meta-right"><div class="delta-line">▲ 12 km</div><div class="meta-sub">vs prev 4w avg</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">120</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">80</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">40</text>
+            <line x1="0" y1="40" x2="560" y2="40" style="stroke: var(--slate);" stroke-width="1" stroke-dasharray="6 4" opacity="0.65"/>
+            <text x="556" y="35" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">target · 100km</text>
+            <rect x="30" y="65" width="50" height="85" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="55" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">68</text>
+            <rect x="115" y="48" width="50" height="102" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="140" y="41" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">82</text>
+            <rect x="200" y="78" width="50" height="72" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="225" y="71" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">58</text>
+            <rect x="285" y="38" width="50" height="112" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="310" y="31" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">91</text>
+            <rect x="370" y="55" width="50" height="95" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="395" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">76</text>
+            <rect x="455" y="105" width="50" height="45" style="fill: var(--moss);" rx="2" opacity="0.85" class="draw-bar"/>
+            <rect x="455" y="50" width="50" height="100" fill="none" style="stroke: var(--chart-highlight);" stroke-width="1" stroke-dasharray="3 3" rx="2"/>
+            <text x="480" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">38·prog</text>
+            <text x="30" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">12 APR</text>
+            <text x="115" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">19 APR</text>
+            <text x="200" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">26 APR</text>
+            <text x="285" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">03 MAY</text>
+            <text x="370" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">10 MAY</text>
+            <text x="455" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">17 MAY</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>Completed km</span><span class="item"><span class="swatch slate"></span>100km target</span></div>
+        </div>
+
+        <!-- Sleep & Recovery -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">Sleep &amp; recovery scores</div><div class="value">68<span class="unit">sleep · 71 recovery</span></div></div>
+            <div class="meta-right"><div class="delta-line">▲ 3 · ▲ 4</div><div class="meta-sub">vs prev 30d</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <defs><linearGradient id="sleepfade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" style="stop-color: var(--moss); stop-opacity: 0.18"/><stop offset="100%" style="stop-color: var(--moss); stop-opacity: 0"/></linearGradient></defs>
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">100</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">66</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">33</text>
+            <path class="draw-fill trend-2" d="M 0 70 L 19 65 L 38 80 L 56 72 L 75 60 L 94 68 L 112 55 L 131 50 L 150 65 L 168 48 L 187 58 L 206 42 L 224 52 L 243 60 L 262 40 L 280 35 L 299 50 L 318 30 L 336 45 L 355 25 L 374 40 L 392 32 L 411 50 L 430 42 L 448 60 L 467 48 L 486 65 L 504 52 L 523 70 L 542 58 L 560 55 L 560 150 L 0 150 Z" fill="url(#sleepfade)"/>
+            <path class="draw-line trend-2" pathLength="1" d="M 0 70 L 19 65 L 38 80 L 56 72 L 75 60 L 94 68 L 112 55 L 131 50 L 150 65 L 168 48 L 187 58 L 206 42 L 224 52 L 243 60 L 262 40 L 280 35 L 299 50 L 318 30 L 336 45 L 355 25 L 374 40 L 392 32 L 411 50 L 430 42 L 448 60 L 467 48 L 486 65 L 504 52 L 523 70 L 542 58 L 560 55" style="stroke: var(--moss); fill: none;" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend-2" pathLength="1" d="M 0 75 L 19 80 L 38 70 L 56 78 L 75 70 L 94 75 L 112 65 L 131 60 L 150 70 L 168 55 L 187 65 L 206 50 L 224 60 L 243 65 L 262 45 L 280 40 L 299 55 L 318 35 L 336 50 L 355 30 L 374 45 L 392 38 L 411 55 L 430 48 L 448 65 L 467 52 L 486 70 L 504 58 L 523 75 L 542 62 L 560 60" style="stroke: var(--clay); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="0" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">12 APR</text>
+            <text x="140" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">19 APR</text>
+            <text x="280" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">26 APR</text>
+            <text x="420" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">03 MAY</text>
+            <text x="525" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">11 MAY</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>Sleep · /100</span><span class="item"><span class="swatch clay"></span>Recovery · /100</span></div>
+        </div>
+
+        <!-- Calories vs Weight -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">Calories · daily balance + weight</div><div class="value">−380<span class="unit">avg deficit</span></div></div>
+            <div class="meta-right"><div class="delta-line">▼ 1.4 kg</div><div class="meta-sub">weight · 30d</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <defs><linearGradient id="infade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" style="stop-color: var(--moss); stop-opacity: 0.20"/><stop offset="100%" style="stop-color: var(--moss); stop-opacity: 0"/></linearGradient></defs>
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">3.5k</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">2.5k</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">1.5k</text>
+            <text x="566" y="29" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">76</text>
+            <text x="566" y="79" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">75</text>
+            <text x="566" y="129" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis-slate);">74</text>
+            <path class="draw-fill trend-3" d="M 0 60 L 19 55 L 38 70 L 56 50 L 75 65 L 94 58 L 112 48 L 131 62 L 150 55 L 168 70 L 187 60 L 206 50 L 224 65 L 243 55 L 262 75 L 280 60 L 299 50 L 318 65 L 336 58 L 355 48 L 374 60 L 392 52 L 411 70 L 430 58 L 448 65 L 467 50 L 486 62 L 504 55 L 523 68 L 542 60 L 560 55 L 560 150 L 0 150 Z" fill="url(#infade)"/>
+            <path class="draw-line trend-3" pathLength="1" d="M 0 60 L 19 55 L 38 70 L 56 50 L 75 65 L 94 58 L 112 48 L 131 62 L 150 55 L 168 70 L 187 60 L 206 50 L 224 65 L 243 55 L 262 75 L 280 60 L 299 50 L 318 65 L 336 58 L 355 48 L 374 60 L 392 52 L 411 70 L 430 58 L 448 65 L 467 50 L 486 62 L 504 55 L 523 68 L 542 60 L 560 55" style="stroke: var(--moss); fill: none;" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend-3" pathLength="1" d="M 0 80 L 19 78 L 38 95 L 56 65 L 75 85 L 94 82 L 112 35 L 131 80 L 150 78 L 168 88 L 187 82 L 206 70 L 224 82 L 243 75 L 262 95 L 280 78 L 299 40 L 318 82 L 336 78 L 355 65 L 374 80 L 392 76 L 411 90 L 430 78 L 448 82 L 467 70 L 486 82 L 504 76 L 523 86 L 542 80 L 560 78" style="stroke: var(--clay); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend-3" pathLength="1" d="M 0 35 L 19 38 L 38 40 L 56 42 L 75 45 L 94 48 L 112 50 L 131 52 L 150 54 L 168 57 L 187 60 L 206 62 L 224 65 L 243 67 L 262 70 L 280 72 L 299 74 L 318 76 L 336 78 L 355 80 L 374 82 L 392 84 L 411 86 L 430 88 L 448 90 L 467 91 L 486 92 L 504 94 L 523 95 L 542 96 L 560 97" style="stroke: var(--slate); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
+            <text x="0" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">12 APR</text>
+            <text x="140" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">19 APR</text>
+            <text x="280" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">26 APR</text>
+            <text x="420" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">03 MAY</text>
+            <text x="525" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">11 MAY</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>Calories in</span><span class="item"><span class="swatch clay"></span>Calories out</span><span class="item"><span class="swatch slate"></span>Body weight · kg</span></div>
+        </div>
+
+        <!-- Workout Adherence -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">Workout adherence · weekly</div><div class="value">87<span class="unit">% completed</span></div></div>
+            <div class="meta-right"><div class="delta-line">▲ 6 pts</div><div class="meta-sub">vs prev 4w</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">100%</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">66%</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">33%</text>
+            <rect x="20" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" class="draw-bar"/>
+            <rect x="20" y="56" width="55" height="94" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="47.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">75%</text>
+            <rect x="105" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" class="draw-bar"/>
+            <rect x="105" y="25" width="55" height="125" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="132.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">100%</text>
+            <rect x="190" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" class="draw-bar"/>
+            <rect x="190" y="61" width="55" height="89" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="217.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">71%</text>
+            <rect x="275" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" class="draw-bar"/>
+            <rect x="275" y="31" width="55" height="119" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="302.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">95%</text>
+            <rect x="360" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" class="draw-bar"/>
+            <rect x="360" y="42" width="55" height="108" style="fill: var(--moss);" rx="2" class="draw-bar"/>
+            <text x="387.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">86%</text>
+            <rect x="445" y="25" width="55" height="125" style="fill: var(--moss-soft);" rx="2" opacity="0.5" class="draw-bar"/>
+            <rect x="445" y="68" width="55" height="82" style="fill: var(--moss);" rx="2" opacity="0.85" class="draw-bar"/>
+            <rect x="445" y="25" width="55" height="125" fill="none" style="stroke: var(--chart-highlight);" stroke-width="1" stroke-dasharray="3 3" rx="2"/>
+            <text x="472.5" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-highlight);">in prog</text>
+            <text x="20" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W14</text>
+            <text x="105" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W15</text>
+            <text x="190" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W16</text>
+            <text x="275" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W17</text>
+            <text x="360" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W18</text>
+            <text x="445" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">W19</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>Completed</span><span class="item"><span class="swatch moss-soft"></span>Planned · not yet done</span></div>
+        </div>
+
+        <!-- Daily Nutrition -->
+        <div class="chart-card">
+          <div class="chart-head">
+            <div><div class="label">Daily nutrition · macros</div><div class="value">2,840<span class="unit">kcal/day avg</span></div></div>
+            <div class="meta-right"><div class="delta-line">P 172 · C 308</div><div class="meta-sub">avg g/day</div></div>
+          </div>
+          <svg viewBox="0 0 560 170" preserveAspectRatio="none" style="overflow: visible; width: 100%; height: auto;">
+            <defs><linearGradient id="calfade" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" style="stop-color: var(--moss); stop-opacity: 0.18"/><stop offset="100%" style="stop-color: var(--moss); stop-opacity: 0"/></linearGradient></defs>
+            <line x1="0" y1="25" x2="560" y2="25" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="75" x2="560" y2="75" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="125" x2="560" y2="125" style="stroke: var(--chart-grid);" stroke-width="1" stroke-dasharray="2 4"/>
+            <line x1="0" y1="150" x2="560" y2="150" style="stroke: var(--chart-baseline);" stroke-width="1"/>
+            <text x="-6" y="29" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">400g</text>
+            <text x="-6" y="79" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">250g</text>
+            <text x="-6" y="129" text-anchor="end" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">100g</text>
+            <text x="566" y="29" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--moss);">3.5k</text>
+            <text x="566" y="79" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--moss);">2.8k</text>
+            <text x="566" y="129" text-anchor="start" font-family="JetBrains Mono" font-size="9" style="fill: var(--moss);">2.1k</text>
+            <path class="draw-fill trend-5" d="M 0 65 L 19 60 L 38 75 L 56 55 L 75 70 L 94 62 L 112 50 L 131 65 L 150 58 L 168 72 L 187 62 L 206 52 L 224 68 L 243 58 L 262 78 L 280 62 L 299 52 L 318 67 L 336 60 L 355 50 L 374 62 L 392 54 L 411 72 L 430 60 L 448 67 L 467 52 L 486 64 L 504 57 L 523 70 L 542 62 L 560 58 L 560 150 L 0 150 Z" fill="url(#calfade)"/>
+            <path class="draw-line trend-5" pathLength="1" d="M 0 65 L 19 60 L 38 75 L 56 55 L 75 70 L 94 62 L 112 50 L 131 65 L 150 58 L 168 72 L 187 62 L 206 52 L 224 68 L 243 58 L 262 78 L 280 62 L 299 52 L 318 67 L 336 60 L 355 50 L 374 62 L 392 54 L 411 72 L 430 60 L 448 67 L 467 52 L 486 64 L 504 57 L 523 70 L 542 62 L 560 58" style="stroke: var(--moss); fill: none;" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend-5" pathLength="1" d="M 0 80 L 19 78 L 38 82 L 56 75 L 75 80 L 94 76 L 112 70 L 131 78 L 150 74 L 168 82 L 187 76 L 206 72 L 224 80 L 243 74 L 262 84 L 280 76 L 299 70 L 318 80 L 336 75 L 355 68 L 374 76 L 392 72 L 411 82 L 430 76 L 448 80 L 467 72 L 486 78 L 504 74 L 523 82 L 542 76 L 560 74" style="stroke: var(--clay); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="draw-line trend-5" pathLength="1" d="M 0 65 L 19 62 L 38 75 L 56 58 L 75 68 L 94 65 L 112 50 L 131 65 L 150 60 L 168 72 L 187 64 L 206 55 L 224 65 L 243 58 L 262 75 L 280 62 L 299 52 L 318 65 L 336 60 L 355 50 L 374 62 L 392 55 L 411 70 L 430 60 L 448 65 L 467 54 L 486 62 L 504 56 L 523 68 L 542 60 L 560 56" style="stroke: var(--slate); fill: none;" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
+            <text x="0" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">12 APR</text>
+            <text x="140" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">19 APR</text>
+            <text x="280" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">26 APR</text>
+            <text x="420" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">03 MAY</text>
+            <text x="525" y="168" font-family="JetBrains Mono" font-size="9" style="fill: var(--chart-axis);">11 MAY</text>
+          </svg>
+          <div class="legend"><span class="item"><span class="swatch moss"></span>Calories · kcal</span><span class="item"><span class="swatch clay"></span>Protein · g</span><span class="item"><span class="swatch slate"></span>Carbs · g</span></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section r r-8">
+      <div class="section-head"><h2>Personal bests · this block</h2><div class="right"><a href="#" class="link">All records →</a></div></div>
+      <div class="pb-strip">
+        <div class="pb-tile"><div class="lift">Back squat · 1RM</div><div class="val">142.5<span class="unit">kg</span></div><div class="delta">▲ 5.0 kg <span class="age">· 4d ago</span></div></div>
+        <div class="pb-tile"><div class="lift">Deadlift · 1RM</div><div class="val">180<span class="unit">kg</span></div><div class="delta">▲ 2.5 kg <span class="age">· 11d</span></div></div>
+        <div class="pb-tile"><div class="lift">5km · road</div><div class="val">18:42</div><div class="delta">▼ 0:08 <span class="age">· 6d</span></div></div>
+        <div class="pb-tile"><div class="lift">Half marathon</div><div class="val">1:24:31</div><div class="delta">▼ 1:12 <span class="age">· 18d</span></div></div>
+        <div class="pb-tile"><div class="lift">Bench · 1RM</div><div class="val">95<span class="unit">kg</span></div><div class="delta held">● held <span class="age">· 28d</span></div></div>
+      </div>
+    </section>
+
+    <section class="section r r-9">
+      <div class="section-head"><h2>Recent</h2><div class="right"><a href="#" class="link">Full history →</a></div></div>
+      <table class="activity">
+        <thead><tr><th style="width: 100px;">When</th><th>Session</th><th class="r" style="width: 100px;">Duration</th><th class="r" style="width: 100px;">Distance</th><th class="r" style="width: 100px;">Avg HR</th><th class="r" style="width: 80px;">Load</th></tr></thead>
+        <tbody>
+          <tr><td class="date">YESTERDAY</td><td class="title"><span class="pip recovery"></span>Recovery walk<span class="type">walking · solo</span></td><td class="r">42:18<span class="unit">min</span></td><td class="r">4.2<span class="unit">km</span></td><td class="r">102<span class="unit">bpm</span></td><td class="r">28</td></tr>
+          <tr><td class="date">SAT · 09 MAY</td><td class="title"><span class="pip run"></span>Threshold intervals<span class="type">running · 6×800m</span></td><td class="r">1:08:42<span class="unit">h</span></td><td class="r">14.6<span class="unit">km</span></td><td class="r">162<span class="unit">bpm</span></td><td class="r">112</td></tr>
+          <tr><td class="date">FRI · 08 MAY</td><td class="title"><span class="pip strength"></span>Lower body<span class="type">strength · gym</span></td><td class="r">52:11<span class="unit">min</span></td><td class="r">—</td><td class="r">118<span class="unit">bpm</span></td><td class="r">64</td></tr>
+          <tr><td class="date">THU · 07 MAY</td><td class="title"><span class="pip run"></span>Easy run<span class="type">running · zone 2</span></td><td class="r">1:02:14<span class="unit">h</span></td><td class="r">11.8<span class="unit">km</span></td><td class="r">144<span class="unit">bpm</span></td><td class="r">58</td></tr>
+          <tr><td class="date">TUE · 05 MAY</td><td class="title"><span class="pip run"></span>Long run<span class="type">running · trail</span></td><td class="r">2:14:08<span class="unit">h</span></td><td class="r">22.4<span class="unit">km</span></td><td class="r">148<span class="unit">bpm</span></td><td class="r">142</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  function cadenceToggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('cadence-theme', next);
+  }
+
+  /* ============================================================
+     COUNT-UP — animates numbers from 0 to data-target on page load
+     Reusable: any element with .count-up class + data-target value
+  ============================================================ */
+  function countUp(el, target, duration) {
+    var startTime = null;
+    var unit = el.querySelector('.unit');
+    var unitHTML = unit ? unit.outerHTML : '';
+
+    function frame(now) {
+      if (!startTime) startTime = now;
+      var elapsed = now - startTime;
+      var progress = Math.min(elapsed / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var value = Math.round(target * eased);
+      el.innerHTML = value + unitHTML;
+      if (progress < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      document.querySelectorAll('.count-up[data-target]').forEach(function(el) {
+        var target = parseInt(el.dataset.target, 10);
+        if (!isNaN(target)) {
+          el.classList.add('ready');
+          countUp(el, target, 1400);
+        }
+      });
+    }, 400);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,264 @@
+/* =====================================================================
+   CADENCE — DESIGN TOKENS
+   Version 1.0 · May 2026
+   
+   Single source of truth for the Cadence visual system.
+   
+   USAGE
+   -----
+   Link this file once in your application's <head>:
+       <link rel="stylesheet" href="cadence-tokens.css">
+   
+   All tokens are CSS custom properties on :root. Use them in any
+   stylesheet via var(--token-name).
+   
+   THEMING
+   -------
+   Light theme is the default. Dark theme overrides via the attribute
+   selector [data-theme="dark"] on <html>. To prevent a flash of the
+   wrong theme on first paint, set the attribute via inline script in
+   <head> BEFORE <body> renders:
+   
+       <script>
+         var stored = localStorage.getItem('cadence-theme');
+         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+         document.documentElement.setAttribute(
+           'data-theme', stored || (prefersDark ? 'dark' : 'light')
+         );
+       </script>
+   
+   ===================================================================== */
+
+/* =====================================================================
+   LIGHT THEME (default)
+   ===================================================================== */
+:root {
+
+  /* -----------------------------------------------------------------
+     COLOUR · SURFACES
+     The four backgrounds — page, card, paper, elevated.
+     "Paper" is highest elevation (modals, inputs).
+     ----------------------------------------------------------------- */
+  --bg:             #F5F2EC; /* Primary page background — warm bone */
+  --bg-card:        #FBFAF5; /* Cards, sections — slightly elevated */
+  --bg-paper:       #FFFFFF; /* Inputs, paper-like, modals, highest elevation */
+  --bg-elevated:    #EDE9E0; /* Hover states, subtle fills */
+
+  /* -----------------------------------------------------------------
+     COLOUR · BORDERS
+     ----------------------------------------------------------------- */
+  --border:         #DCD7CB; /* Hairline dividers, default borders */
+  --border-strong:  #B8B3A7; /* Hover borders, stronger separation */
+
+  /* -----------------------------------------------------------------
+     COLOUR · TEXT
+     Five steps from primary down to placeholder.
+     ----------------------------------------------------------------- */
+  --text:           #1B1B1F; /* Primary text, headlines, hero numbers */
+  --text-soft:      #2E2E33; /* Body copy */
+  --text-muted:     #5F5C55; /* Secondary text, helper text */
+  --text-quiet:     #8A867D; /* Labels, metadata, axis labels */
+  --text-faint:     #B8B3A7; /* Placeholder, disabled, hairline cues */
+
+  /* -----------------------------------------------------------------
+     COLOUR · BRAND ACCENT (moss)
+     The single most-used non-neutral. Save it for moments of meaning:
+     primary buttons, positive deltas, the wordmark dot, focus rings.
+     ----------------------------------------------------------------- */
+  --moss:           #6B7A5A; /* Brand colour — non-text use only on light */
+  --moss-deep:      #4F5A42; /* Moss for text on light (AA at 14pt+) */
+  --moss-soft:      #C9CFB9; /* Selected-state fills */
+  --moss-glow:      rgba(107, 122, 90, 0.10); /* Focus rings, pulse halos */
+
+  /* -----------------------------------------------------------------
+     COLOUR · STATE & ACCENTS
+     Use sparingly — these earn their place. Clay = warning. Sand =
+     approaching/in-progress. Slate = comparison/baseline data.
+     ----------------------------------------------------------------- */
+  --clay:           #B96A4D; /* Warnings, alerts, missed sessions, negative deltas */
+  --clay-deep:      #A3493D; /* Clay for text on light (AA at 14pt+) */
+  --clay-soft:      #E8C7B5; /* Alert backgrounds */
+  --slate:          #4A5F6E; /* Secondary data series, baselines, comparison overlays */
+  --sand:           #C9A24E; /* "Approaching target" state, deload markers, quaternary data */
+  --on-moss:        #F5F2EC; /* Foreground on moss surfaces */
+
+  /* -----------------------------------------------------------------
+     COLOUR · DATA VISUALISATION (categorical palette)
+     Default series ordering. Tested for tritanopia / deuteranopia.
+     Never use more than three series on a single chart by default.
+     ----------------------------------------------------------------- */
+  --d1:             #6B7A5A; /* Series 1 — moss (primary) */
+  --d2:             #B96A4D; /* Series 2 — clay (comparison/alert) */
+  --d3:             #4A5F6E; /* Series 3 — slate (baseline/target) */
+  --d4:             #C9A24E; /* Series 4 — sand */
+  --d5:             #8A7396; /* Series 5 — mauve */
+  --d6:             #5F5C55; /* Series 6 — stone (historical/faded) */
+  --d7:             #A3493D; /* Series 7 — brick (extreme/negative-emphasis) */
+
+  /* -----------------------------------------------------------------
+     COLOUR · CHART HELPERS
+     ----------------------------------------------------------------- */
+  --chart-grid:     #DCD7CB; /* Dashed gridlines */
+  --chart-baseline: #B8B3A7; /* Solid axis baselines */
+  --chart-target:   #4A5F6E; /* Target/threshold lines (slate) */
+
+  /* -----------------------------------------------------------------
+     TYPOGRAPHY · FONT FAMILIES
+     Three families, three jobs. Display for headlines + numbers.
+     Sans for interface. Mono for metadata + timestamps.
+     ----------------------------------------------------------------- */
+  --display: "Fraunces", ui-serif, Georgia, serif;
+  --sans:    "Geist", "Söhne", ui-sans-serif, -apple-system, system-ui, sans-serif;
+  --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* -----------------------------------------------------------------
+     TYPOGRAPHY · TYPE SCALE
+     Pixel sizes — semantic aliases below. Mockups currently use
+     inline sizes; engineering should adopt these for consistency.
+     ----------------------------------------------------------------- */
+  --type-9:   9px;   /* Tiny meta — pip labels, micro-tags */
+  --type-10:  10px;  /* Meta — eyebrow labels, status pills */
+  --type-11:  11px;  /* Label — uppercase mono labels */
+  --type-12:  12px;  /* Caption — axis labels, timestamps */
+  --type-13:  13px;  /* Body small */
+  --type-14:  14px;  /* Body — default */
+  --type-17:  17px;  /* Body large, lede */
+  --type-20:  20px;  /* H4 / week heading */
+  --type-24:  24px;  /* H3 / wordmark */
+  --type-28:  28px;  /* H2 / date displays */
+  --type-36:  36px;  /* Large stat / H1 small */
+  --type-44:  44px;  /* H1 default */
+  --type-56:  56px;  /* H1 large / large stat */
+  --type-64:  64px;  /* Hero number, dashboard */
+  --type-80:  80px;  /* Display number, Charts page hero */
+  --type-96:  96px;  /* TV mode clock */
+  --type-144: 144px; /* TV mode km hero */
+
+  /* Semantic aliases (preferred) */
+  --type-body:      var(--type-14);
+  --type-body-sm:   var(--type-13);
+  --type-body-lg:   var(--type-17);
+  --type-caption:   var(--type-12);
+  --type-label:     var(--type-11);
+  --type-meta:      var(--type-10);
+  --type-h4:        var(--type-20);
+  --type-h3:        var(--type-24);
+  --type-h2:        var(--type-28);
+  --type-h1-sm:     var(--type-44);
+  --type-h1:        var(--type-56);
+  --type-hero:      var(--type-80);
+
+  /* -----------------------------------------------------------------
+     TYPOGRAPHY · LETTER SPACING
+     Tightens with size. Goes to zero at body.
+     ----------------------------------------------------------------- */
+  --tracking-hero:    -0.04em;
+  --tracking-h1:      -0.035em;
+  --tracking-h2:      -0.025em;
+  --tracking-h3:      -0.015em;
+  --tracking-body:    -0.005em;
+  --tracking-caption: 0;
+  --tracking-label:   0.16em;   /* Uppercase mono labels */
+  --tracking-meta:    0.18em;   /* Tiny uppercase meta */
+
+  /* -----------------------------------------------------------------
+     SPACING SCALE
+     Internal padding, gaps, margins. 4px base unit.
+     ----------------------------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-9:  40px;
+  --space-10: 48px;
+  --space-11: 56px;
+  --space-12: 72px;
+
+  /* -----------------------------------------------------------------
+     BORDER RADIUS
+     ----------------------------------------------------------------- */
+  --radius-sm: 3px;  /* Pills, tags */
+  --radius-md: 4px;  /* Default — buttons, inputs */
+  --radius-lg: 6px;  /* Cards, sections */
+  --radius-xl: 8px;  /* Large surfaces (TV mode tiles) */
+
+  /* -----------------------------------------------------------------
+     MOTION
+     Five durations + one easing curve. Spring is forbidden outside
+     iOS native components.
+     ----------------------------------------------------------------- */
+  --ease:    cubic-bezier(0.2, 0.7, 0.2, 1);  /* "Slow in, quicker out" — universal */
+  --t-ui:    240ms;  /* UI changes — buttons, toggles, input focus */
+  --t-fade:  280ms;  /* Data-cycle fades (TV mode range switching) */
+  --t-theme: 320ms;  /* Theme switching (light/dark crossfade) */
+  --t-paint: 900ms;  /* First-paint reveals — staggered element rises */
+  --t-cycle: 20s;    /* TV mode auto-advance interval */
+
+  /* -----------------------------------------------------------------
+     Z-INDEX LAYERS
+     Use these instead of arbitrary numbers.
+     ----------------------------------------------------------------- */
+  --z-base:    1;
+  --z-sticky:  10;
+  --z-dropdown: 50;
+  --z-modal:   100;
+  --z-toast:   200;
+}
+
+/* =====================================================================
+   DARK THEME
+   
+   Inverse but not absent. Base is warmer than typical "pure black"
+   tech apps. Moss lifts slightly in luminance to maintain contrast.
+   ===================================================================== */
+[data-theme="dark"] {
+
+  /* Surfaces */
+  --bg:             #13141A; /* Primary background — deep charcoal */
+  --bg-card:        #1B1B22; /* Cards */
+  --bg-paper:       #25262E; /* Elevated surfaces */
+  --bg-elevated:    #2E2F38; /* Hover states */
+
+  /* Borders */
+  --border:         #25262E;
+  --border-strong:  #2E2F38;
+
+  /* Text */
+  --text:           #F5F2EC; /* Bone for primary text on dark */
+  --text-soft:      #E8E4DA;
+  --text-muted:     #A09C92;
+  --text-quiet:     #6F6B62;
+  --text-faint:     #4A4843;
+
+  /* Brand — lifted */
+  --moss:           #8DA075; /* Lifted +luminance for dark backgrounds */
+  --moss-deep:      #6B7A5A;
+  --moss-soft:      rgba(141, 160, 117, 0.28);
+  --moss-glow:      rgba(141, 160, 117, 0.10);
+
+  /* State & accents — lifted */
+  --clay:           #C97E62;
+  --clay-deep:      #B96A4D;
+  --clay-soft:      rgba(201, 126, 98, 0.22);
+  --slate:          #6B8398;
+  --sand:           #D4B265;
+  --on-moss:        #13141A;
+
+  /* Chart helpers */
+  --chart-grid:     #2E2F38;
+  --chart-baseline: #4A4843;
+  --chart-target:   #6B8398;
+
+  /* Data-viz categorical palette — same hues, slight lift */
+  --d1:             #8DA075;
+  --d2:             #C97E62;
+  --d3:             #6B8398;
+  --d4:             #D4B265;
+  --d5:             #A089AB;
+  --d6:             #8A867D;
+  --d7:             #C16E5F;
+}
