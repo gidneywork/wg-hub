@@ -2677,6 +2677,14 @@
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
 }
+/* Synced section in solo mode (Activity only) — tile takes one-fifth
+   slot rather than stretching across all five columns. */
+[data-cadence] .daily-page .synced-grid.synced-grid--solo {
+  grid-template-columns: repeat(5, 1fr);
+}
+[data-cadence] .daily-page .synced-grid.synced-grid--solo .synced-tile {
+  max-width: 100%;
+}
 [data-cadence] .daily-page .synced-tile {
   background: var(--bg-card);
   border: 1px solid var(--border);
