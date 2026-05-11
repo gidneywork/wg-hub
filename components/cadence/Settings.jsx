@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import StravaCard from './settings/StravaCard'
+import TargetSection from './settings/TargetSection'
+import { currentValues, SECTION_LAYOUT } from './settings/settingsHelpers'
 
 /**
  * Cadence — Settings page.
@@ -15,6 +17,7 @@ import StravaCard from './settings/StravaCard'
  */
 export default function Settings({
   settings,
+  defaultSettings,
   saveSettings,
   stravaConnection,
   onStravaConnectionChange,
@@ -24,14 +27,31 @@ export default function Settings({
 }) {
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(settings)))
 
-  // Save / Reset are wired against the local copy. Target rows in commit 4
-  // make this copy diverge from `settings`; commit 4.5 will diff the two
-  // and write target_updated audit rows on save.
+  // Live values for each target row — sums + rolling means over the same
+  // data the dashboard reads. Recomputed when any source changes.
+  const currents = useMemo(
+    () => currentValues({ logs, whoopData, activities }),
+    [logs, whoopData, activities]
+  )
+
+  const setTarget = (key, v) => {
+    setLocal(prev => ({ ...prev, [key]: { ...prev[key], value: v } }))
+  }
+
+  // Reset reverts the local copy to the canonical defaults — the shipped
+  // DEFAULT_SETTINGS from WGHub. The user must hit Save to persist.
+  const handleReset = () => {
+    if (defaultSettings) {
+      setLocal(JSON.parse(JSON.stringify(defaultSettings)))
+    } else {
+      setLocal(JSON.parse(JSON.stringify(settings)))
+    }
+  }
+
+  // Audit writes for changed targets land in commit 4.5; for now the
+  // save simply persists the local copy.
   const handleSave = async () => {
     await saveSettings(local)
-  }
-  const handleReset = () => {
-    setLocal(JSON.parse(JSON.stringify(settings)))
   }
 
   const handleDisconnect = async () => {
@@ -48,33 +68,30 @@ export default function Settings({
 
       <StravaCard stravaConnection={stravaConnection} onDisconnect={handleDisconnect} />
 
-      {/* ===== Running ===== */}
-      <section className="settings-section r r-4">
-        <div className="section-head"><span className="section-label">Running</span></div>
-        <div className="section-body">Target rows wired in commit 4.</div>
-      </section>
+      {(() => {
+        // Thread an absolute row index across sections so the bar
+        // animation stagger reads as one cascade, not four restarts.
+        let runningIndex = 0
+        return SECTION_LAYOUT.map(section => {
+          const node = (
+            <TargetSection
+              key={section.label}
+              label={section.label}
+              rN={section.rN}
+              keys={section.keys}
+              local={local}
+              currents={currents}
+              setTarget={setTarget}
+              baseRowIndex={runningIndex}
+            />
+          )
+          runningIndex += section.keys.length
+          return node
+        })
+      })()}
 
-      {/* ===== Body metrics ===== */}
-      <section className="settings-section r r-5">
-        <div className="section-head"><span className="section-label">Body metrics</span></div>
-        <div className="section-body">Target rows wired in commit 4.</div>
-      </section>
-
-      {/* ===== Sleep & recovery ===== */}
-      <section className="settings-section r r-6">
-        <div className="section-head"><span className="section-label">Sleep &amp; recovery</span></div>
-        <div className="section-body">Target rows wired in commit 4.</div>
-      </section>
-
-      {/* ===== Nutrition ===== */}
-      <section className="settings-section r r-7">
-        <div className="section-head"><span className="section-label">Nutrition</span></div>
-        <div className="section-body">Target rows wired in commit 4.</div>
-      </section>
-
-      {/* ===== Save row ===== */}
       <div className="save-row r r-8">
-        <button type="button" className="btn btn-primary btn-lg">Save targets</button>
+        <button type="button" className="btn btn-primary btn-lg" onClick={handleSave}>Save targets</button>
       </div>
 
       {/* ===== Whoop data import ===== */}
