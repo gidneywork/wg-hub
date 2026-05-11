@@ -5,6 +5,8 @@ import StatRow from './StatRow'
 import WeekGrid from './WeekGrid'
 import TodayCards from './TodayCards'
 import Trends from './Trends'
+import PersonalBests from './PersonalBests'
+import Recent from './Recent'
 
 /**
  * Cadence dashboard.
@@ -18,12 +20,13 @@ import Trends from './Trends'
  */
 export default function Dashboard({ logs, settings, activities, whoopData, plan, setView }) {
   const now = new Date()
-  const stamp = now
-    .toLocaleString('en-GB', {
-      weekday: 'short', day: '2-digit', month: 'short',
-      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-    })
-    .toUpperCase()
+  // Mockup stamp format: "MON 11 MAY · 09:42 GMT"
+  const weekday = now.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()
+  const dayNum = now.toLocaleDateString('en-GB', { day: '2-digit' })
+  const monthShort = now.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()
+  const hhmm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const tz = (now.toLocaleTimeString('en-GB', { timeZoneName: 'short' }).split(' ').pop() || '').toUpperCase()
+  const stamp = `${weekday} ${dayNum} ${monthShort} · ${hhmm} ${tz}`
 
   const hour = now.getHours()
   const greetingWord = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -45,15 +48,9 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <Trends logs={logs} whoopData={whoopData} activities={activities} settings={settings} plan={plan} />
 
-      <section className="section r r-8" aria-label="Personal bests">
-        <div className="section-head"><h2>Personal bests · this block</h2></div>
-        {/* Phase F — running PB strip */}
-      </section>
+      <PersonalBests activities={activities} />
 
-      <section className="section r r-9" aria-label="Recent">
-        <div className="section-head"><h2>Recent</h2></div>
-        {/* Phase F — activity table */}
-      </section>
+      <Recent activities={activities} />
     </>
   )
 }
