@@ -2672,18 +2672,14 @@
 [data-cadence] .daily-page .resync-btn:hover { text-decoration: underline; }
 
 /* Synced tiles (read-only Whoop + Strava) ---------------------------- */
+/* Synced section grid — 5 columns at desktop. When only one tile
+   renders (Activity-only mode), it occupies column 1 of 5; columns
+   2–5 stay empty. The natural layout reads as "small tile, breathing
+   room to the right" which suits a single auto-syncing source. */
 [data-cadence] .daily-page .synced-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
-}
-/* Synced section in solo mode (Activity only) — tile takes one-fifth
-   slot rather than stretching across all five columns. */
-[data-cadence] .daily-page .synced-grid.synced-grid--solo {
-  grid-template-columns: repeat(5, 1fr);
-}
-[data-cadence] .daily-page .synced-grid.synced-grid--solo .synced-tile {
-  max-width: 100%;
 }
 [data-cadence] .daily-page .synced-tile {
   background: var(--bg-card);

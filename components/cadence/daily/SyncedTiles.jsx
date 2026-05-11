@@ -75,7 +75,7 @@ export default function SyncedTiles({
         </span>
       </div>
 
-      <div className="synced-grid synced-grid--solo">
+      <div className="synced-grid">
         <Tile
           label="Activity"
           value={act ? `${act.count}` : null}
