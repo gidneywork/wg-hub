@@ -299,3 +299,194 @@ export function fmtDeltaHM(seconds) {
   const sign = seconds > 0 ? '+' : '−'
   return `${sign}${fmtHM(Math.abs(seconds))}`
 }
+
+// ── Range filtering
+// this-week  → Monday of this week through today (inclusive)
+// this-month → 1st of this calendar month through today
+// 3-months   → rolling 90 days ending today
+// this-year  → Jan 1 of this year through today
+// all-time   → everything
+export function rangeBounds(range, endDate = new Date()) {
+  const end = startOfDay(endDate)
+  if (range === 'this-week')  return { start: startOfWeek(end), end }
+  if (range === 'this-month') return { start: new Date(end.getFullYear(), end.getMonth(), 1), end }
+  if (range === '3-months') {
+    const s = new Date(end); s.setDate(s.getDate() - 89)
+    return { start: s, end }
+  }
+  if (range === 'this-year') return { start: new Date(end.getFullYear(), 0, 1), end }
+  return { start: null, end: null } // all-time
+}
+
+export function filterByRange(activities, range, endDate = new Date()) {
+  const { start, end } = rangeBounds(range, endDate)
+  if (!start || !end) return activities.slice()
+  return activitiesInRange(activities, start, end)
+}
+
+// ── PB heuristic (Will's spec)
+// Distance brackets (in metres) — moving_time within each bracket decides
+// the PB. An activity belongs to at most one bracket (the first that
+// matches in declaration order). Strength sessions are not eligible.
+const PB_BRACKETS = [
+  { key: '5km',      min: 4700,  max: 5300  },
+  { key: '10km',     min: 9500,  max: 10500 },
+  { key: 'half',     min: 20600, max: 21600 },
+  { key: 'marathon', min: 41500, max: 42600 },
+]
+// Longest-run bracket: anything ≥ 22km that isn't in the half/marathon
+// bracket. Half = 20.6–21.6km, marathon = 41.5–42.6km, so the gap to
+// avoid is 21.6–22.0km (already filtered out by the 22km floor) and
+// 41.5–42.6km (explicit). 22000–41499 and 42601+ all qualify.
+function pbBracket(a) {
+  if (typeBucket(a) !== 'run') return null
+  const m = a?.data?.distance
+  if (!m) return null
+  for (const b of PB_BRACKETS) {
+    if (m >= b.min && m <= b.max) return b.key
+  }
+  if (m >= 22000 && !(m >= 41500 && m <= 42600)) return 'longest'
+  return null
+}
+
+// Returns a Set of activity ids that are the fastest-ever within their
+// distance bracket. Computed over the full activity history (not the
+// filtered view) so a PB tag remains stable as filters change.
+export function computePBIds(activities) {
+  const byBracket = {}
+  ;(activities || []).forEach(a => {
+    const bracket = pbBracket(a)
+    if (!bracket) return
+    const t = a?.data?.moving_time
+    if (!isFinite(t) || t <= 0) return
+    if (!byBracket[bracket] || t < byBracket[bracket].time) {
+      byBracket[bracket] = { id: a.id, time: t }
+    }
+  })
+  return new Set(Object.values(byBracket).map(x => x.id))
+}
+
+// ── Filtering predicates (type / source / search)
+export function matchesType(a, typeFilter) {
+  if (typeFilter === 'all') return true
+  return typeBucket(a) === typeFilter
+}
+
+export function matchesSource(a, sourceFilter) {
+  if (sourceFilter === 'all') return true
+  return activitySource(a) === sourceFilter
+}
+
+export function matchesSearch(a, search) {
+  if (!search || !search.trim()) return true
+  const q = search.trim().toLowerCase()
+  const name = effectiveName(a).toLowerCase()
+  const sub = (a?.data?.sport_type || a?.strava_type || a?.custom_type || '').toLowerCase()
+  const notes = (a?.notes || '').toLowerCase()
+  return name.includes(q) || sub.includes(q) || notes.includes(q)
+}
+
+export function applyFilters(activities, { typeFilter, sourceFilter, search }) {
+  return (activities || []).filter(a =>
+    matchesType(a, typeFilter) &&
+    matchesSource(a, sourceFilter) &&
+    matchesSearch(a, search)
+  )
+}
+
+// ── Grouping
+// Group activities by Monday-anchored week. Returns an array sorted
+// descending by week start, each entry { key, weekStart, activities }
+// where activities is also sorted descending by start_date.
+export function groupByWeek(activities) {
+  const buckets = new Map()
+  ;(activities || []).forEach(a => {
+    if (!a?.start_date) return
+    const ws = startOfWeek(new Date(a.start_date))
+    const key = ws.toISOString().split('T')[0]
+    if (!buckets.has(key)) buckets.set(key, { key, weekStart: ws, activities: [] })
+    buckets.get(key).activities.push(a)
+  })
+  const groups = Array.from(buckets.values())
+  groups.forEach(g => g.activities.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)))
+  groups.sort((a, b) => b.weekStart - a.weekStart)
+  return groups
+}
+
+// Week head title — "Week of 4 May".
+export function fmtWeekTitle(weekStart) {
+  const d = weekStart.getDate()
+  const mon = weekStart.toLocaleDateString('en-GB', { month: 'long' })
+  return `Week of ${d} ${mon}`
+}
+
+// Week head totals — { sessions, km, hours }. km only counts run activities;
+// hours is the sum of moving_time across all activities in the week.
+export function weekTotals(activities) {
+  const sessions = activities.length
+  const km = activities.reduce((s, a) => {
+    if (typeBucket(a) !== 'run') return s
+    return s + ((a?.data?.distance || 0) / 1000)
+  }, 0)
+  const totalSeconds = activities.reduce((s, a) => s + (a?.data?.moving_time || 0), 0)
+  return { sessions, km, hours: fmtHM(totalSeconds) }
+}
+
+// Month totals add a PB count to the week totals shape.
+export function monthTotals(activities, pbIds) {
+  const t = weekTotals(activities)
+  const pbCount = activities.filter(a => pbIds.has(a.id)).length
+  return { ...t, pbCount }
+}
+
+// Group an array of week-groups by calendar month. Each month entry:
+//   { key, year, monthIndex, name, weeks }
+// where `weeks` is the contiguous subset of weeks whose start lands in
+// that calendar month, in original (descending) order.
+export function groupWeeksByMonth(weekGroups) {
+  const out = []
+  let current = null
+  for (const wg of weekGroups) {
+    const y = wg.weekStart.getFullYear()
+    const m = wg.weekStart.getMonth()
+    const key = `${y}-${m}`
+    if (!current || current.key !== key) {
+      const name = wg.weekStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+      current = { key, year: y, monthIndex: m, name, weeks: [] }
+      out.push(current)
+    }
+    current.weeks.push(wg)
+  }
+  return out
+}
+
+// Group month-groups by calendar year. Each year entry:
+//   { key, year, scope, months }
+// `scope` reads "Jan 1 → today" for the current year and "Jan 1 → Dec 31"
+// for closed years.
+export function groupMonthsByYear(monthGroups, today = new Date()) {
+  const thisYear = today.getFullYear()
+  const out = []
+  let current = null
+  for (const mg of monthGroups) {
+    if (!current || current.year !== mg.year) {
+      const scope = mg.year === thisYear ? 'Jan 1 → today' : 'Jan 1 → Dec 31'
+      current = { key: String(mg.year), year: mg.year, scope, months: [] }
+      out.push(current)
+    }
+    current.months.push(mg)
+  }
+  return out
+}
+
+// ── Row metric helpers (kg top set / exercises for strength rows)
+// Strength rows show "kg top set" or "exercises" in the pace column.
+// We don't have structured top-set data in the schema; fall back to a
+// notes-mined "Xkg" pattern, or return null so the column muted-dashes.
+export function strengthMetric(a) {
+  if (typeBucket(a) !== 'strength') return null
+  const notes = a?.notes || ''
+  const kg = notes.match(/(\d{2,3}(?:\.\d)?)\s*kg/i)
+  if (kg) return { value: kg[1], unit: 'kg top set' }
+  return null
+}

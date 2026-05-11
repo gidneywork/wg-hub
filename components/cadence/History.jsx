@@ -1,17 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SummaryStrip from './history/SummaryStrip'
 import Filters from './history/Filters'
-import { fmtLastSync } from './history/historyHelpers'
+import ActivityList from './history/ActivityList'
+import {
+  fmtLastSync,
+  filterByRange,
+  applyFilters,
+  computePBIds,
+  groupByWeek,
+  groupWeeksByMonth,
+  groupMonthsByYear,
+} from './history/historyHelpers'
+
+const INITIAL_WEEKS = 4
 
 /**
  * Cadence — History page.
- *
  * Mockup: design/mockups/cadence-history.html
- * Page head, summary strip and filters bar are wired.
- * Grouping, PB heuristic, load-more, footer count and empty state
- * arrive in the next commit.
  */
 export default function History({ activities = [], stravaConnection = null }) {
   const [range, setRange] = useState('this-month')
@@ -19,14 +26,56 @@ export default function History({ activities = [], stravaConnection = null }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
+  const [weeksVisible, setWeeksVisible] = useState(INITIAL_WEEKS)
 
-  const lastSync = fmtLastSync(stravaConnection?.last_synced_at)
+  // Reset load-more when the user changes any filter — otherwise a tight
+  // result set could carry stale "Load earlier weeks" state.
+  useEffect(() => { setWeeksVisible(INITIAL_WEEKS) }, [range, typeFilter, sourceFilter, search])
+
   const totalSessions = activities.length
+  const lastSync = fmtLastSync(stravaConnection?.last_synced_at)
+
+  // PBs are computed across the full history so the tag is stable as
+  // filters change.
+  const pbIds = useMemo(() => computePBIds(activities), [activities])
+
+  const derived = useMemo(() => {
+    const inRange = filterByRange(activities, range)
+    const filtered = applyFilters(inRange, { typeFilter, sourceFilter, search })
+    const allWeeks = groupByWeek(filtered)
+    const visibleWeeks = allWeeks.slice(0, weeksVisible)
+    const renderedCount = visibleWeeks.reduce((s, w) => s + w.activities.length, 0)
+    const months = groupWeeksByMonth(visibleWeeks)
+    const years = groupMonthsByYear(months)
+
+    const archiveActivities = allWeeks.slice(weeksVisible).flatMap(w => w.activities)
+    const archiveCount = archiveActivities.length
+    let archiveYear = null
+    let archiveFromLabel = null
+    if (archiveCount > 0) {
+      const newestInArchive = archiveActivities[0]
+      const oldestInArchive = archiveActivities[archiveActivities.length - 1]
+      if (newestInArchive?.start_date) {
+        archiveYear = new Date(newestInArchive.start_date).getFullYear()
+      }
+      if (oldestInArchive?.start_date) {
+        const d = new Date(oldestInArchive.start_date)
+        archiveFromLabel = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+      }
+    }
+
+    return {
+      hasResults: filtered.length > 0,
+      renderedCount,
+      years,
+      moreWeeksAvailable: weeksVisible < allWeeks.length,
+      archive: { count: archiveCount, year: archiveYear, fromLabel: archiveFromLabel },
+    }
+  }, [activities, range, typeFilter, sourceFilter, search, weeksVisible])
 
   return (
     <div className="history" data-range={range}>
 
-      {/* ===== Page head ===== */}
       <header className="page-head r r-1">
         <div>
           <div className="eyebrow">Analyse</div>
@@ -39,10 +88,8 @@ export default function History({ activities = [], stravaConnection = null }) {
         </div>
       </header>
 
-      {/* ===== Summary strip — density tile + 3 stat tiles ===== */}
       <SummaryStrip activities={activities} />
 
-      {/* ===== Filters ===== */}
       <Filters
         search={search} setSearch={setSearch}
         typeFilter={typeFilter} setTypeFilter={setTypeFilter}
@@ -51,45 +98,26 @@ export default function History({ activities = [], stravaConnection = null }) {
         rangeOpen={rangeOpen} setRangeOpen={setRangeOpen}
       />
 
-      {/* ===== Empty state (hidden by default) ===== */}
-      <div className="empty-state">
-        Nothing matches. Try a wider date range or clear your filters.
-      </div>
+      {derived.hasResults ? (
+        <>
+          <ActivityList
+            years={derived.years}
+            pbIds={pbIds}
+            archive={derived.archive}
+            moreWeeksAvailable={derived.moreWeeksAvailable}
+            onLoadMore={() => setWeeksVisible(weeksVisible + 1)}
+          />
 
-      {/* ===== Activity list — year banners, month dividers, weeks ===== */}
-      {/* Placeholder until commit 5 wires real grouping. */}
-      <div className="year-banner">
-        <span className="num">—</span>
-        <span className="line" />
-        <span className="scope">—</span>
-      </div>
-
-      <div className="month-divider">
-        <span className="name">—</span>
-        <span className="totals"><span>—</span></span>
-      </div>
-
-      <section className="week r r-4">
-        <div className="week-head">
-          <span className="title">Week of —</span>
-          <span className="totals"><span>Activity list scaffold — wired in commit 5.</span></span>
+          <div className="footer-count r r-9">
+            <span>Showing {derived.renderedCount} of {totalSessions} sessions</span>
+            <span>Synced from Strava, Whoop, manual entries</span>
+          </div>
+        </>
+      ) : (
+        <div className="empty-state show">
+          Nothing matches. Try a wider date range or clear your filters.
         </div>
-        <div className="activity-list" />
-      </section>
-
-      {/* ===== Archive stub (visible only at all-time) ===== */}
-      <div className="archive-stub">
-        <div className="year">— ↓</div>
-        <div className="text">Archive coming in commit 5.</div>
-        <div className="meta">Use search or narrow the date range to find a specific session</div>
-      </div>
-
-      <button type="button" className="load-more r r-8">Load earlier weeks</button>
-
-      <div className="footer-count r r-9">
-        <span>Showing — of {activities.length} sessions</span>
-        <span>Synced from Strava, Whoop, manual entries</span>
-      </div>
+      )}
     </div>
   )
 }
