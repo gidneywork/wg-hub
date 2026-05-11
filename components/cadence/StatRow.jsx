@@ -110,8 +110,23 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
   const avgPrior7Hrv = prior7Hrv.length ? prior7Hrv.reduce((a, b) => a + b, 0) / prior7Hrv.length : null
   const hrvDelta = (hrvNum != null && avgPrior7Hrv != null) ? Math.round(hrvNum - avgPrior7Hrv) : null
 
-  // ── Steps (no source yet) ───────────────────────────────────
-  // Per the audit: keep the tile, show "—", helper text "No data yet".
+  // ── Steps ───────────────────────────────────────────────────
+  // Manual-entry field on Daily Data; no Whoop sync yet so this reads
+  // logs only (no mergeWhoopForDate fallback).
+  const stepsToday = parseFloat(todayMerged?.body?.steps)
+  const stepsNum = isFinite(stepsToday) ? Math.round(stepsToday) : null
+  const last7Steps = last7.map(d => {
+    const v = parseFloat(logs?.[d]?.body?.steps)
+    return isFinite(v) ? v : null
+  })
+  const prior7Steps = last7Steps.slice(0, -1).filter(v => v !== null)
+  const avgPrior7Steps = prior7Steps.length
+    ? prior7Steps.reduce((a, b) => a + b, 0) / prior7Steps.length
+    : null
+  const stepsDelta = (stepsNum != null && avgPrior7Steps != null)
+    ? Math.round(stepsNum - avgPrior7Steps)
+    : null
+  const stepsAvgPrior = avgPrior7Steps != null ? Math.round(avgPrior7Steps) : null
 
   return (
     <section className="stat-row r r-4" aria-label="Daily stats">
@@ -181,8 +196,20 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
 
       <div className="stat">
         <div className="label">Steps</div>
-        <div className="value">—</div>
-        <div className="helper">No data yet</div>
+        <div className="value">
+          {stepsNum != null ? stepsNum : '—'}
+          {stepsNum != null && <span className="unit">steps</span>}
+        </div>
+        <div className="row">
+          <span className={`delta ${deltaClass(stepsDelta, 'higher')}`}>
+            {stepsDelta != null
+              ? <>{arrow(stepsDelta)} {Math.abs(stepsDelta)} vs prev 7d avg</>
+              : stepsAvgPrior != null
+                ? <>avg {stepsAvgPrior} last 7d</>
+                : 'no data yet'}
+          </span>
+          <MiniSpark values={last7Steps} />
+        </div>
       </div>
 
     </section>
