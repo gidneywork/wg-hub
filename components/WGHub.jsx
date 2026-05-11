@@ -270,7 +270,7 @@ export default function WGHub({ onSignOut }) {
           }
         </div>
       ) : (
-        <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Coming soon</div>
+        <div className="cadence-empty">coming soon</div>
       )}
     </DashboardShell>
   )

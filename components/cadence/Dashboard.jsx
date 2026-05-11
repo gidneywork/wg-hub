@@ -28,13 +28,10 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
   const tz = (now.toLocaleTimeString('en-GB', { timeZoneName: 'short' }).split(' ').pop() || '').toUpperCase()
   const stamp = `${weekday} ${dayNum} ${monthShort} · ${hhmm} ${tz}`
 
-  const hour = now.getHours()
-  const greetingWord = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-
   return (
     <>
       <header className="header r r-1">
-        <h1 className="greeting">{greetingWord}, <em>Will.</em></h1>
+        <h1 className="greeting">Good morning, <em>Will.</em></h1>
         <span className="stamp">{stamp}</span>
       </header>
 

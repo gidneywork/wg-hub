@@ -37,11 +37,15 @@ function arrow(delta) {
   return '●'
 }
 
-function deltaClass(delta) {
-  if (delta == null) return 'flat'
-  if (delta > 0) return 'up'
-  if (delta < 0) return 'down'
-  return 'flat'
+// Arrow always reflects literal direction of change.
+// Colour reflects semantic goodness for the metric:
+//   'higher'  → bigger is better (HRV, sleep, recovery, load, steps)
+//   'lower'   → smaller is better (RHR)
+// .up class = moss (good), .down class = clay (bad), .flat class = neutral.
+function deltaClass(delta, direction = 'higher') {
+  if (delta == null || delta === 0) return 'flat'
+  const better = direction === 'lower' ? delta < 0 : delta > 0
+  return better ? 'up' : 'down'
 }
 
 export default function StatRow({ logs, whoopData, settings, activities }) {
@@ -119,7 +123,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
           <span className="unit">bpm</span>
         </div>
         <div className="row">
-          <span className={`delta ${deltaClass(rhrDelta)}`}>
+          <span className={`delta ${deltaClass(rhrDelta, 'lower')}`}>
             {rhrDelta != null
               ? <>{arrow(rhrDelta)} {Math.abs(rhrDelta)} · 30d</>
               : 'no baseline'}
@@ -132,7 +136,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
         <div className="label">Weekly load</div>
         <div className="value">{weeklyLoadRound > 0 ? weeklyLoadRound : '—'}</div>
         <div className="row">
-          <span className={`delta ${deltaClass(weekLoadDelta)}`}>
+          <span className={`delta ${deltaClass(weekLoadDelta, 'higher')}`}>
             {weekLoadDelta != null
               ? <>{arrow(weekLoadDelta)} {Math.abs(weekLoadDelta)} · wk</>
               : 'no baseline'}
@@ -148,7 +152,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
           {sleepValue && <span className="unit">h</span>}
         </div>
         <div className="row">
-          <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(hoursValid && isFinite(sleepTarget) ? hours - sleepTarget : null)}`}>
+          <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(hoursValid && isFinite(sleepTarget) ? hours - sleepTarget : null, 'higher')}`}>
             {sleepAtTarget
               ? <>● target</>
               : hoursValid && isFinite(sleepTarget)
@@ -166,7 +170,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
           <span className="unit">ms</span>
         </div>
         <div className="row">
-          <span className={`delta ${deltaClass(hrvDelta)}`}>
+          <span className={`delta ${deltaClass(hrvDelta, 'higher')}`}>
             {hrvDelta != null
               ? <>{arrow(hrvDelta)} {Math.abs(hrvDelta)} · 7d</>
               : 'no baseline'}

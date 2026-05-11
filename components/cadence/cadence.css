@@ -1048,6 +1048,24 @@
   transition: opacity 200ms var(--ease);
 }
 
+/* -----------------------------------------------------------------
+   EMPTY STATE — for sidebar nav targets that don't yet exist.
+   Single italic Fraunces line, lowercase, no full stop, centred.
+   ----------------------------------------------------------------- */
+[data-cadence] .cadence-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px);
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 380;
+  font-size: 28px;
+  letter-spacing: -0.018em;
+  font-variation-settings: "opsz" 144, "SOFT" 80;
+  color: var(--text-muted);
+}
+
 /* =====================================================================
    RESPONSIVE
    ===================================================================== */
