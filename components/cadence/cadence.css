@@ -1397,6 +1397,7 @@
 [data-cadence] .history .range-picker {
   position: relative;
   margin-left: auto;
+  z-index: var(--z-dropdown);
 }
 [data-cadence] .history .range-menu {
   position: absolute;
