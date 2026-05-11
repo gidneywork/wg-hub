@@ -9,6 +9,7 @@ import { db } from '../lib/db'
 import WorkoutHistory from './WorkoutHistory'
 import DashboardShell from './cadence/DashboardShell'
 import CadenceDashboard from './cadence/Dashboard'
+import CadenceHistory from './cadence/History'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -248,7 +249,7 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
-  const LEGACY_VIEWS = ['log','history','plan','planner','finance','settings','tv']
+  const LEGACY_VIEWS = ['log','plan','planner','finance','settings','tv']
   const isLegacy = LEGACY_VIEWS.includes(view)
 
   return (
@@ -257,11 +258,12 @@ export default function WGHub({ onSignOut }) {
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
+      ) : view === 'history' ? (
+        <CadenceHistory activities={activities} stravaConnection={stravaConnection}/>
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
           {view==='log'      ? <LogData    logs={logs} saveLog={saveLog} settings={settings} plan={plan} activities={activities} whoopData={whoopData}/>
-           :view==='history' ? <WorkoutHistory stravaConnection={stravaConnection} onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); const a=await db.loadActivities(); setActivities(a); }}/>
            :view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
            :view==='planner' ? <PlannerPage/>
            :view==='finance' ? <FinancePage/>
