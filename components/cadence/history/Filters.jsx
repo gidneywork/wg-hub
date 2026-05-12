@@ -3,10 +3,13 @@
 import { useEffect, useRef } from 'react'
 
 const TYPE_OPTIONS = [
-  { val: 'all',      label: 'All' },
-  { val: 'run',      label: 'Run',      pip: 'run' },
-  { val: 'strength', label: 'Strength', pip: 'strength' },
-  { val: 'recovery', label: 'Recovery', pip: 'recovery' },
+  { val: 'all',        label: 'All' },
+  { val: 'run',        label: 'Run',        pip: 'run' },
+  { val: 'strength',   label: 'Strength',   pip: 'strength' },
+  { val: 'functional', label: 'Functional', pip: 'strength' },
+  { val: 'yoga',       label: 'Yoga',       pip: 'recovery' },
+  { val: 'bike',       label: 'Bike',       pip: 'run' },
+  { val: 'swim',       label: 'Swim',       pip: 'run' },
 ]
 
 const SOURCE_OPTIONS = [

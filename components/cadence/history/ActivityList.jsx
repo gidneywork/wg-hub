@@ -6,12 +6,24 @@ import {
   monthTotals,
   effectiveName,
   typeBucket,
+  canonicalType,
   activitySource,
   fmtRowDate,
   fmtDuration,
   fmtPace,
   strengthMetric,
 } from './historyHelpers'
+
+const CANONICAL_LABEL = {
+  run: 'Running', strength: 'Strength', functional: 'Functional',
+  yoga: 'Yoga', bike: 'Cycling', swim: 'Swimming', other: 'Activity',
+}
+
+const CANONICAL_PIP = {
+  run: 'run', bike: 'run', swim: 'run',
+  strength: 'strength', functional: 'strength',
+  yoga: 'recovery', other: 'recovery',
+}
 
 const SOURCE_LABEL = { strava: 'Strava', whoop: 'Whoop', manual: 'Manual' }
 
@@ -27,18 +39,13 @@ function Chevron() {
 
 function ActivityRow({ activity, isPB }) {
   const bucket = typeBucket(activity)
+  const canonical = canonicalType(activity)
   const source = activitySource(activity)
-  const sportType = activity?.data?.sport_type || activity?.strava_type || activity?.custom_type || ''
-  const isLongRun = bucket === 'run' && (activity?.data?.distance || 0) >= 18000
+  const isLongRun = canonical === 'run' && (activity?.data?.distance || 0) >= 18000
 
-  const pipClass = bucket === 'run' ? (isLongRun ? 'long' : 'run') : bucket
-  const subText = bucket === 'run'
-    ? 'Running'
-    : bucket === 'strength'
-      ? 'Strength'
-      : bucket === 'recovery'
-        ? 'Recovery'
-        : sportType || 'Activity'
+  const pipBase = CANONICAL_PIP[canonical] || 'recovery'
+  const pipClass = pipBase === 'run' && isLongRun ? 'long' : pipBase
+  const subText = CANONICAL_LABEL[canonical] || 'Activity'
 
   const dist = activity?.data?.distance
   const time = activity?.data?.moving_time

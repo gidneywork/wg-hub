@@ -42,6 +42,25 @@ export function typeBucket(a) {
   return BUCKET[effectiveType(a)] || 'recovery'
 }
 
+// Canonical display type: 6 categories used throughout History, Recent, and
+// filter predicates. Title-based "Functional Training" override takes priority
+// so WeightTraining sessions with that name show as "Functional", not "Strength".
+export function canonicalType(a) {
+  const title = (a?.custom_name || a?.data?.name || '').toLowerCase()
+  if (title.includes('functional training')) return 'functional'
+  const raw = (a?.custom_type || a?.data?.sport_type || a?.strava_type || '').toLowerCase()
+  if (['run', 'virtualrun', 'trailrun', 'treadmillrun'].includes(raw)) return 'run'
+  if (['ride', 'virtualride', 'gravelride', 'mountainbikeride', 'cycle', 'ebikeride'].includes(raw)) return 'bike'
+  if (['swim', 'openwatersports'].includes(raw)) return 'swim'
+  if (raw === 'yoga') return 'yoga'
+  if (['weighttraining', 'strength', 'gym', 'workout'].includes(raw)) return 'strength'
+  if (raw === 'functional') return 'functional'
+  const bucket = BUCKET[raw]
+  if (bucket === 'run') return 'run'
+  if (bucket === 'strength') return 'strength'
+  return 'other'
+}
+
 export function effectiveName(a) {
   return a?.custom_name || a?.data?.name || 'Activity'
 }
@@ -372,7 +391,7 @@ export function computePBIds(activities) {
 // ── Filtering predicates (type / source / search)
 export function matchesType(a, typeFilter) {
   if (typeFilter === 'all') return true
-  return typeBucket(a) === typeFilter
+  return canonicalType(a) === typeFilter
 }
 
 export function matchesSource(a, sourceFilter) {

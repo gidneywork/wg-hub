@@ -1,34 +1,16 @@
 'use client'
 
-const PIP_MAP = {
-  run: 'run',
-  swim: 'run',
-  cycle: 'run',
-  hike: 'run',
-  gym: 'strength',
-  functional: 'strength',
-  strength: 'strength',
-  yoga: 'recovery',
-  stretch: 'recovery',
-  recovery: 'recovery',
-  walk: 'recovery',
-  walking: 'recovery',
-  custom: 'recovery',
+import { canonicalType } from './history/historyHelpers'
+
+const CANONICAL_PIP = {
+  run: 'run', bike: 'run', swim: 'run',
+  strength: 'strength', functional: 'strength',
+  yoga: 'recovery', other: 'recovery',
 }
 
-const TYPE_LABEL = {
-  run: 'running',
-  swim: 'swimming',
-  cycle: 'cycling',
-  hike: 'hiking',
-  gym: 'strength · gym',
-  functional: 'functional',
-  yoga: 'yoga',
-  stretch: 'stretching',
-  recovery: 'recovery',
-  walk: 'walking',
-  walking: 'walking',
-  custom: 'custom',
+const CANONICAL_LABEL = {
+  run: 'Running', strength: 'Strength', functional: 'Functional',
+  yoga: 'Yoga', bike: 'Cycling', swim: 'Swimming', other: 'Activity',
 }
 
 function formatWhen(dateIso) {
@@ -55,12 +37,11 @@ function formatDuration(seconds) {
 }
 
 // Match WGHub's load formula: km + (gymHrs × 8) + (yogaHrs × 3).
-// Apply per-activity: count km for runs, count time for gym/yoga.
-function computeRowLoad(a, type) {
-  const km = type === 'run' ? (a.data?.distance || 0) / 1000 : 0
+function computeRowLoad(a, canonical) {
+  const km = ['run', 'bike', 'swim'].includes(canonical) ? (a.data?.distance || 0) / 1000 : 0
   const hours = (a.data?.moving_time || 0) / 3600
-  const gymLoad = (type === 'gym' || type === 'functional' || type === 'strength') ? hours * 8 : 0
-  const yogaLoad = (type === 'yoga' || type === 'stretch') ? hours * 3 : 0
+  const gymLoad = ['strength', 'functional'].includes(canonical) ? hours * 8 : 0
+  const yogaLoad = canonical === 'yoga' ? hours * 3 : 0
   return Math.round(km + gymLoad + yogaLoad)
 }
 
@@ -93,19 +74,19 @@ export default function Recent({ activities }) {
           </thead>
           <tbody>
             {recent.map(a => {
-              const type = a.custom_type || a.strava_type || 'custom'
-              const name = a.custom_name || a.data?.name || (TYPE_LABEL[type] || type)
+              const canonical = canonicalType(a)
+              const name = a.custom_name || a.data?.name || CANONICAL_LABEL[canonical] || canonical
               const dur = formatDuration(a.data?.moving_time)
               const distKm = a.data?.distance ? (a.data.distance / 1000) : null
               const hr = a.data?.average_heartrate
-              const load = computeRowLoad(a, type)
+              const load = computeRowLoad(a, canonical)
               return (
                 <tr key={a.id}>
                   <td className="date">{formatWhen(a.start_date)}</td>
                   <td className="title">
-                    <span className={`pip ${PIP_MAP[type] || 'recovery'}`} />
+                    <span className={`pip ${CANONICAL_PIP[canonical] || 'recovery'}`} />
                     {name}
-                    <span className="type">{TYPE_LABEL[type] || type}</span>
+                    <span className="type">{CANONICAL_LABEL[canonical] || canonical}</span>
                   </td>
                   <td className="r">
                     {dur ? <>{dur.value}<span className="unit">{dur.unit}</span></> : '—'}
