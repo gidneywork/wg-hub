@@ -12,6 +12,7 @@ import CadenceDashboard from './cadence/Dashboard'
 import CadenceHistory from './cadence/History'
 import CadenceSettings from './cadence/Settings'
 import CadenceDaily from './cadence/Daily'
+import CadenceTVMode from './cadence/TVMode'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -253,8 +254,22 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
-  const LEGACY_VIEWS = ['plan','planner','finance','tv']
+  const LEGACY_VIEWS = ['plan','planner','finance']
   const isLegacy = LEGACY_VIEWS.includes(view)
+
+  // TV mode bypasses DashboardShell entirely — no sidebar, dark-by-default
+  if (view === 'tv') {
+    return (
+      <CadenceTVMode
+        logs={logs}
+        settings={settings}
+        plan={plan}
+        activities={activities}
+        whoopData={whoopData}
+        setView={setView}
+      />
+    )
+  }
 
   return (
     <DashboardShell view={view} setView={setView} userName="Will" onSignOut={onSignOut}>
