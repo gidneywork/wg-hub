@@ -102,6 +102,15 @@ export default function Daily({
     scheduleSave()
   }
 
+  const onLiftsChange = (newLifts) => {
+    setForm(prev => {
+      const next = { ...prev, lifts: newLifts }
+      pendingRef.current = { date: dateRef.current, form: next }
+      return next
+    })
+    scheduleSave()
+  }
+
   // ── Date change
   // When the user navigates to a different date, flush any pending save
   // for the OLD date FIRST, then re-populate the form from logs[newDate].
@@ -184,7 +193,12 @@ export default function Daily({
         baseRowIndex={8}
       />
 
-      <LiftsSection />
+      <LiftsSection
+        date={date}
+        allLogs={logs}
+        lifts={form.lifts || []}
+        onLiftsChange={onLiftsChange}
+      />
 
       <FeelingsSection />
 
