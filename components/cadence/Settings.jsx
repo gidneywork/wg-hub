@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { db } from '../../lib/db'
 import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
+import AboutYouSection from './settings/AboutYouSection'
 import StravaCard from './settings/StravaCard'
 import TargetSection from './settings/TargetSection'
 import WhoopUpload from './settings/WhoopUpload'
@@ -32,6 +33,8 @@ export default function Settings({
   logs,
   whoopData,
   activities,
+  userProfile,
+  saveUserProfile,
 }) {
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(settings)))
 
@@ -104,6 +107,8 @@ export default function Settings({
       <PageHeader onReset={handleReset} onSave={handleSave} />
 
       <InfoBanner />
+
+      <AboutYouSection userProfile={userProfile} saveUserProfile={saveUserProfile} />
 
       <StravaCard
         stravaConnection={stravaConnection}

@@ -2470,6 +2470,150 @@ html::-webkit-scrollbar-track { background: transparent; }
   text-align: center;
 }
 
+/* About you section --------------------------------------------------- */
+[data-cadence] .settings-page .ay-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+[data-cadence] .settings-page .ay-toggle:hover .section-label { color: var(--moss); }
+[data-cadence] .settings-page .ay-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+[data-cadence] .settings-page .ay-preview {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+[data-cadence] .settings-page .ay-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--text-quiet);
+  flex-shrink: 0;
+  transition: transform var(--t-ui) var(--ease);
+}
+[data-cadence] .settings-page .ay-chevron--open {
+  transform: rotate(180deg);
+}
+
+[data-cadence] .settings-page .ay-sub-head {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-quiet);
+  padding: var(--space-5) 0 var(--space-3);
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-3);
+}
+[data-cadence] .settings-page .ay-sub-head:first-of-type {
+  border-top: none;
+  margin-top: 0;
+  padding-top: var(--space-2);
+}
+
+[data-cadence] .settings-page .ay-field {
+  margin-bottom: var(--space-3);
+}
+[data-cadence] .settings-page .ay-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+[data-cadence] .settings-page .ay-field input,
+[data-cadence] .settings-page .ay-field select,
+[data-cadence] .settings-page .ay-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow  var(--t-ui) var(--ease);
+}
+[data-cadence] .settings-page .ay-field input:focus,
+[data-cadence] .settings-page .ay-field select:focus,
+[data-cadence] .settings-page .ay-field textarea:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .settings-page .ay-field input::placeholder,
+[data-cadence] .settings-page .ay-field textarea::placeholder {
+  color: var(--text-faint);
+}
+[data-cadence] .settings-page .ay-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A867D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 30px;
+  cursor: pointer;
+}
+[data-theme="dark"] [data-cadence] .settings-page .ay-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236F6B62' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+}
+[data-cadence] .settings-page .ay-field textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+[data-cadence] .settings-page .ay-input-unit {
+  position: relative;
+}
+[data-cadence] .settings-page .ay-input-unit input {
+  padding-right: 72px;
+}
+[data-cadence] .settings-page .ay-unit {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-quiet);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+[data-cadence] .settings-page .ay-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+[data-cadence] .settings-page .ay-field-row--3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+[data-cadence] .settings-page .ay-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  [data-cadence] .settings-page .ay-field-row,
+  [data-cadence] .settings-page .ay-field-row--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* =====================================================================
    DAILY DATA PAGE
    All rules scoped under [data-cadence] .daily-page so bare class

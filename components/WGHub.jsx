@@ -269,9 +269,10 @@ export default function WGHub({ onSignOut }) {
     return () => { unsubActivities(); unsubLogs(); unsubWhoop() }
   }, [])
 
-  const saveLog      = async (date, data) => { await db.saveLog(date, data);     setLogs(p => ({...p, [date]: data})) }
-  const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
-  const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
+  const saveLog            = async (date, data) => { await db.saveLog(date, data);     setLogs(p => ({...p, [date]: data})) }
+  const saveSettings       = async (s)          => { await db.saveSettings(s);         setSettings(s) }
+  const savePlan           = async (p)          => { await db.savePlan(p);             setPlan(p) }
+  const saveUserProfileFn  = async (p)          => { await db.saveUserProfile(p);      setUserProfile(p) }
 
   const handleOnboardingComplete = async (profile) => {
     await db.saveUserProfile(profile)
@@ -333,6 +334,8 @@ export default function WGHub({ onSignOut }) {
           logs={logs}
           whoopData={whoopData}
           activities={activities}
+          userProfile={userProfile}
+          saveUserProfile={saveUserProfileFn}
         />
       ) : view === 'assistant-config' ? (
         <div className="cadence-empty">coming soon</div>
