@@ -303,6 +303,8 @@ export default function WGHub({ onSignOut }) {
           whoopData={whoopData}
           activities={activities}
         />
+      ) : view === 'assistant-config' ? (
+        <div className="cadence-empty">coming soon</div>
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
