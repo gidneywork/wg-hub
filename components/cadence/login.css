@@ -1,0 +1,392 @@
+/* ============================================================
+   CADENCE — LOGIN PAGE
+   Scoped to .signin-page / .signin-shell / .signin-form
+   Fixed-position elements prefixed login- to avoid collision
+   ============================================================ */
+
+/* Local token extensions */
+:root {
+  --clay-glow: rgba(185, 106, 77, 0.15);
+}
+[data-theme="dark"] {
+  --clay-glow: rgba(201, 126, 98, 0.15);
+}
+
+/* ============================================================
+   PAGE SHELL
+   Carries body-level centering and fade-in from mockup
+   ============================================================ */
+.signin-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  overflow: hidden;
+  position: relative;
+  font-size: var(--type-body);
+  line-height: 1.5;
+  font-feature-settings: "ss01", "cv11";
+  opacity: 0;
+  animation: loginFadeIn 600ms var(--ease) forwards;
+}
+
+/* ============================================================
+   AMBIENT GRADIENT
+   Rendered as a sibling div inside .signin-page so it mounts
+   and unmounts with the LoginScreen component.
+   ============================================================ */
+.login-ambient {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(107, 122, 90, 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(74, 95, 110, 0.03), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity var(--t-theme) var(--ease);
+}
+[data-theme="dark"] .login-ambient {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(141, 160, 117, 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(107, 131, 152, 0.04), transparent 70%);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.signin-shell {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   BRAND
+   ============================================================ */
+.signin-page .brand {
+  margin-bottom: 56px;
+}
+
+.signin-page .wordmark {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 64px;
+  letter-spacing: -0.015em; /* opens here, tightens on entrance */
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  color: var(--text);
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1;
+  animation: wordmarkTighten 1200ms var(--ease) 200ms forwards;
+}
+
+.signin-page .wordmark .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--moss);
+  border-radius: 50%;
+  margin-left: 4px;
+  margin-bottom: 8px;
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: center;
+  --pulse-from: rgba(107, 122, 90, 0.35);
+  --pulse-to:   rgba(107, 122, 90, 0);
+  animation:
+    dotLand  400ms var(--ease)  700ms forwards,
+    dotPulse 2500ms var(--ease) 1500ms infinite;
+}
+[data-theme="dark"] .signin-page .wordmark .dot {
+  --pulse-from: rgba(141, 160, 117, 0.45);
+  --pulse-to:   rgba(141, 160, 117, 0);
+}
+
+.signin-page .tagline {
+  margin-top: 14px;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 17px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+.signin-form {
+  text-align: left;
+}
+
+.signin-form .field {
+  margin-bottom: 14px;
+  position: relative;
+}
+
+.signin-form .field .label {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.signin-form .field input {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    background-color var(--t-theme) var(--ease);
+}
+.signin-form .field input:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+.signin-form .field input::placeholder {
+  color: var(--text-faint);
+}
+
+/* Error state — .error toggled on .field */
+.signin-form .field.error input {
+  border-color: var(--clay);
+}
+.signin-form .field.error input:focus {
+  box-shadow: 0 0 0 3px var(--clay-glow);
+}
+.signin-form .field .err-msg {
+  display: none;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--clay-deep);
+  margin-top: 7px;
+}
+[data-theme="dark"] .signin-form .field .err-msg {
+  color: var(--clay);
+}
+.signin-form .field.error .err-msg {
+  display: block;
+}
+
+/* ============================================================
+   PRIMARY BUTTON
+   ============================================================ */
+.signin-page .btn-primary {
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--moss);
+  color: var(--on-moss);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  cursor: pointer;
+  margin-top: 18px;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    transform var(--t-ui) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.signin-page .btn-primary:hover {
+  background: var(--moss-deep);
+}
+[data-theme="dark"] .signin-page .btn-primary:hover {
+  background: var(--moss);
+  filter: brightness(1.1);
+}
+.signin-page .btn-primary:active {
+  transform: scale(0.99);
+}
+.signin-page .btn-primary svg.arrow {
+  width: 12px;
+  height: 12px;
+  opacity: 0.85;
+  transition: transform var(--t-ui) var(--ease);
+}
+.signin-page .btn-primary:hover svg.arrow {
+  transform: translateX(2px);
+}
+
+/* Loading state — .loading toggled on button */
+.signin-page .btn-primary.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+.signin-page .btn-primary.loading svg.arrow {
+  display: none;
+}
+.signin-page .btn-primary.loading::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--on-moss);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+/* ============================================================
+   FORGOT PASSWORD LINK
+   ============================================================ */
+.signin-page .forgot {
+  display: block;
+  margin-top: 28px;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+  text-decoration: none;
+  text-align: center;
+}
+.signin-page .forgot:hover {
+  color: var(--text);
+}
+
+/* ============================================================
+   THEME TOGGLE — fixed top-right
+   ============================================================ */
+.login-theme-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-sticky);
+  transition:
+    background-color var(--t-theme) var(--ease),
+    border-color var(--t-theme) var(--ease),
+    color var(--t-theme) var(--ease);
+}
+.login-theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.login-theme-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+.login-theme-toggle .t-icon {
+  display: none;
+}
+[data-theme="light"] .login-theme-toggle .t-moon {
+  display: block;
+}
+[data-theme="dark"] .login-theme-toggle .t-sun {
+  display: block;
+}
+
+/* ============================================================
+   FOOTER — fixed bottom
+   ============================================================ */
+.login-footer {
+  position: fixed;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  z-index: 1;
+}
+.login-footer .sep {
+  margin: 0 var(--space-2);
+  opacity: 0.5;
+}
+
+/* ============================================================
+   LOADING SPLASH — session-check state (session === undefined)
+   ============================================================ */
+.login-splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+.login-splash-spinner {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--moss);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+/* ============================================================
+   STAGGER RISE SYSTEM
+   ============================================================ */
+.signin-page .r {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: rise var(--t-paint) var(--ease) forwards;
+}
+.signin-page .r-1 { animation-delay: 120ms; }
+.signin-page .r-2 { animation-delay: 280ms; }
+.signin-page .r-3 { animation-delay: 440ms; }
+.signin-page .r-4 { animation-delay: 600ms; }
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+@keyframes loginFadeIn {
+  to { opacity: 1; }
+}
+@keyframes wordmarkTighten {
+  to { letter-spacing: -0.045em; }
+}
+@keyframes dotLand {
+  0%   { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes dotPulse {
+  0%   { box-shadow: 0 0 0 0px  var(--pulse-from); }
+  60%  { box-shadow: 0 0 0 16px var(--pulse-to); }
+  100% { box-shadow: 0 0 0 0px  var(--pulse-to); }
+}
+@keyframes rise {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 480px) {
+  .signin-page .wordmark { font-size: 52px; }
+  .signin-page .tagline  { font-size: 16px; }
+  .signin-page .brand    { margin-bottom: 44px; }
+}
