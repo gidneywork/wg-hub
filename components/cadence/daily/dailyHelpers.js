@@ -109,6 +109,7 @@ export function computeSleepDuration(bedtime, wakeTime) {
   const bedMins  = bh * 60 + bm
   const wakeMins = wh * 60 + wm
   const durMins  = wakeMins >= bedMins ? wakeMins - bedMins : 1440 - bedMins + wakeMins
+  if (durMins === 0) return null
   return { hours: Math.floor(durMins / 60), minutes: durMins % 60 }
 }
 

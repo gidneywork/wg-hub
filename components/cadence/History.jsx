@@ -199,7 +199,7 @@ export default function History({ activities = [], stravaConnection = null }) {
               <textarea
                 className="edit-textarea"
                 value={editDraft.notes}
-                placeholder="Anything worth noting about this session."
+                placeholder="Anything worth noting."
                 rows={3}
                 onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))}
               />
