@@ -715,7 +715,7 @@
   letter-spacing: -0.005em;
 }
 
-/* Add annotation button — non-functional, renders silently */
+/* Add annotation button */
 [data-cadence] .add-annot {
   display: flex;
   align-items: center;
@@ -738,6 +738,132 @@
   color: var(--text);
 }
 [data-cadence] .add-annot svg { width: 12px; height: 12px; }
+
+/* -----------------------------------------------------------------
+   ANNOTATION FORM (inside CadenceDialog body)
+   Scoped to [data-cadence] via the portal backdrop's data-cadence attr.
+   ----------------------------------------------------------------- */
+
+/* Delete button in footerExtra — clay text, no fill, mono uppercase */
+[data-cadence] .btn-annot-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--clay-deep);
+  padding: 6px 0;
+}
+[data-cadence] .btn-annot-delete:hover { color: var(--clay); }
+[data-theme="dark"] [data-cadence] .btn-annot-delete { color: var(--clay); }
+
+/* Form field wrapper */
+[data-cadence] .annot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+[data-cadence] .annot-field:last-child { margin-bottom: 0; }
+
+/* Field label */
+[data-cadence] .annot-field label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+
+/* Text input, date input, textarea — shared chrome */
+[data-cadence] .annot-field-input,
+[data-cadence] .annot-field-textarea {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .annot-field-input:focus,
+[data-cadence] .annot-field-textarea:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-glow);
+}
+[data-cadence] .annot-field-textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Date field pair (start + optional end) */
+[data-cadence] .annot-date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Kind selector — pill row reusing .control-group + .filter-pill */
+[data-cadence] .annot-kind-row {
+  display: flex;
+  gap: 6px;
+}
+[data-cadence] .annot-kind-row .filter-pill {
+  flex: 1;
+  text-align: center;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+[data-cadence] .annot-kind-row .filter-pill.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+[data-theme="dark"] [data-cadence] .annot-kind-row .filter-pill.active {
+  background: var(--moss);
+  color: var(--on-moss);
+  border-color: var(--moss);
+}
+
+/* PB read-only dialog body */
+[data-cadence] .annot-pb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+[data-cadence] .annot-pb-body .pb-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  line-height: 1.2;
+}
+[data-cadence] .annot-pb-body .pb-date {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+[data-cadence] .annot-pb-body .pb-note {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  line-height: 1.45;
+  margin-top: 4px;
+}
 
 /* -----------------------------------------------------------------
    LIFT TABS EMPTY STATE

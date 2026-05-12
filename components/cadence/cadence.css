@@ -3410,7 +3410,14 @@ html::-webkit-scrollbar-track { background: transparent; }
   margin-bottom: 22px;
   line-height: 1.5;
 }
-[data-cadence] .cadence-dialog-actions { display: flex; gap: 8px; }
+[data-cadence] .cadence-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+[data-cadence] .cadence-dialog-actions-left  { display: flex; align-items: center; }
+[data-cadence] .cadence-dialog-actions-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 @keyframes cadenceDialogFade {
   from { opacity: 0 }
   to   { opacity: 1 }
