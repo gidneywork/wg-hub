@@ -109,6 +109,70 @@ const fmtInt = v => v != null ? Math.round(v).toString() : '—'
 const fmtDp1 = v => v != null ? v.toFixed(1) : '—'
 const hasVal = v => v !== '—'
 
+// ─── ANNOTATION DATE FORMAT ("08 MAY 2026") ───────────────────────────────────
+function formatAnnotDate(d) {
+  return new Date(d + 'T00:00:00')
+    .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    .toUpperCase()
+}
+
+// ─── RUNNING PB DETECTOR ─────────────────────────────────────────────────────
+// Scans all historical data for new-longest-run and new-best-week records.
+// Returns annotations sorted newest-first; caller filters to the view range.
+function detectRunningPBs(logs, stravaKmMap) {
+  // Build date → km map across all logs + Strava
+  const allDates = new Set([
+    ...Object.keys(logs),
+    ...Object.keys(stravaKmMap),
+  ])
+  const dailyKm = {}
+  allDates.forEach(d => {
+    const km = getKmForDate(d, logs, stravaKmMap)
+    if (km > 0) dailyKm[d] = km
+  })
+  const sorted = Object.keys(dailyKm).sort()
+
+  // Longest single-run PBs
+  const longestPBs = []
+  let maxRun = 0
+  sorted.forEach(d => {
+    const km = dailyKm[d]
+    if (km > maxRun) {
+      longestPBs.push({
+        date: d,
+        kind: 'pb',
+        title: `Longest run · ${km.toFixed(1)} km`,
+        note: maxRun > 0 ? `Prior best: ${maxRun.toFixed(1)} km.` : 'First recorded long run.',
+      })
+      maxRun = km
+    }
+  })
+
+  // Best-week PBs
+  const weeklyKm = {}
+  sorted.forEach(d => {
+    const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+    weeklyKm[wk] = (weeklyKm[wk] || 0) + dailyKm[d]
+  })
+  const weeksSorted = Object.keys(weeklyKm).sort()
+  const bestWeekPBs = []
+  let maxWeek = 0
+  weeksSorted.forEach(wk => {
+    const km = weeklyKm[wk]
+    if (km > maxWeek) {
+      bestWeekPBs.push({
+        date: wk,
+        kind: 'pb',
+        title: `Best week · ${km.toFixed(1)} km`,
+        note: maxWeek > 0 ? `Prior weekly best: ${maxWeek.toFixed(1)} km.` : 'First weekly distance record.',
+      })
+      maxWeek = km
+    }
+  })
+
+  return [...longestPBs, ...bestWeekPBs].sort((a, b) => b.date.localeCompare(a.date))
+}
+
 // ─── WEEK BUCKETS FOR RUNNING KM ─────────────────────────────────────────────
 function buildWeekBuckets(days, logs, stravaKmMap) {
   const byWeek = {}
@@ -386,6 +450,16 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
   }, [activeTab, runKm, allMetrics, range, settings])
 
+  // ── Annotations for the running tab ─────────────────────────────
+  const annotations = useMemo(() => {
+    if (activeTab !== 'running') return []
+    const allPBs = detectRunningPBs(logs, stravaKmMap)
+    if (!rangeDays) return allPBs  // "all" range — show everything
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - rangeDays)
+    const cutoffStr = cutoff.toISOString().split('T')[0]
+    return allPBs.filter(a => a.date >= cutoffStr)
+  }, [activeTab, logs, stravaKmMap, rangeDays])
+
   const isLift = activeTab === 'squat' || activeTab === 'pullup'
 
   const rangeWindowLabel = useMemo(
@@ -533,24 +607,45 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         </section>
       )}
 
-      {/* Annotations — always visible (wired in Charts: 5) */}
-      <section className="annot-section r r-5">
-        <div className="annot-head">
-          <span className="title">Annotations · this view</span>
-          <span className="meta">Pulled from Cadence + manual notes</span>
-        </div>
-        <div className="annot-list">
-          <div className="annot-empty">
-            <span>Nothing logged yet — PBs detected from runs, other types come later.</span>
+      {/* Annotations — always visible except on lift tabs */}
+      {!isLift && (
+        <section className="annot-section r r-5">
+          <div className="annot-head">
+            <span className="title">Annotations · this view</span>
+            <span className="meta">
+              {activeTab === 'running' && annotations.length > 0
+                ? `${annotations.length} PB${annotations.length !== 1 ? 's' : ''} in this view · auto-detected from runs`
+                : 'Pulled from Cadence + manual notes'
+              }
+            </span>
           </div>
-          <button className="add-annot" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Add annotation
-          </button>
-        </div>
-      </section>
+          <div className="annot-list">
+            {activeTab === 'running' && annotations.length > 0 ? (
+              annotations.map(a => (
+                <div className="annot-row" key={a.date + a.title}>
+                  <div className="date">{formatAnnotDate(a.date)}</div>
+                  <div className={`pip ${a.kind}`} />
+                  <div className="body">
+                    <div className="title">{a.title}</div>
+                    {a.note && <div className="note">{a.note}</div>}
+                  </div>
+                  <div className={`kind ${a.kind}`}>PB</div>
+                </div>
+              ))
+            ) : (
+              <div className="annot-empty">
+                <span>Nothing logged yet — PBs detected from runs, other types come later.</span>
+              </div>
+            )}
+            <button className="add-annot" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Add annotation
+            </button>
+          </div>
+        </section>
+      )}
 
     </div>
   )
