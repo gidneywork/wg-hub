@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import {
   daysWindow,
   startOfWeek,
@@ -310,8 +310,27 @@ function runningHero(logs, stravaKmMap, range) {
   }
 }
 
+// ─── METRIC META — tooltip unit, direction, value formatter ──────────────────
+const METRIC_META = {
+  running:  { unit: 'km',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
+  hrv:      { unit: 'ms',   lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
+  rhr:      { unit: 'bpm',  lowerIsBetter: true,  fmt: v => Math.round(v).toString()                        },
+  weight:   { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
+  sleep:    { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
+  recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
+  strain:   { unit: '',     lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
+  calories: { unit: 'kcal', lowerIsBetter: false, fmt: v => (v >= 0 ? '+' : '') + Math.round(v).toString() },
+}
+const METRIC_META_FALLBACK = { unit: '', lowerIsBetter: false, fmt: v => Math.round(v).toString() }
+
 // ─── CHART SVG ────────────────────────────────────────────────────────────────
-function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [] }) {
+function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [], metricMeta = METRIC_META_FALLBACK }) {
+  // Hooks first — Rules of Hooks require unconditional ordering
+  const [tooltip,     setTooltip    ] = useState(null)
+  const [showTooltip, setShowTooltip] = useState(false)
+  const svgRef    = useRef(null)
+  const leaveTimer = useRef(null)
+
   const hasData = bars.some(b => b.value !== null && isFinite(b.value))
   if (!hasData) {
     return (
@@ -320,6 +339,7 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
       </svg>
     )
   }
+
   const n      = bars.length
   const SLOT_W = (CR - CL) / n
   const BAR_W  = Math.max(2, Math.min(30, SLOT_W * 0.72))
@@ -374,67 +394,136 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
     weekAnnots.get(wk).push(a)
   })
 
+  // Bar hover handlers
+  const handleBarEnter = (bar, prevBar, i) => {
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null }
+    const svg = svgRef.current
+    if (!svg) return
+    const { width, height } = svg.getBoundingClientRect()
+    const scaleX  = width  / SVG_W
+    const scaleY  = height / SVG_H
+    const cx      = barMid(i)
+    const bty     = isBalance && bar.value < 0 ? baselineY : toY(bar.value)
+    const barHt   = isBalance ? Math.abs(toY(bar.value) - baselineY) : baselineY - bty
+    const nearTop = bty < CT + 60
+    const domX    = cx * scaleX
+    const domY    = nearTop ? (bty + barHt) * scaleY + 10 : bty * scaleY
+    const txPct   = cx > 900 ? '-90%' : cx < 150 ? '-10%' : '-50%'
+    const transformStr = nearTop
+      ? `translate(${txPct}, 10px)`
+      : `translate(${txPct}, calc(-100% - 10px))`
+    setTooltip({ domX, domY, transformStr, bar, prevBar })
+    requestAnimationFrame(() => setShowTooltip(true))
+  }
+
+  const handleBarLeave = () => {
+    setShowTooltip(false)
+    leaveTimer.current = setTimeout(() => {
+      setTooltip(null)
+      leaveTimer.current = null
+    }, 110)
+  }
+
+  // Tooltip delta
+  const ttDeltaInfo = (() => {
+    if (!tooltip || tooltip.prevBar?.value == null || tooltip.bar?.value == null) return null
+    const delta    = tooltip.bar.value - tooltip.prevBar.value
+    const isUp     = metricMeta.lowerIsBetter ? delta < 0 : delta > 0
+    const absDelta = Math.abs(delta)
+    return {
+      arrow:    isUp ? '▲' : '▼',
+      color:    isUp ? 'var(--moss)' : 'var(--clay)',
+      fmtDelta: absDelta < 1 ? absDelta.toFixed(1) : String(Math.round(absDelta)),
+    }
+  })()
+
   return (
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
-      {gridLineVals.map((v, i) => (
-        <line key={`g${i}`} className="grid-line" x1={CL} y1={toY(v)} x2={CR} y2={toY(v)} />
-      ))}
-      <line className="baseline" x1={CL} y1={baselineY} x2={CR} y2={baselineY} />
-      {yLabelVals.map((v, i) => (
-        <text key={`y${i}`} className="axis-label y" x={CL - 8} y={toY(v) + 4}>{fmtGridLabel(v)}</text>
-      ))}
-      {bars.map((bar, i) => {
-        if (bar.value === null || !isFinite(bar.value)) return null
-        const v  = bar.value
-        const py = isBalance && v < 0 ? baselineY : toY(v)
-        const ht = isBalance ? Math.abs(toY(v) - baselineY) : baselineY - toY(v)
-        if (ht <= 0) return null
-        return (
-          <rect
-            key={`${animKey}-${i}`}
-            className={`bar${bar.isCurrent ? ' current' : ''}`}
-            x={barX(i)} y={py} width={BAR_W} height={ht}
-            style={{
-              fill: barColor,
-              animationDelay: `${Math.round(200 + i * delay)}ms`,
-              ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
-              ...(bar.smoothPartial ? { opacity: 0.35 } : {}),
-            }}
-          />
-        )
-      })}
-      {visXLabels.map((l, i) => (
-        <text key={`x${i}`} className="axis-label x" x={l.x} y={LABEL_Y}>{l.label}</text>
-      ))}
-      {showTarget && (
-        <>
-          <line className="target-line" x1={CL} y1={targetLineY} x2={CR} y2={targetLineY} />
-          <text className="target-label" x={CR - 4} y={targetLineY - 3}>
-            TARGET {fmtGridLabel(targetValue)}
-          </text>
-        </>
-      )}
-      {prevPathD && <path className="prev-line" d={prevPathD} />}
-      {weekAnnots.size > 0 && bars.map((bar, i) => {
-        if (bar.value === null || !isFinite(bar.value) || !bar.weekKey) return null
-        const wkAnnots = weekAnnots.get(bar.weekKey)
-        if (!wkAnnots) return null
-        const cx  = barMid(i)
-        const bty = toY(bar.value)
-        return wkAnnots.map((a, k) => {
-          const apexY   = bty - 8  - k * 16
-          const stemY1  = bty - 14 - k * 16
-          const triTopY = apexY - 8
-          const triPath = `M ${cx - 6} ${triTopY} L ${cx + 6} ${triTopY} L ${cx} ${apexY} Z`
+    <>
+      <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
+        {gridLineVals.map((v, i) => (
+          <line key={`g${i}`} className="grid-line" x1={CL} y1={toY(v)} x2={CR} y2={toY(v)} />
+        ))}
+        <line className="baseline" x1={CL} y1={baselineY} x2={CR} y2={baselineY} />
+        {yLabelVals.map((v, i) => (
+          <text key={`y${i}`} className="axis-label y" x={CL - 8} y={toY(v) + 4}>{fmtGridLabel(v)}</text>
+        ))}
+        {bars.map((bar, i) => {
+          if (bar.value === null || !isFinite(bar.value)) return null
+          const v  = bar.value
+          const py = isBalance && v < 0 ? baselineY : toY(v)
+          const ht = isBalance ? Math.abs(toY(v) - baselineY) : baselineY - toY(v)
+          if (ht <= 0) return null
           return (
-            <g key={`am-${i}-${k}`} className={`annot annot-marker ${a.kind}`}>
-              <line className="annot-line" x1={cx} y1={stemY1} x2={cx} y2={apexY} />
-              <path d={triPath} />
-            </g>
+            <rect
+              key={`${animKey}-${i}`}
+              className={`bar${bar.isCurrent ? ' current' : ''}`}
+              x={barX(i)} y={py} width={BAR_W} height={ht}
+              style={{
+                fill: barColor,
+                animationDelay: `${Math.round(200 + i * delay)}ms`,
+                ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
+                ...(bar.smoothPartial ? { opacity: 0.35 } : {}),
+              }}
+              onMouseEnter={() => handleBarEnter(bar, bars[i - 1] ?? null, i)}
+              onMouseLeave={handleBarLeave}
+            />
           )
-        })
-      })}
-    </svg>
+        })}
+        {visXLabels.map((l, i) => (
+          <text key={`x${i}`} className="axis-label x" x={l.x} y={LABEL_Y}>{l.label}</text>
+        ))}
+        {showTarget && (
+          <>
+            <line className="target-line" x1={CL} y1={targetLineY} x2={CR} y2={targetLineY} />
+            <text className="target-label" x={CR - 4} y={targetLineY - 3}>
+              TARGET {fmtGridLabel(targetValue)}
+            </text>
+          </>
+        )}
+        {prevPathD && <path className="prev-line" d={prevPathD} />}
+        {weekAnnots.size > 0 && bars.map((bar, i) => {
+          if (bar.value === null || !isFinite(bar.value) || !bar.weekKey) return null
+          const wkAnnots = weekAnnots.get(bar.weekKey)
+          if (!wkAnnots) return null
+          const cx  = barMid(i)
+          const bty = toY(bar.value)
+          return wkAnnots.map((a, k) => {
+            const apexY   = bty - 8  - k * 16
+            const stemY1  = bty - 14 - k * 16
+            const triTopY = apexY - 8
+            const triPath = `M ${cx - 6} ${triTopY} L ${cx + 6} ${triTopY} L ${cx} ${apexY} Z`
+            return (
+              <g key={`am-${i}-${k}`} className={`annot annot-marker ${a.kind}`}>
+                <line className="annot-line" x1={cx} y1={stemY1} x2={cx} y2={apexY} />
+                <path d={triPath} />
+              </g>
+            )
+          })
+        })}
+      </svg>
+      {tooltip && (
+        <div
+          className="chart-tooltip"
+          data-visible={showTooltip ? 'true' : undefined}
+          style={{
+            left:      `${tooltip.domX}px`,
+            top:       `${tooltip.domY}px`,
+            transform: tooltip.transformStr,
+          }}
+        >
+          <div className="tt-value">
+            {metricMeta.fmt(tooltip.bar.value)}
+            {metricMeta.unit && <span className="tt-unit">{metricMeta.unit}</span>}
+          </div>
+          <div className="tt-week">{tooltip.bar.weekLabel}</div>
+          {ttDeltaInfo && (
+            <div className="tt-delta" style={{ color: ttDeltaInfo.color }}>
+              {ttDeltaInfo.arrow} {ttDeltaInfo.fmtDelta}{metricMeta.unit ? ` ${metricMeta.unit}` : ''}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -707,7 +796,8 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return buildChartBars(metric.vals, days)
   }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics])
 
-  const animKey = `${activeTab}-${range}`
+  const animKey   = `${activeTab}-${range}`
+  const metricMeta = METRIC_META[activeTab] ?? METRIC_META_FALLBACK
 
   const smoothWindow = smoothing === '4w' ? 4 : smoothing === '12w' ? 12 : 1
 
@@ -878,6 +968,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               targetValue={compare === 'target' ? tabTarget : null}
               prevBars={compare === 'prev' ? prevChartBars : []}
               annotations={activeTab === 'running' ? annotations : []}
+              metricMeta={metricMeta}
             />
           </div>
 

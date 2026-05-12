@@ -435,7 +435,8 @@
    HOVER TOOLTIP (paper card)
    Absolutely positioned inside .chart-canvas (position: relative).
    pointer-events: none — never captures the hover that triggered it.
-   transform: translateX(-50%) centres it on the bar's mid-x.
+   transform is set inline per-bar (edge-aware); opacity transitions
+   120ms in / 100ms out via data-visible attribute switching.
    ----------------------------------------------------------------- */
 [data-cadence] .chart-tooltip {
   position: absolute;
@@ -446,8 +447,13 @@
   pointer-events: none;
   z-index: var(--z-dropdown);
   white-space: nowrap;
-  transform: translateX(-50%);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  transition: opacity 100ms var(--ease);
+}
+[data-cadence] .chart-tooltip[data-visible="true"] {
+  opacity: 1;
+  transition: opacity 120ms var(--ease);
 }
 [data-cadence] .chart-tooltip .tt-value {
   font-family: var(--display);
