@@ -111,6 +111,8 @@ export function mkEmptyForm() {
     },
     sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '', bedTime: '' },
     nutrition: { calories: '', protein: '', carbs: '' },
+    lifts:     [],
+    feelings:  { mood: null, journal: '' },
   }
 }
 
@@ -126,6 +128,8 @@ export function loadFormFromLog(log, whoop) {
     body:      { ...empty.body,      ...(log.body      || {}) },
     sleep:     { ...empty.sleep,     ...(log.sleep     || {}) },
     nutrition: { ...empty.nutrition, ...(log.nutrition || {}) },
+    lifts:     Array.isArray(log.lifts) ? log.lifts : [],
+    feelings:  { ...empty.feelings,  ...(log.feelings  || {}) },
   }
   if (whoop) {
     const fill = (current, whoopVal, round = true) => {
@@ -295,4 +299,55 @@ export function activitySummary(activities, isoDate) {
     noun:  dayActs.length === 1 ? 'activity' : 'activities',
     km:    null,
   }
+}
+
+// ── Lift PB helpers
+// Epley 1RM estimate. For bodyweight lifts (weight === 0), returns null
+// so callers can fall back to reps-based comparison instead.
+export function epley1RM(weight, reps) {
+  if (weight == null || reps == null) return null
+  const w = parseFloat(weight)
+  const r = parseInt(reps, 10)
+  if (!isFinite(w) || !isFinite(r) || r < 1) return null
+  if (w === 0) return null
+  return w * (1 + r / 30)
+}
+
+// Build a lookup of { exercise → { max1RM, maxReps } } from all log dates
+// except `excludeDate`. Used to detect PBs against historical data.
+export function buildLiftHistory(allLogs, excludeDate) {
+  const history = {}
+  Object.entries(allLogs || {}).forEach(([date, log]) => {
+    if (date === excludeDate) return
+    const lifts = Array.isArray(log?.lifts) ? log.lifts : []
+    lifts.forEach(({ exercise, weight, reps }) => {
+      if (!exercise) return
+      const orm = epley1RM(weight, reps)
+      const r   = parseInt(reps, 10) || 0
+      if (!history[exercise]) history[exercise] = { max1RM: null, maxReps: 0 }
+      if (orm != null && (history[exercise].max1RM == null || orm > history[exercise].max1RM)) {
+        history[exercise].max1RM = orm
+      }
+      if (r > history[exercise].maxReps) history[exercise].maxReps = r
+    })
+  })
+  return history
+}
+
+// Returns true if this lift entry is a personal best vs historical data.
+// For bodyweight (weight === 0): reps-based comparison.
+// For weighted: Epley 1RM comparison.
+export function isLiftPB(lift, history) {
+  const { exercise, weight, reps } = lift
+  if (!exercise) return false
+  const prev = history[exercise]
+  const w = parseFloat(weight)
+  const r = parseInt(reps, 10) || 0
+  if (w === 0 || !isFinite(w)) {
+    // Bodyweight: PB if reps > historical max reps
+    return r > (prev?.maxReps ?? 0)
+  }
+  const orm = epley1RM(w, r)
+  if (orm == null) return false
+  return prev?.max1RM == null || orm > prev.max1RM
 }
