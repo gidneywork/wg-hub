@@ -28,31 +28,86 @@ const TABS = [
 // ─── RANGE DAYS ───────────────────────────────────────────────────────────────
 const RANGE_DAYS = { '1m': 30, '3m': 91, '6m': 182, '1y': 365, 'all': null }
 
-// ─── RANGE LABEL FOR HERO SUBTITLE ───────────────────────────────────────────
-// period-averaged metrics: "{N}M average"
 function rangeLabel(range) {
-  if (range === '1m')  return '1M average'
-  if (range === '3m')  return '3M average'
-  if (range === '6m')  return '6M average'
-  if (range === '1y')  return '1Y average'
+  if (range === '1m') return '1M average'
+  if (range === '3m') return '3M average'
+  if (range === '6m') return '6M average'
+  if (range === '1y') return '1Y average'
   return 'All-time average'
 }
 
-// ─── METRIC CONFIG ────────────────────────────────────────────────────────────
-// subtitle: 'fixed-last30' | 'fixed-latest' | 'ranged-avg'
-// heroType: what unit/label the hero shows
-const METRIC_META = {
-  running:  { eyebrow: 'Running distance · km per week',        subtitle: 'fixed-last30',  unit: 'km',  unitAfter: 'last 30 days' },
-  hrv:      { eyebrow: 'Heart rate variability · ms',           subtitle: 'fixed-latest',  unit: 'ms',  unitAfter: 'latest reading' },
-  rhr:      { eyebrow: 'Resting heart rate · bpm',             subtitle: 'fixed-latest',  unit: 'bpm', unitAfter: 'latest reading' },
-  weight:   { eyebrow: 'Body weight · kg',                     subtitle: 'fixed-latest',  unit: 'kg',  unitAfter: 'latest reading' },
-  sleep:    { eyebrow: 'Sleep score · out of 100',             subtitle: 'ranged-avg',    unit: '/100',unitAfter: null },
-  recovery: { eyebrow: 'Recovery score · out of 100',          subtitle: 'ranged-avg',    unit: '/100',unitAfter: null },
-  strain:   { eyebrow: 'Whoop strain · daily score',           subtitle: 'fixed-latest',  unit: '',    unitAfter: 'latest reading' },
-  calories: { eyebrow: 'Calories balance · kcal per day',      subtitle: 'ranged-avg',    unit: 'kcal',unitAfter: null },
-  squat:    { eyebrow: 'Back squat · personal best',           subtitle: 'fixed-latest',  unit: 'kg',  unitAfter: 'latest reading' },
-  pullup:   { eyebrow: 'Pull-up · personal best',              subtitle: 'fixed-latest',  unit: 'reps',unitAfter: 'latest reading' },
+// ─── TILE DATE FORMAT ─────────────────────────────────────────────────────────
+function fmtTileDate(d) {
+  if (!d) return ''
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
+
+// ─── RANGE WINDOW LABEL ───────────────────────────────────────────────────────
+function fmtRangeWindow(range, days) {
+  if (!days) return 'All data'
+  const end   = new Date()
+  const start = new Date(); start.setDate(start.getDate() - (days - 1))
+  const fmt   = d => d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  return `${fmt(start)} → ${fmt(end)}`
+}
+
+// ─── METRIC BUILDER ───────────────────────────────────────────────────────────
+// accessor(mergedLog, whoopDay, dateStr) → number | null | ''
+function buildMetric(days, priorDays, accessor, logs, whoopData) {
+  const vals = days.map(d => {
+    const merged = mergeWhoopForDate(d, logs[d], whoopData)
+    const raw    = accessor(merged, whoopData[d], d)
+    const v      = raw !== null && raw !== undefined && raw !== ''
+      ? parseFloat(raw) : NaN
+    return { date: d, value: isNaN(v) ? null : v }
+  }).filter(x => x.value !== null)
+
+  const values = vals.map(x => x.value)
+  const latest      = vals.length ? vals[vals.length - 1].value : null
+  const latestDate  = vals.length ? vals[vals.length - 1].date  : null
+  const avg  = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
+  const peak = values.length ? Math.max(...values) : null
+  const low  = values.length ? Math.min(...values) : null
+
+  const subAvg = (n) => {
+    const sv = days.slice(-n).map(d => {
+      const m = mergeWhoopForDate(d, logs[d], whoopData)
+      const r = accessor(m, whoopData[d], d)
+      const v = r !== null && r !== undefined && r !== '' ? parseFloat(r) : NaN
+      return isNaN(v) ? null : v
+    }).filter(v => v !== null)
+    return sv.length ? sv.reduce((a, b) => a + b, 0) / sv.length : null
+  }
+
+  const priorVals = priorDays.map(d => {
+    const m = mergeWhoopForDate(d, logs[d], whoopData)
+    const r = accessor(m, whoopData[d], d)
+    const v = r !== null && r !== undefined && r !== '' ? parseFloat(r) : NaN
+    return isNaN(v) ? null : v
+  }).filter(v => v !== null)
+  const priorAvg = priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null
+
+  return { latest, latestDate, avg, peak, low, avg7: subAvg(7), avg30: subAvg(30), priorAvg, count: values.length, vals }
+}
+
+// ─── DELTA HELPER ─────────────────────────────────────────────────────────────
+function calcDelta(current, prior, { lowerIsBetter = false, mode = 'pct' } = {}) {
+  if (current == null || prior == null) return null
+  if (mode === 'pct') {
+    if (prior === 0) return null
+    const pct = ((current - prior) / prior) * 100
+    const dir = lowerIsBetter ? (pct <= 0 ? 'up' : 'down') : (pct >= 0 ? 'up' : 'down')
+    return { label: `${Math.abs(pct).toFixed(0)}%`, dir }
+  }
+  // abs mode — no colour direction
+  const diff = current - prior
+  return { label: `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}`, dir: null }
+}
+
+// ─── FORMAT VALUE ─────────────────────────────────────────────────────────────
+const fmtInt = v => v != null ? Math.round(v).toString() : '—'
+const fmtDp1 = v => v != null ? v.toFixed(1) : '—'
+const hasVal = v => v !== '—'
 
 // ─── WEEK BUCKETS FOR RUNNING KM ─────────────────────────────────────────────
 function buildWeekBuckets(days, logs, stravaKmMap) {
@@ -65,108 +120,276 @@ function buildWeekBuckets(days, logs, stravaKmMap) {
   return byWeek
 }
 
-// ─── RUNNING KM HERO NUMBERS ─────────────────────────────────────────────────
+// ─── RUNNING HERO DATA ────────────────────────────────────────────────────────
 function runningHero(logs, stravaKmMap, range) {
-  const n = RANGE_DAYS[range] ?? 730
+  const n    = RANGE_DAYS[range] ?? 730
   const days = daysWindow(n)
 
-  // last-30 cumulative
-  const last30Days = daysWindow(30)
-  const last30km   = last30Days.reduce((s, d) => s + getKmForDate(d, logs, stravaKmMap), 0)
+  const last30km = daysWindow(30).reduce((s, d) => s + getKmForDate(d, logs, stravaKmMap), 0)
 
-  // weekly stats across range
   const byWeek   = buildWeekBuckets(days, logs, stravaKmMap)
   const weekVals = Object.values(byWeek)
-  const bestWeekKm = weekVals.length ? Math.max(...weekVals) : 0
-  const bestWeekKey = weekVals.length
-    ? Object.keys(byWeek).find(k => byWeek[k] === bestWeekKm) || ''
-    : ''
-  const avgWeekKm = weekVals.length ? mean(weekVals) : null
+  const bestWeekKm  = weekVals.length ? Math.max(...weekVals) : 0
+  const bestWeekKey = weekVals.length ? Object.keys(byWeek).find(k => byWeek[k] === bestWeekKm) || '' : ''
+  const avgWeekKm   = weekVals.length ? mean(weekVals) : null
 
-  // longest run in range
   let longestKm = 0, longestDate = ''
   days.forEach(d => {
     const km = getKmForDate(d, logs, stravaKmMap)
     if (km > longestKm) { longestKm = km; longestDate = d }
   })
-
-  // total in range
   const totalKm = days.reduce((s, d) => s + getKmForDate(d, logs, stravaKmMap), 0)
 
-  // delta vs prior period
-  const prevDays = daysWindow(n, (() => { const e = new Date(); e.setDate(e.getDate() - n); return e })())
-  const prevLast30 = prevDays.slice(-30).reduce((s, d) => s + getKmForDate(d, logs, stravaKmMap), 0)
-  let delta = null, deltaDir = null
-  if (prevLast30 > 0) {
-    const pct = ((last30km - prevLast30) / prevLast30) * 100
-    delta    = Math.abs(pct).toFixed(0) + '%'
-    deltaDir = pct >= 0 ? 'up' : 'down'
-  }
+  const priorEnd = new Date(); priorEnd.setDate(priorEnd.getDate() - n)
+  const prevLast30 = daysWindow(30, priorEnd).reduce((s, d) => s + getKmForDate(d, logs, stravaKmMap), 0)
 
-  // best week label
-  const bestWeekLabel = bestWeekKey
-    ? new Date(bestWeekKey + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    : ''
-
-  // longest run label
-  const longestLabel = longestDate
-    ? new Date(longestDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    : ''
+  const delta = prevLast30 > 0
+    ? calcDelta(last30km, prevLast30)
+    : null
 
   return {
     hero: last30km > 0 ? last30km.toFixed(1) : '—',
     delta,
-    deltaDir,
     prevLabel: prevLast30 > 0 ? `vs prev 30 days · ${prevLast30.toFixed(0)} km` : 'vs prev 30 days',
-    bestWeekKm:   bestWeekKm  > 0 ? bestWeekKm.toFixed(1)  : '—',
-    bestWeekLabel,
-    avgWeekKm:    avgWeekKm != null ? avgWeekKm.toFixed(1) : '—',
-    avgWeekCount: weekVals.length,
-    longestKm:    longestKm  > 0 ? longestKm.toFixed(1)   : '—',
-    longestLabel,
-    totalKm:      totalKm    > 0 ? totalKm.toFixed(0)     : '—',
-    rangeWeeks:   weekVals.length,
+    bestWeekKm:    bestWeekKm  > 0 ? bestWeekKm.toFixed(1)  : '—',
+    bestWeekLabel: bestWeekKey ? new Date(bestWeekKey + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '',
+    avgWeekKm:     avgWeekKm != null ? avgWeekKm.toFixed(1) : '—',
+    avgWeekCount:  weekVals.length,
+    longestKm:     longestKm  > 0 ? longestKm.toFixed(1)   : '—',
+    longestLabel:  longestDate ? new Date(longestDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '',
+    totalKm:       totalKm    > 0 ? totalKm.toFixed(0)     : '—',
+    rangeWeeks:    weekVals.length,
   }
 }
 
-// ─── FORMAT HELPERS ──────────────────────────────────────────────────────────
-function fmtRange(range, days) {
-  if (!days) return 'All data'
-  const end   = new Date()
-  const start = new Date(); start.setDate(start.getDate() - (days - 1))
-  const fmt   = d => d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-  return `${fmt(start)} → ${fmt(end)}`
+// ─── STAT TILE ────────────────────────────────────────────────────────────────
+function StatTile({ label, val, unit, ctx }) {
+  return (
+    <div className="stat-tile">
+      <div className="label">{label}</div>
+      <div className="value">
+        {val}
+        {hasVal(String(val)) && unit ? <span className="unit">{unit}</span> : null}
+      </div>
+      <div className="ctx">{ctx}</div>
+    </div>
+  )
 }
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {} }) {
-  const [activeTab,  setActiveTab ] = useState('running')
-  const [range,      setRange     ] = useState('6m')
-  const [compare,    setCompare   ] = useState('target')
-  const [smoothing,  setSmoothing ] = useState('raw')
+  const [activeTab, setActiveTab] = useState('running')
+  const [range,     setRange    ] = useState('6m')
+  const [compare,   setCompare  ] = useState('target')
+  const [smoothing, setSmoothing] = useState('raw')
 
   const stravaKmMap = useMemo(() => kmByDateMap(activities), [activities])
   const rangeDays   = RANGE_DAYS[range]
 
-  // ── Running km data ──────────────────────────────────────────────
   const runKm = useMemo(
     () => runningHero(logs, stravaKmMap, range),
     [logs, stravaKmMap, range]
   )
 
+  // ── All metric data ──────────────────────────────────────────────
+  const allMetrics = useMemo(() => {
+    const n    = rangeDays ?? 730
+    const days = daysWindow(n)
+    const priorEnd = new Date(); priorEnd.setDate(priorEnd.getDate() - n)
+    const priorDays = daysWindow(n, priorEnd)
+    const bm = (acc) => buildMetric(days, priorDays, acc, logs, whoopData)
+
+    return {
+      hrv:      bm((m)      => m?.body?.hrv),
+      rhr:      bm((m)      => m?.body?.rhr),
+      weight:   bm((m)      => m?.body?.weight),
+      sleep:    bm((m)      => m?.sleep?.sleepScore),
+      recovery: bm((m)      => m?.sleep?.recoveryScore),
+      strain:   bm((_, w)   => w?.day_strain),
+      hoursSlept: bm((m)    => m?.sleep?.hoursSlept),
+      calsIn:   bm((_, __, d) => {
+        const v = logs[d]?.nutrition?.calories
+        return v !== '' && v != null ? parseFloat(v) : null
+      }),
+      calsBurned: bm((_, w) => w?.energy_burned ?? null),
+      calsBalance: bm((_, w, d) => {
+        const intake  = logs[d]?.nutrition?.calories
+        if (intake === '' || intake == null) return null
+        const burned  = w?.energy_burned
+        if (burned == null) return null
+        return parseFloat(intake) - burned
+      }),
+    }
+  }, [logs, whoopData, rangeDays])
+
+  // ── Hero config driven by activeTab ─────────────────────────────
+  const heroConfig = useMemo(() => {
+    const wtTarget = settings?.weightTarget?.value
+
+    if (activeTab === 'running') {
+      return {
+        eyebrow: 'Running distance · km per week',
+        heroStr: runKm.hero,
+        unitStr: 'km · last 30 days',
+        delta:   runKm.delta,
+        metaStr: runKm.prevLabel,
+        tiles: [
+          { label: 'Best week',     val: runKm.bestWeekKm,  unit: 'km',  ctx: runKm.bestWeekLabel ? `Week of ${runKm.bestWeekLabel}` : 'No data' },
+          { label: 'Average week',  val: runKm.avgWeekKm,   unit: 'km',  ctx: `Across ${runKm.avgWeekCount} week${runKm.avgWeekCount !== 1 ? 's' : ''}` },
+          { label: 'Longest run',   val: runKm.longestKm,   unit: 'km',  ctx: runKm.longestLabel || 'No data' },
+          { label: 'Total in view', val: runKm.totalKm,     unit: 'km',  ctx: `${runKm.rangeWeeks} week${runKm.rangeWeeks !== 1 ? 's' : ''} of data` },
+        ],
+      }
+    }
+
+    if (activeTab === 'hrv') {
+      const m = allMetrics.hrv
+      const d = calcDelta(m.latest, m.priorAvg)
+      return {
+        eyebrow: 'Heart rate variability · ms',
+        heroStr: fmtInt(m.latest),
+        unitStr: 'ms · latest reading',
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtInt(m.priorAvg)} ms` : 'vs prior period',
+        tiles: [
+          { label: 'Latest',       val: fmtInt(m.latest), unit: 'ms',  ctx: m.latestDate ? fmtTileDate(m.latestDate) : 'No data' },
+          { label: '7-day avg',    val: fmtInt(m.avg7),   unit: 'ms',  ctx: 'Rolling average' },
+          { label: '30-day avg',   val: fmtInt(m.avg30),  unit: 'ms',  ctx: 'Rolling average' },
+          { label: 'Peak in view', val: fmtInt(m.peak),   unit: 'ms',  ctx: 'Highest recorded' },
+        ],
+      }
+    }
+
+    if (activeTab === 'rhr') {
+      const m = allMetrics.rhr
+      const d = calcDelta(m.latest, m.priorAvg, { lowerIsBetter: true })
+      return {
+        eyebrow: 'Resting heart rate · bpm',
+        heroStr: fmtInt(m.latest),
+        unitStr: 'bpm · latest reading',
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtInt(m.priorAvg)} bpm` : 'vs prior period',
+        tiles: [
+          { label: 'Latest',        val: fmtInt(m.latest), unit: 'bpm', ctx: m.latestDate ? fmtTileDate(m.latestDate) : 'No data' },
+          { label: '7-day avg',     val: fmtInt(m.avg7),   unit: 'bpm', ctx: 'Rolling average' },
+          { label: '30-day avg',    val: fmtInt(m.avg30),  unit: 'bpm', ctx: 'Rolling average' },
+          { label: 'Lowest in view',val: fmtInt(m.low),    unit: 'bpm', ctx: 'Best recorded' },
+        ],
+      }
+    }
+
+    if (activeTab === 'weight') {
+      const m = allMetrics.weight
+      // Delta: absolute kg change (latest vs prior period average)
+      const d = m.latest != null && m.priorAvg != null
+        ? calcDelta(m.latest, m.priorAvg, { mode: 'abs' })
+        : null
+      const tgt = wtTarget != null ? `${parseFloat(wtTarget).toFixed(1)}` : '—'
+      return {
+        eyebrow: 'Body weight · kg',
+        heroStr: fmtDp1(m.latest),
+        unitStr: 'kg · latest reading',
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtDp1(m.priorAvg)} kg` : 'vs prior period',
+        tiles: [
+          { label: 'Latest',         val: fmtDp1(m.latest), unit: 'kg', ctx: m.latestDate ? fmtTileDate(m.latestDate) : 'No data' },
+          { label: 'Target',         val: tgt,               unit: tgt !== '—' ? 'kg' : '', ctx: 'Your goal' },
+          { label: 'Highest in view',val: fmtDp1(m.peak),   unit: 'kg', ctx: 'In this range' },
+          { label: 'Lowest in view', val: fmtDp1(m.low),    unit: 'kg', ctx: 'In this range' },
+        ],
+      }
+    }
+
+    if (activeTab === 'sleep') {
+      const m  = allMetrics.sleep
+      const mh = allMetrics.hoursSlept
+      const d  = calcDelta(m.avg, m.priorAvg)
+      return {
+        eyebrow: 'Sleep score · out of 100',
+        heroStr: fmtInt(m.avg),
+        unitStr: `/100 · ${rangeLabel(range)}`,
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtInt(m.priorAvg)}/100` : 'vs prior period',
+        tiles: [
+          { label: 'Average',     val: fmtInt(m.avg),    unit: '/100', ctx: `Across ${m.count} night${m.count !== 1 ? 's' : ''}` },
+          { label: 'Best night',  val: fmtInt(m.peak),   unit: '/100', ctx: 'Highest score' },
+          { label: 'Lowest night',val: fmtInt(m.low),    unit: '/100', ctx: 'Lowest score' },
+          { label: 'Avg hours',   val: fmtDp1(mh.avg),   unit: 'h',    ctx: 'Per night' },
+        ],
+      }
+    }
+
+    if (activeTab === 'recovery') {
+      const m = allMetrics.recovery
+      const d = calcDelta(m.avg, m.priorAvg)
+      const greenDays = m.vals.filter(x => x.value >= 70).length
+      return {
+        eyebrow: 'Recovery score · out of 100',
+        heroStr: fmtInt(m.avg),
+        unitStr: `/100 · ${rangeLabel(range)}`,
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtInt(m.priorAvg)}/100` : 'vs prior period',
+        tiles: [
+          { label: 'Average',    val: fmtInt(m.avg),  unit: '/100', ctx: `Across ${m.count} day${m.count !== 1 ? 's' : ''}` },
+          { label: 'Peak day',   val: fmtInt(m.peak), unit: '/100', ctx: 'Best score' },
+          { label: 'Lowest day', val: fmtInt(m.low),  unit: '/100', ctx: 'Lowest score' },
+          { label: 'Days ≥ 70',  val: m.count > 0 ? greenDays.toString() : '—', unit: '', ctx: 'Green recovery days' },
+        ],
+      }
+    }
+
+    if (activeTab === 'strain') {
+      const m = allMetrics.strain
+      const d = calcDelta(m.latest, m.priorAvg)
+      return {
+        eyebrow: 'Whoop strain · daily score',
+        heroStr: fmtDp1(m.latest),
+        unitStr: '· latest reading',
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtDp1(m.priorAvg)}` : 'vs prior period',
+        tiles: [
+          { label: 'Latest',       val: fmtDp1(m.latest), unit: '', ctx: m.latestDate ? fmtTileDate(m.latestDate) : 'No data' },
+          { label: '7-day avg',    val: fmtDp1(m.avg7),   unit: '', ctx: 'Rolling average' },
+          { label: '30-day avg',   val: fmtDp1(m.avg30),  unit: '', ctx: 'Rolling average' },
+          { label: 'Peak in view', val: fmtDp1(m.peak),   unit: '', ctx: 'Highest in range' },
+        ],
+      }
+    }
+
+    if (activeTab === 'calories') {
+      const mb = allMetrics.calsBalance
+      const mi = allMetrics.calsIn
+      const mx = allMetrics.calsBurned
+      const d  = mb.avg != null && mb.priorAvg != null
+        ? calcDelta(mb.avg, Math.abs(mb.priorAvg), { mode: 'abs' })
+        : null
+      const surplusDays = mb.vals.filter(x => x.value > 0).length
+      const avgBalStr = mb.avg != null
+        ? `${mb.avg >= 0 ? '+' : ''}${Math.round(mb.avg)}`
+        : '—'
+      return {
+        eyebrow: 'Calories balance · kcal per day',
+        heroStr: avgBalStr,
+        unitStr: `kcal · ${rangeLabel(range)}`,
+        delta:   d,
+        metaStr: mb.count > 0 ? `Across ${mb.count} logged days` : 'No data — log calories + connect Whoop',
+        tiles: [
+          { label: 'Avg balance', val: avgBalStr,               unit: 'kcal', ctx: 'Intake minus burned' },
+          { label: 'Avg intake',  val: fmtInt(mi.avg),          unit: 'kcal', ctx: `${mi.count} logged days` },
+          { label: 'Avg burned',  val: fmtInt(mx.avg),          unit: 'kcal', ctx: 'From Whoop' },
+          { label: 'Surplus days',val: mb.count > 0 ? surplusDays.toString() : '—', unit: '', ctx: 'Days in calorie surplus' },
+        ],
+      }
+    }
+
+    // Fallback (lift tabs handled separately)
+    return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
+  }, [activeTab, runKm, allMetrics, range, settings])
+
   const isLift = activeTab === 'squat' || activeTab === 'pullup'
-  const meta   = METRIC_META[activeTab]
 
-  // ── Hero subtitle text ───────────────────────────────────────────
-  function heroSubtitle() {
-    if (meta.subtitle === 'fixed-last30')  return 'last 30 days'
-    if (meta.subtitle === 'fixed-latest')  return 'latest reading'
-    return rangeLabel(range)
-  }
-
-  // ── Range window label for page head ────────────────────────────
   const rangeWindowLabel = useMemo(
-    () => fmtRange(range, rangeDays),
+    () => fmtRangeWindow(range, rangeDays),
     [range, rangeDays]
   )
 
@@ -209,42 +432,28 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
           <div className="chart-head">
             <div className="left">
-              <div className="eyebrow">{meta.eyebrow}</div>
-
-              {/* Hero number — Running km wired; others show dash */}
+              <div className="eyebrow">{heroConfig.eyebrow}</div>
               <div className="hero-num">
-                {activeTab === 'running' ? (
-                  <>
-                    {runKm.hero}
-                    <span className="unit">
-                      km · {heroSubtitle()}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    —
-                    <span className="unit">{meta.unit} · {heroSubtitle()}</span>
-                  </>
-                )}
+                {heroConfig.heroStr}
+                <span className="unit">{heroConfig.unitStr}</span>
               </div>
-
-              {/* Hero meta / delta */}
               <div className="hero-meta">
-                {activeTab === 'running' && runKm.delta ? (
+                {heroConfig.delta ? (
                   <>
-                    <span className={`delta ${runKm.deltaDir}`}>
-                      {runKm.deltaDir === 'up' ? '▲' : '▼'} {runKm.delta}
+                    <span className={`delta${heroConfig.delta.dir ? ` ${heroConfig.delta.dir}` : ''}`}>
+                      {heroConfig.delta.dir === 'up'   ? '▲ ' : ''}
+                      {heroConfig.delta.dir === 'down'  ? '▼ ' : ''}
+                      {heroConfig.delta.label}
                     </span>
-                    <span>{runKm.prevLabel}</span>
+                    <span>{heroConfig.metaStr}</span>
                   </>
                 ) : (
-                  <span>No data yet</span>
+                  <span>{heroConfig.metaStr}</span>
                 )}
               </div>
             </div>
 
             <div className="right">
-              {/* Range control */}
               <div className="control-group">
                 <span className="gl">Range</span>
                 {['1m','3m','6m','1y','all'].map(r => (
@@ -257,14 +466,12 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-
-              {/* Compare control */}
               <div className="control-group">
                 <span className="gl">Compare</span>
                 {[
-                  { val: 'off',    label: 'Off'       },
-                  { val: 'target', label: 'vs Target'  },
-                  { val: 'prev',   label: 'vs Prev'    },
+                  { val: 'off',    label: 'Off'      },
+                  { val: 'target', label: 'vs Target' },
+                  { val: 'prev',   label: 'vs Prev'   },
                 ].map(c => (
                   <button
                     key={c.val}
@@ -293,9 +500,9 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               <div className="control-group">
                 <span className="gl">Smooth</span>
                 {[
-                  { val: 'raw', label: 'Raw'      },
-                  { val: '4w',  label: '4-wk avg' },
-                  { val: '12w', label: '12-wk avg'},
+                  { val: 'raw', label: 'Raw'       },
+                  { val: '4w',  label: '4-wk avg'  },
+                  { val: '12w', label: '12-wk avg' },
                 ].map(s => (
                   <button
                     key={s.val}
@@ -317,54 +524,12 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         </section>
       )}
 
-      {/* Stat tiles — Running km wired; lift tabs get no tiles */}
+      {/* Stat tiles */}
       {!isLift && (
         <section className="stats-grid r r-4">
-          {activeTab === 'running' ? (
-            <>
-              <div className="stat-tile">
-                <div className="label">Best week</div>
-                <div className="value">
-                  {runKm.bestWeekKm}
-                  {runKm.bestWeekKm !== '—' && <span className="unit">km</span>}
-                </div>
-                <div className="ctx">{runKm.bestWeekLabel ? `Week of ${runKm.bestWeekLabel}` : 'No data'}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="label">Average week</div>
-                <div className="value">
-                  {runKm.avgWeekKm}
-                  {runKm.avgWeekKm !== '—' && <span className="unit">km</span>}
-                </div>
-                <div className="ctx">Across {runKm.avgWeekCount} week{runKm.avgWeekCount !== 1 ? 's' : ''}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="label">Longest run</div>
-                <div className="value">
-                  {runKm.longestKm}
-                  {runKm.longestKm !== '—' && <span className="unit">km</span>}
-                </div>
-                <div className="ctx">{runKm.longestLabel || 'No data'}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="label">Total in view</div>
-                <div className="value">
-                  {runKm.totalKm}
-                  {runKm.totalKm !== '—' && <span className="unit">km</span>}
-                </div>
-                <div className="ctx">{runKm.rangeWeeks} week{runKm.rangeWeeks !== 1 ? 's' : ''} of data</div>
-              </div>
-            </>
-          ) : (
-            // Other tabs: stub tiles
-            ['Best', 'Average', 'Peak', 'Total'].map(label => (
-              <div className="stat-tile" key={label}>
-                <div className="label">{label}</div>
-                <div className="value">—</div>
-                <div className="ctx">No data yet</div>
-              </div>
-            ))
-          )}
+          {heroConfig.tiles.map(tile => (
+            <StatTile key={tile.label} {...tile} />
+          ))}
         </section>
       )}
 
