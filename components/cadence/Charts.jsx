@@ -106,14 +106,14 @@ function buildChartBars(metricVals, allDays) {
   const byWeek    = {}
   const weekOrder = []
   allDays.forEach(d => {
-    const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+    const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
     if (!byWeek[wk]) { byWeek[wk] = []; weekOrder.push(wk) }
   })
   ;(metricVals || []).forEach(({ date, value }) => {
-    const wk = startOfWeek(new Date(date + 'T00:00:00')).toISOString().split('T')[0]
+    const wk = localIso(startOfWeek(new Date(date + 'T00:00:00')))
     if (byWeek[wk]) byWeek[wk].push(value)
   })
-  const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+  const currentWk = localIso(startOfWeek(new Date()))
   return weekOrder.map(wk => {
     const vals  = byWeek[wk]
     const value = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
@@ -249,7 +249,7 @@ function detectRunningPBs(logs, stravaKmMap) {
   // Best-week PBs
   const weeklyKm = {}
   sorted.forEach(d => {
-    const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+    const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
     weeklyKm[wk] = (weeklyKm[wk] || 0) + dailyKm[d]
   })
   const weeksSorted = Object.keys(weeklyKm).sort()
@@ -275,7 +275,7 @@ function detectRunningPBs(logs, stravaKmMap) {
 function buildWeekBuckets(days, logs, stravaKmMap) {
   const byWeek = {}
   days.forEach(d => {
-    const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+    const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
     const km = getKmForDate(d, logs, stravaKmMap)
     byWeek[wk] = (byWeek[wk] || 0) + km
   })
@@ -405,7 +405,7 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
   // Annotation markers — map annotation dates to their week bucket
   const weekAnnots = new Map()
   annotations.forEach(a => {
-    const wk = startOfWeek(new Date(a.date + 'T00:00:00')).toISOString().split('T')[0]
+    const wk = localIso(startOfWeek(new Date(a.date + 'T00:00:00')))
     if (!weekAnnots.has(wk)) weekAnnots.set(wk, [])
     weekAnnots.get(wk).push(a)
   })
@@ -635,13 +635,13 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const weekOrder = []
 
     days.forEach(d => {
-      const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+      const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
       if (!byWeek[wk]) { byWeek[wk] = null; weekOrder.push(wk) }
     })
 
     Object.entries(logs).forEach(([date, log]) => {
       if (!daySet.has(date)) return
-      const wk = startOfWeek(new Date(date + 'T00:00:00')).toISOString().split('T')[0]
+      const wk = localIso(startOfWeek(new Date(date + 'T00:00:00')))
       if (!(wk in byWeek)) return
       ;(Array.isArray(log?.lifts) ? log.lifts : []).filter(matchFn).forEach(lift => {
         const w   = parseFloat(lift.weight)
@@ -652,7 +652,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       })
     })
 
-    const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+    const currentWk = localIso(startOfWeek(new Date()))
     const bars = weekOrder.map(wk => ({
       weekKey:   wk,
       weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),
@@ -886,7 +886,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     if (activeTab === 'running') {
       const byWeek    = buildWeekBuckets(days, logs, stravaKmMap)
       const weekOrder = Object.keys(byWeek).sort()
-      const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+      const currentWk = localIso(startOfWeek(new Date()))
       return weekOrder.map(wk => ({
         weekKey:   wk,
         weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),

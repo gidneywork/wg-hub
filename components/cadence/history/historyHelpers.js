@@ -425,7 +425,7 @@ export function groupByWeek(activities) {
   ;(activities || []).forEach(a => {
     if (!a?.start_date) return
     const ws = startOfWeek(new Date(a.start_date))
-    const key = ws.toISOString().split('T')[0]
+    const key = localIso(ws)
     if (!buckets.has(key)) buckets.set(key, { key, weekStart: ws, activities: [] })
     buckets.get(key).activities.push(a)
   })
