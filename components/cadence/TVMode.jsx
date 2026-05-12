@@ -6,6 +6,8 @@ import {
   mergeWhoopForDate,
   sparklinePath,
   formatHoursColon,
+  kmByDateMap,
+  getKmForDate,
 } from './helpers'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -17,6 +19,53 @@ const DAYS_LABEL = {
   '6M':  'avg · 6 months',
   '1Y':  'avg · last 12 months',
   'YTD': 'avg · year to date',
+}
+
+const KM_HEAD = {
+  '7D':  'Km run · last 7 days',
+  '30D': 'Km run · last 30 days',
+  '6M':  'Km run · last 6 months',
+  '1Y':  'Km run · last 12 months',
+  'YTD': 'Km run · year to date',
+}
+
+// Deterministic context sentence for the km hero panel.
+// Dry, factual, British English. Sentence case. No exclamation marks.
+function kmContext(km, sessionCount, rangeKey) {
+  const sessions = `${sessionCount} session${sessionCount !== 1 ? 's' : ''}`
+  if (km === 0) {
+    const empty = {
+      '7D':  'No runs logged this week.',
+      '30D': 'No runs this month.',
+      '6M':  'No runs in the last 6 months.',
+      '1Y':  'No runs in the last year.',
+      'YTD': 'No runs logged this year.',
+    }
+    return empty[rangeKey] || 'No runs logged.'
+  }
+  const now = new Date()
+  if (rangeKey === '7D') {
+    // Mon=1 … Sat=6, Sun=7 (re-mapped so Sunday isn't 0)
+    const dow = now.getDay() === 0 ? 7 : now.getDay()
+    if (dow < 7) {
+      const projected = Math.round((km / dow) * 7)
+      return `On pace for ${projected} km by Sunday — ${sessions} logged.`
+    }
+    return `${km.toFixed(1)} km this week — ${sessions}.`
+  }
+  if (rangeKey === '30D') {
+    return `${Math.round(km)} km this month across ${sessions}.`
+  }
+  if (rangeKey === '6M') {
+    return `${Math.round(km)} km over 6 months — ${Math.round(km / 6)} km per month average.`
+  }
+  if (rangeKey === '1Y') {
+    return `${Math.round(km)} km this year across ${sessions}.`
+  }
+  // YTD
+  const dayOfYear = Math.ceil((now - new Date(now.getFullYear(), 0, 1)) / 86400000)
+  const projected = Math.round((km / dayOfYear) * 365)
+  return `${Math.round(km)} km year to date — on pace for ${projected} km by year end.`
 }
 
 // ─── Period helpers ───────────────────────────────────────────────────────────
@@ -351,7 +400,18 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
   })()
 
-  // ── Bottom grid data — wired in TV: 4–6 ─────────────────────────────────────
+  // ── Km hero data ─────────────────────────────────────────────────────────────
+  const stravaKmMap = useMemo(() => kmByDateMap(activities), [activities])
+
+  const { periodKm, runCount } = useMemo(() => {
+    const periodKm  = days.reduce((sum, d) => sum + getKmForDate(d, logs, stravaKmMap), 0)
+    const runCount  = (activities || []).filter(a => {
+      const type = a.custom_type || a.strava_type
+      const date = (a.start_date || '').split('T')[0]
+      return type === 'run' && days.includes(date)
+    }).length
+    return { periodKm, runCount }
+  }, [days, logs, activities, stravaKmMap])
 
   const periodLabel = DAYS_LABEL[range]
 
@@ -446,8 +506,32 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
           />
         </section>
 
-        {/* Bottom grid — wired in TV: 4–6 */}
-        <section className="bottom-grid" />
+        <section className="bottom-grid">
+
+          {/* Panel 1 — Km hero */}
+          <div className="panel r r-9">
+            <div className="head cycleable">{KM_HEAD[range]}</div>
+            <div className="sub">running · all surfaces</div>
+            <div className="km-hero">
+              <div className="num cycleable">
+                {periodKm.toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              </div>
+              <div className="unit-line cycleable">
+                kilometres · {runCount} session{runCount !== 1 ? 's' : ''}
+              </div>
+              <div className="ctx cycleable">
+                {kmContext(periodKm, runCount, range)}
+              </div>
+            </div>
+          </div>
+
+          {/* Panel 2 — Nutrition (TV: 5) */}
+          <div className="panel r r-9" />
+
+          {/* Panel 3 — Training (TV: 6) */}
+          <div className="panel r r-10" />
+
+        </section>
 
       </div>
 
