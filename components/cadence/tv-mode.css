@@ -1,0 +1,703 @@
+/* =====================================================================
+   CADENCE — TV MODE STYLES
+   Scoped to .tv-page / .tv-shell — bypasses [data-cadence] shell entirely.
+   Ported from design/mockups/cadence-tv-mode-v4.html.
+
+   All canonical tokens come from design/cadence-tokens.css (loaded
+   globally by app/layout.js). This file adds TV-specific aliases only.
+   ===================================================================== */
+
+/* -----------------------------------------------------------------
+   TV-MODE LOCAL TOKEN EXTENSIONS
+
+   --ambient-1 / --ambient-2: radial gradient fills for the page
+   background overlay. Mockup-specific; not in the canonical token set.
+
+   --pill-primary-border: aliases the raw rgba used in the mockup for
+   .training-pill.primary on dark backgrounds. Same pattern as Session 3's
+   source-pill borders (--pill-moss-border-dark etc.) in cadence.css —
+   raw rgba never ships directly in a rule.
+   ----------------------------------------------------------------- */
+:root {
+  --ambient-1:           rgba(107, 122, 90, 0.05);
+  --ambient-2:           rgba(74, 95, 110, 0.03);
+  --pill-primary-border: var(--moss);
+}
+[data-theme="dark"] {
+  --ambient-1:           rgba(141, 160, 117, 0.04);
+  --ambient-2:           rgba(107, 131, 152, 0.03);
+  --pill-primary-border: rgba(141, 160, 117, 0.35);
+}
+
+/* -----------------------------------------------------------------
+   PAGE WRAPPER  (.tv-page — replaces <body> in the standalone mockup)
+
+   --t-paint is overridden here to 1200ms; the mockup uses this longer
+   duration for TV reveals. Other pages use the canonical 900ms value
+   defined in cadence-tokens.css. Scoping to .tv-page means the
+   override only affects elements inside this component.
+   ----------------------------------------------------------------- */
+.tv-page {
+  --t-paint: 1200ms;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition:
+    background-color var(--t-theme) var(--ease),
+    color var(--t-theme) var(--ease);
+
+  /* Page-load fade — completes before the staggered .r reveals begin */
+  opacity: 0;
+  animation: tvPageFadeIn 700ms var(--ease) forwards;
+}
+
+@keyframes tvPageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Ambient gradient overlay — fixed behind all page content */
+.tv-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%,   var(--ambient-1), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, var(--ambient-2), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity var(--t-theme) var(--ease);
+}
+
+/* Theme-crossfade on surfaces that carry a background or border colour */
+.tv-page .stat-tile,
+.tv-page .panel,
+.tv-page .training-pill,
+.tv-page .theme-toggle,
+.tv-page .nut-row .track,
+.tv-page .tv-range button {
+  transition:
+    background-color var(--t-theme) var(--ease),
+    border-color var(--t-theme) var(--ease),
+    color var(--t-theme) var(--ease);
+}
+
+/* -----------------------------------------------------------------
+   SHELL  (layout container; sits above the ::before gradient)
+   ----------------------------------------------------------------- */
+.tv-shell {
+  position: relative;
+  z-index: 1;
+  padding: 56px 72px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* -----------------------------------------------------------------
+   TOP BAR — 3-column grid: brand (left) · range toggle (centre) · clock (right)
+   ----------------------------------------------------------------- */
+.tv-page .top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 32px;
+  margin-bottom: 56px;
+}
+.tv-page .top > .brand      { justify-self: start; }
+.tv-page .top > .tv-range   { justify-self: center; margin-top: 6px; }
+.tv-page .top > .clock-area { justify-self: end; }
+
+/* Wordmark */
+.tv-page .brand .wordmark {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 32px;
+  letter-spacing: -0.045em;
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--text);
+  line-height: 1;
+}
+.tv-page .brand .wordmark .dot {
+  width: 8px; height: 8px;
+  background: var(--moss);
+  border-radius: 50%;
+  margin-left: 4px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+/* Tagline + pulse dot */
+.tv-page .brand .tagline {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tv-page .brand .tagline .pulse {
+  width: 6px; height: 6px;
+  background: var(--moss);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: tvPulse 2.5s var(--ease) infinite;
+}
+@keyframes tvPulse {
+  0%   { box-shadow: 0 0 0 0   var(--moss-glow); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+
+/* -----------------------------------------------------------------
+   RANGE TOGGLE
+   ----------------------------------------------------------------- */
+.tv-page .tv-range {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tv-page .tv-range button {
+  background: transparent;
+  border: none;
+  padding: 9px 18px;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  overflow: hidden;
+}
+.tv-page .tv-range button:last-child { border-right: none; }
+.tv-page .tv-range button:hover      { color: var(--text); }
+
+.tv-page .tv-range button.active {
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] .tv-page .tv-range button.active { color: var(--moss); }
+
+/* Progress bar on the active button — auto-cycle indicator.
+   Uses `forwards` (not `infinite`) so the animation runs once and stops.
+   It is restarted on each range change via a forced reflow in TVMode.jsx. */
+.tv-page .tv-range button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: var(--moss);
+  animation: tvRangeProgress var(--t-cycle) linear forwards;
+}
+@keyframes tvRangeProgress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* -----------------------------------------------------------------
+   CLOCK + THEME TOGGLE
+   ----------------------------------------------------------------- */
+.tv-page .clock-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.tv-page .clock { text-align: right; }
+.tv-page .clock .time {
+  font-family: var(--display);
+  font-weight: 320;
+  font-size: 96px;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  font-variation-settings: "opsz" 144, "SOFT" 65;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tv-page .clock .date {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-top: 14px;
+}
+
+.tv-page .theme-toggle {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.tv-page .theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.tv-page .theme-toggle svg   { width: 16px; height: 16px; }
+.tv-page .theme-toggle .t-icon         { display: none; }
+[data-theme="light"] .tv-page .theme-toggle .t-moon { display: block; }
+[data-theme="dark"]  .tv-page .theme-toggle .t-sun  { display: block; }
+
+/* -----------------------------------------------------------------
+   STAT GRID — 6-up horizontal tiles
+   ----------------------------------------------------------------- */
+.tv-page .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+  margin-bottom: 36px;
+}
+.tv-page .stat-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 30px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tv-page .stat-tile .label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-quiet);
+  margin-bottom: 4px;
+}
+.tv-page .stat-tile .sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  opacity: 0.7;
+}
+.tv-page .stat-tile .value {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 14px 0;
+}
+/* Empty state: tile has no data for this metric / period */
+.tv-page .stat-tile .value.empty {
+  font-style: italic;
+  color: var(--text-faint);
+}
+.tv-page .stat-tile .value .unit {
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.tv-page .stat-tile .footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Status text — default is positive (moss). .down = clay. .flat = muted. .no-data = faint. */
+.tv-page .stat-tile .status {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--moss-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .tv-page .stat-tile .status         { color: var(--moss); }
+.tv-page .stat-tile .status.down                        { color: var(--clay-deep); }
+[data-theme="dark"] .tv-page .stat-tile .status.down    { color: var(--clay); }
+.tv-page .stat-tile .status.flat                        { color: var(--text-muted); }
+.tv-page .stat-tile .status.no-data                     { color: var(--text-faint); }
+
+.tv-page .stat-tile .spark { flex-shrink: 0; opacity: 0.75; }
+
+/* -----------------------------------------------------------------
+   BOTTOM GRID — 3 asymmetric panels
+   ----------------------------------------------------------------- */
+.tv-page .bottom-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.25fr 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 280px;
+}
+.tv-page .panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px 36px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Panel header: mono label + full-width hairline rule via ::after */
+.tv-page .panel .head {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-quiet);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.tv-page .panel .head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.tv-page .panel .sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-quiet);
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 24px;
+}
+
+/* ----- Km hero ----- */
+.tv-page .km-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.tv-page .km-hero .num {
+  font-family: var(--display);
+  font-weight: 320;
+  font-size: 144px;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  font-variation-settings: "opsz" 144, "SOFT" 70;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tv-page .km-hero .unit-line {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  margin-top: 14px;
+}
+.tv-page .km-hero .ctx {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--text-muted);
+  margin-top: 18px;
+  font-weight: 360;
+  letter-spacing: -0.005em;
+  max-width: 22ch;
+  line-height: 1.4;
+}
+
+/* ----- Nutrition rows ----- */
+.tv-page .nut-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 160px;
+  gap: 18px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.tv-page .nut-row:last-child { border-bottom: none; }
+
+.tv-page .nut-row .nut-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+}
+.tv-page .nut-row .nut-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.tv-page .nut-row .track {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+.tv-page .nut-row .track .fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 700ms var(--ease);
+}
+.tv-page .nut-row .track .fill.moss  { background: var(--moss); }
+.tv-page .nut-row .track .fill.clay  { background: var(--clay); }
+.tv-page .nut-row .track .fill.slate { background: var(--slate); }
+
+.tv-page .nut-row .bar-foot {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tv-page .nut-row .bar-foot .target-pct                      { color: var(--moss-deep); }
+[data-theme="dark"] .tv-page .nut-row .bar-foot .target-pct  { color: var(--moss); }
+.tv-page .nut-row .bar-foot .target-pct.no-data              { color: var(--text-faint); }
+.tv-page .nut-row .bar-foot .dot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.tv-page .nut-row .nut-val {
+  text-align: right;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tv-page .nut-row .nut-val .unit {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-quiet);
+  margin-left: 3px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.tv-page .nut-row .nut-val .daily {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-quiet);
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* ----- Training pills ----- */
+.tv-page .training-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+.tv-page .training-pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.tv-page .training-pill .pip {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tv-page .training-pill .pip.run      { background: var(--moss); }
+.tv-page .training-pill .pip.strength { background: var(--clay); }
+.tv-page .training-pill .pip.recovery { background: var(--slate); }
+.tv-page .training-pill .name {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  flex: 1;
+}
+.tv-page .training-pill .meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tv-page .training-pill.primary {
+  background: var(--moss-soft);
+  border-color: var(--pill-primary-border);
+}
+
+/* Rest day empty state: italic Fraunces centred, no pip */
+.tv-page .rest-day {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 360;
+  letter-spacing: -0.015em;
+  color: var(--text-muted);
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* -----------------------------------------------------------------
+   DATA-CYCLE BREATHING TRANSITION
+
+   .cycleable elements dip to near-invisible during range changes.
+   The class .data-changing is toggled on .tv-page via React state —
+   matching the mockup's body.data-changing pattern.
+   ----------------------------------------------------------------- */
+.tv-page .cycleable {
+  transition:
+    opacity var(--t-fade) var(--ease),
+    transform var(--t-fade) var(--ease);
+}
+.tv-page.data-changing .cycleable {
+  opacity: 0.15;
+  transform: translateY(-4px);
+}
+
+/* -----------------------------------------------------------------
+   STAGGERED REVEALS  (first paint)
+
+   Scoped to .tv-page to avoid conflict with [data-cadence] .r rules
+   in cadence.css. Delays use 80ms increments (matching the mockup)
+   rather than the 60ms increments used on other Cadence pages.
+   --t-paint is 1200ms here (overridden on .tv-page above).
+   ----------------------------------------------------------------- */
+.tv-page .r {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: tvRise var(--t-paint) var(--ease) forwards;
+}
+.tv-page .r-1  { animation-delay: 80ms; }
+.tv-page .r-2  { animation-delay: 200ms; }
+.tv-page .r-3  { animation-delay: 320ms; }
+.tv-page .r-4  { animation-delay: 440ms; }
+.tv-page .r-5  { animation-delay: 560ms; }
+.tv-page .r-6  { animation-delay: 680ms; }
+.tv-page .r-7  { animation-delay: 800ms; }
+.tv-page .r-8  { animation-delay: 920ms; }
+.tv-page .r-9  { animation-delay: 1040ms; }
+.tv-page .r-10 { animation-delay: 1160ms; }
+@keyframes tvRise {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* -----------------------------------------------------------------
+   EXIT HINT (fixed bottom-right)
+   ----------------------------------------------------------------- */
+.tv-exit-hint {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.5;
+  z-index: 10;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.tv-exit-hint:hover { opacity: 1; }
+.tv-exit-hint kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin-right: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+
+/* -----------------------------------------------------------------
+   RESPONSIVE BREAKPOINTS
+   ----------------------------------------------------------------- */
+@media (max-width: 1500px) {
+  .tv-shell                    { padding: 48px 56px; }
+  .tv-page .clock .time        { font-size: 80px; }
+  .tv-page .stat-tile .value   { font-size: 54px; }
+  .tv-page .km-hero .num       { font-size: 120px; }
+}
+@media (max-width: 1300px) {
+  .tv-page .top {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+  .tv-page .top > .tv-range {
+    grid-column: 1 / -1;
+    order: 2;
+    justify-self: start;
+    margin-top: 24px;
+  }
+}
+@media (max-width: 1200px) {
+  .tv-page .stat-grid                       { grid-template-columns: repeat(3, 1fr); }
+  .tv-page .bottom-grid                     { grid-template-columns: 1fr 1fr; }
+  .tv-page .bottom-grid .panel:nth-child(3) { grid-column: 1 / -1; }
+}
+@media (max-width: 800px) {
+  .tv-shell                    { padding: 32px; }
+  .tv-page .top {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .tv-page .top > .brand,
+  .tv-page .top > .clock-area,
+  .tv-page .top > .tv-range    { justify-self: start; }
+  .tv-page .stat-grid          { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .tv-page .bottom-grid        { grid-template-columns: 1fr; }
+  .tv-page .clock .time        { font-size: 64px; }
+  .tv-page .stat-tile          { padding: 20px; min-height: 140px; }
+  .tv-page .stat-tile .value   { font-size: 40px; }
+  .tv-page .km-hero .num       { font-size: 88px; }
+  .tv-page .tv-range button    { padding: 8px 12px; font-size: 10px; }
+}
