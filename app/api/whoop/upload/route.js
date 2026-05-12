@@ -131,8 +131,8 @@ export async function POST(request) {
 
     await supabaseServer.from('audit_log').insert({
       event_type: 'whoop_upload',
-      title:      `Whoop data uploaded — ${rows.length} days`,
-      detail:     `Date range: ${earliest} to ${latest}`,
+      title:      `Whoop: ${rows.length} days imported`,
+      detail:     `${earliest} → ${latest}`,
       metadata:   {
         days_imported: rows.length,
         earliest_date: earliest,

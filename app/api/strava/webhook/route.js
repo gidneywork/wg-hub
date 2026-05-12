@@ -58,8 +58,8 @@ export async function POST(request) {
               const distanceLabel = distanceKm != null ? `${distanceKm.toFixed(1)}km` : '—'
               await supabaseServer.from('audit_log').insert({
                 event_type: 'strava_sync',
-                title:      'Strava sync',
-                detail:     `Synced activity from Strava — ${activity.name} · ${distanceLabel}`,
+                title:      `Strava: ${activity.name}`,
+                detail:     `${activity.name} · ${distanceLabel}`,
                 metadata:   {
                   activity_id:   activity.id,
                   source:        'webhook',

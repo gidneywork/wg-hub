@@ -78,12 +78,12 @@ export async function POST() {
     // activity log shows that a sync ran even when nothing new came
     // through. The detail string distinguishes the two cases.
     const detail = newCount > 0
-      ? `Synced ${newCount} activit${newCount === 1 ? 'y' : 'ies'} from Strava`
-      : 'Strava sync · no new activities'
+      ? `${newCount} activit${newCount === 1 ? 'y' : 'ies'} added · ${count} total`
+      : `No new activities · ${count} total`
 
     await supabaseServer.from('audit_log').insert({
       event_type: 'strava_sync',
-      title:      'Strava sync',
+      title:      newCount > 0 ? `Strava: synced ${newCount} activit${newCount === 1 ? 'y' : 'ies'}` : 'Strava: nothing new',
       detail,
       metadata: {
         source:   'manual_sync',
