@@ -8,10 +8,10 @@ import './onboarding.css'
 // First-login detection is row-presence only — any completed Step 1 unlocks the app.
 const DEFAULT_PROFILE = {
   identity:       { displayName: '', dateOfBirth: null, biologicalSex: null, heightCm: null, baselineWeightKg: null },
-  training:       { primarySport: null, experience: null, yearsTraining: null, goals: '' },
-  lifestyle:      { occupation: '', workHoursPerWeek: null, travelFrequency: null, stressLevel: null, coffeeUnitsPerDay: null, alcoholUnitsPerWeek: null, diet: null },
-  health:         { currentInjuries: '', medications: '', allergies: '', sleepEnvironmentNotes: '' },
-  longFormContext: '',
+  training:       { primarySport: null, experience: null, yearsTraining: null, goals: null },
+  lifestyle:      { occupation: null, workHoursPerWeek: null, travelFrequency: null, stressLevel: null, coffeeUnitsPerDay: null, alcoholUnitsPerWeek: null, diet: null },
+  health:         { currentInjuries: null, medications: null, allergies: null, sleepEnvironmentNotes: null },
+  longFormContext: null,
 }
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ function TrainingStep({ profile, update, onNext, onBack, onSkip }) {
 
       <Field label="Goals">
         <textarea
-          value={training.goals}
+          value={training.goals ?? ''}
           placeholder="What are you training for? A race, a number, a feeling…"
           rows={3}
           onChange={e => update('training', 'goals', e.target.value)}
@@ -226,7 +226,7 @@ function LifestyleStep({ profile, update, onNext, onBack, onSkip }) {
         <Field label="Occupation">
           <input
             type="text"
-            value={lifestyle.occupation}
+            value={lifestyle.occupation ?? ''}
             placeholder="What do you do?"
             onChange={e => update('lifestyle', 'occupation', e.target.value)}
           />
@@ -323,7 +323,7 @@ function HealthStep({ profile, update, onNext, onBack, onSkip }) {
 
       <Field label="Current injuries">
         <textarea
-          value={health.currentInjuries}
+          value={health.currentInjuries ?? ''}
           placeholder="Nothing you'd rather Cadence didn't suggest working around…"
           rows={2}
           onChange={e => update('health', 'currentInjuries', e.target.value)}
@@ -332,7 +332,7 @@ function HealthStep({ profile, update, onNext, onBack, onSkip }) {
 
       <Field label="Medications">
         <textarea
-          value={health.medications}
+          value={health.medications ?? ''}
           placeholder="Any that affect training, sleep, or recovery."
           rows={2}
           onChange={e => update('health', 'medications', e.target.value)}
@@ -343,7 +343,7 @@ function HealthStep({ profile, update, onNext, onBack, onSkip }) {
         <Field label="Allergies">
           <input
             type="text"
-            value={health.allergies}
+            value={health.allergies ?? ''}
             placeholder="Food, environment…"
             onChange={e => update('health', 'allergies', e.target.value)}
           />
@@ -351,7 +351,7 @@ function HealthStep({ profile, update, onNext, onBack, onSkip }) {
         <Field label="Sleep environment">
           <input
             type="text"
-            value={health.sleepEnvironmentNotes}
+            value={health.sleepEnvironmentNotes ?? ''}
             placeholder="Hot room, noisy street…"
             onChange={e => update('health', 'sleepEnvironmentNotes', e.target.value)}
           />
@@ -380,7 +380,7 @@ function LongFormStep({ profile, update, onNext, onBack, onSkip }) {
       <Field label="Context">
         <textarea
           className="tall"
-          value={profile.longFormContext}
+          value={profile.longFormContext ?? ''}
           placeholder="Add any context that would help Cadence understand you better — training history, why you're doing this, what matters most."
           rows={6}
           onChange={e => update('root', 'longFormContext', e.target.value)}

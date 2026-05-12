@@ -5,7 +5,7 @@ import { useState } from 'react'
 const DEFAULT_CONFIG = {
   identity:        { name: 'Cadence', voiceGender: 'neutral', accent: 'british' },
   personality:     { style: 'direct-and-brief', verbosity: 'medium', firstNameUse: 'occasional' },
-  behavioural:     { proactiveNudges: true, reminderStyle: 'text-only', timeWindowStart: '07:00', timeWindowEnd: '21:00', timezone: '' },
+  behavioural:     { proactiveNudges: true, reminderStyle: 'text-only', timeWindowStart: '07:00', timeWindowEnd: '21:00', timezone: null },
   forbiddenTopics: '',
 }
 
@@ -24,15 +24,15 @@ function AcField({ label, children }) {
   )
 }
 
-function AcFieldRow({ children, cols3 = false }) {
+function AcFieldRow({ children }) {
   return (
-    <div className={`ac-field-row${cols3 ? ' ac-field-row--3' : ''}`}>
+    <div className="ac-field-row">
       {children}
     </div>
   )
 }
 
-function AcToggle({ checked, onChange, label }) {
+function AcToggle({ checked, onChange }) {
   return (
     <label className="ac-toggle-label">
       <input
@@ -47,40 +47,14 @@ function AcToggle({ checked, onChange, label }) {
   )
 }
 
-function SaveRow({ saveState, onSave }) {
-  return (
-    <div className="ac-save-row">
-      <button
-        type="button"
-        className={`btn ${saveState === 'saved' ? 'btn-ghost' : 'btn-primary'}`}
-        onClick={onSave}
-        disabled={saveState === 'saving'}
-      >
-        {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Save'}
-      </button>
-    </div>
-  )
-}
-
-function useSectionSave(getLocal, saveAssistantConfig) {
-  const [state, setState] = useState('idle')
-  const handleSave = async () => {
-    setState('saving')
-    try {
-      await saveAssistantConfig(getLocal())
-      setState('saved')
-      setTimeout(() => setState('idle'), 2000)
-    } catch {
-      setState('idle')
-    }
-  }
-  return [state, handleSave]
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function AssistantConfig({ assistantConfig, saveAssistantConfig }) {
-  const [local, setLocal] = useState(() => cloneConfig(assistantConfig))
+  const [local,       setLocal      ] = useState(() => cloneConfig(assistantConfig))
+  const [savedConfig, setSavedConfig] = useState(() => cloneConfig(assistantConfig))
+  const [saveState,   setSaveState  ] = useState('idle') // idle | saving
+
+  const isDirty = JSON.stringify(local) !== JSON.stringify(savedConfig)
 
   const update = (section, key, value) => {
     if (section === 'root') {
@@ -90,12 +64,15 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
     }
   }
 
-  const getLocal = () => local
-
-  const [idSave,   handleIdSave  ] = useSectionSave(getLocal, saveAssistantConfig)
-  const [persSave, handlePersSave] = useSectionSave(getLocal, saveAssistantConfig)
-  const [behSave,  handleBehSave ] = useSectionSave(getLocal, saveAssistantConfig)
-  const [forbSave, handleForbSave] = useSectionSave(getLocal, saveAssistantConfig)
+  const handleSave = async () => {
+    setSaveState('saving')
+    try {
+      await saveAssistantConfig(local)
+      setSavedConfig(cloneConfig(local))
+    } finally {
+      setSaveState('idle')
+    }
+  }
 
   const { identity, personality, behavioural } = local
 
@@ -148,7 +125,6 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
             </AcField>
           </AcFieldRow>
 
-          <SaveRow saveState={idSave} onSave={handleIdSave} />
         </div>
       </section>
 
@@ -193,7 +169,6 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
             </AcField>
           </AcFieldRow>
 
-          <SaveRow saveState={persSave} onSave={handlePersSave} />
         </div>
       </section>
 
@@ -223,14 +198,14 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
           </AcField>
 
           <AcFieldRow>
-            <AcField label="Quiet hours start">
+            <AcField label="Nudges from">
               <input
                 type="time"
                 value={behavioural.timeWindowStart ?? ''}
                 onChange={e => update('behavioural', 'timeWindowStart', e.target.value || null)}
               />
             </AcField>
-            <AcField label="Quiet hours end">
+            <AcField label="Nudges until">
               <input
                 type="time"
                 value={behavioural.timeWindowEnd ?? ''}
@@ -248,7 +223,6 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
             />
           </AcField>
 
-          <SaveRow saveState={behSave} onSave={handleBehSave} />
         </div>
       </section>
 
@@ -261,16 +235,27 @@ export default function AssistantConfig({ assistantConfig, saveAssistantConfig }
 
           <AcField label="Topics to avoid">
             <textarea
-              value={local.forbiddenTopics}
+              value={local.forbiddenTopics ?? ''}
               placeholder="Anything Cadence should never bring up or comment on."
               rows={4}
               onChange={e => update('root', 'forbiddenTopics', e.target.value)}
             />
           </AcField>
 
-          <SaveRow saveState={forbSave} onSave={handleForbSave} />
         </div>
       </section>
+
+      {/* ── Page-level save ───────────────────────────────────────────────── */}
+      <div className="ac-save-row r r-6">
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          onClick={handleSave}
+          disabled={!isDirty || saveState === 'saving'}
+        >
+          {saveState === 'saving' ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
 
     </div>
   )
