@@ -29,6 +29,14 @@ const KM_HEAD = {
   'YTD': 'Km run · year to date',
 }
 
+const NUT_HEAD = {
+  '7D':  'Nutrition totals · last 7 days',
+  '30D': 'Nutrition totals · last 30 days',
+  '6M':  'Nutrition totals · last 6 months',
+  '1Y':  'Nutrition totals · last 12 months',
+  'YTD': 'Nutrition totals · year to date',
+}
+
 // Deterministic context sentence for the km hero panel.
 // Dry, factual, British English. Sentence case. No exclamation marks.
 function kmContext(km, sessionCount, rangeKey) {
@@ -196,7 +204,7 @@ function NutRow({ label, fillClass, fillPct, targetPct, targetLabel, total, unit
         ) : (
           <>
             {total}<span className="unit">{unit}</span>
-            <span className="daily">{dailyAvg}/{unit === 'kcal' ? 'day avg' : 'day avg'}</span>
+            <span className="daily">{dailyAvg}/day avg</span>
           </>
         )}
       </div>
@@ -413,6 +421,42 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     return { periodKm, runCount }
   }, [days, logs, activities, stravaKmMap])
 
+  // ── Nutrition data ───────────────────────────────────────────────────────────
+  const { nutTotals, nutLoggedDays } = useMemo(() => {
+    let calories = 0, protein = 0, carbs = 0, loggedDays = 0
+    for (const d of days) {
+      const n = logs?.[d]?.nutrition
+      const cal = parseFloat(n?.calories) || 0
+      const pro = parseFloat(n?.protein)  || 0
+      const crb = parseFloat(n?.carbs)    || 0
+      if (cal || pro || crb) { loggedDays++; calories += cal; protein += pro; carbs += crb }
+    }
+    return { nutTotals: { calories, protein, carbs }, nutLoggedDays: loggedDays }
+  }, [days, logs])
+
+  const nutDailyAvg = nutLoggedDays > 0 ? {
+    calories: Math.round(nutTotals.calories / nutLoggedDays),
+    protein:  Math.round(nutTotals.protein  / nutLoggedDays),
+    carbs:    Math.round(nutTotals.carbs    / nutLoggedDays),
+  } : null
+
+  const calTarget  = parseFloat(settings?.dailyCalories?.value)
+  const protTarget = parseFloat(settings?.dailyProtein?.value)
+  const carbTarget = parseFloat(settings?.dailyCarbs?.value)
+
+  const calPct  = nutDailyAvg && isFinite(calTarget)  ? Math.round(nutDailyAvg.calories / calTarget  * 100) : null
+  const protPct = nutDailyAvg && isFinite(protTarget) ? Math.round(nutDailyAvg.protein  / protTarget * 100) : null
+  const carbPct = nutDailyAvg && isFinite(carbTarget) ? Math.round(nutDailyAvg.carbs    / carbTarget * 100) : null
+
+  const calTargetLabel  = isFinite(calTarget)  ? `${Math.round(calTarget).toLocaleString('en-GB')} kcal/day` : null
+  const protTargetLabel = isFinite(protTarget) ? `${Math.round(protTarget)} g/day` : null
+  const carbTargetLabel = isFinite(carbTarget) ? `${Math.round(carbTarget)} g/day` : null
+
+  const nutPending = days.length - nutLoggedDays
+  const nutSub = nutLoggedDays > 0
+    ? `${nutLoggedDays} day${nutLoggedDays !== 1 ? 's' : ''} logged · ${nutPending} pending`
+    : `${days.length} days · none logged`
+
   const periodLabel = DAYS_LABEL[range]
 
   return (
@@ -525,8 +569,35 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             </div>
           </div>
 
-          {/* Panel 2 — Nutrition (TV: 5) */}
-          <div className="panel r r-9" />
+          {/* Panel 2 — Nutrition */}
+          <div className="panel r r-9">
+            <div className="head cycleable">{NUT_HEAD[range]}</div>
+            <div className="sub cycleable">{nutSub}</div>
+            <NutRow
+              label="Calories" fillClass="moss"
+              fillPct={calPct} targetPct={calPct != null ? `${calPct}%` : null}
+              targetLabel={calTargetLabel}
+              total={nutDailyAvg ? Math.round(nutTotals.calories).toLocaleString('en-GB') : null}
+              unit="kcal"
+              dailyAvg={nutDailyAvg ? nutDailyAvg.calories.toLocaleString('en-GB') : null}
+            />
+            <NutRow
+              label="Protein" fillClass="clay"
+              fillPct={protPct} targetPct={protPct != null ? `${protPct}%` : null}
+              targetLabel={protTargetLabel}
+              total={nutDailyAvg ? Math.round(nutTotals.protein).toLocaleString('en-GB') : null}
+              unit="g"
+              dailyAvg={nutDailyAvg ? nutDailyAvg.protein.toLocaleString('en-GB') : null}
+            />
+            <NutRow
+              label="Carbs" fillClass="slate"
+              fillPct={carbPct} targetPct={carbPct != null ? `${carbPct}%` : null}
+              targetLabel={carbTargetLabel}
+              total={nutDailyAvg ? Math.round(nutTotals.carbs).toLocaleString('en-GB') : null}
+              unit="g"
+              dailyAvg={nutDailyAvg ? nutDailyAvg.carbs.toLocaleString('en-GB') : null}
+            />
+          </div>
 
           {/* Panel 3 — Training (TV: 6) */}
           <div className="panel r r-10" />
