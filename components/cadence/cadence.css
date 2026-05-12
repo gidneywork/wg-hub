@@ -115,7 +115,7 @@
 [data-cadence] .wordmark {
   font-family: var(--display);
   font-weight: 380;
-  font-size: 22px;
+  font-size: 26px;
   letter-spacing: -0.045em;
   font-variation-settings: "opsz" 144, "SOFT" 60;
   display: inline-flex;
@@ -124,8 +124,8 @@
   color: var(--text);
 }
 [data-cadence] .wordmark .dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   background: var(--moss);
   border-radius: 50%;
   margin-left: 3px;

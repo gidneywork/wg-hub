@@ -20,6 +20,8 @@ import Recent from './Recent'
  */
 export default function Dashboard({ logs, settings, activities, whoopData, plan, setView }) {
   const now = new Date()
+  const hour = now.getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 19 ? 'Good afternoon' : 'Good evening'
   // Mockup stamp format: "MON 11 MAY · 09:42 GMT"
   const weekday = now.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()
   const dayNum = now.toLocaleDateString('en-GB', { day: '2-digit' })
@@ -31,7 +33,7 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
   return (
     <>
       <header className="header r r-1">
-        <h1 className="greeting">Good morning, <em>Will.</em></h1>
+        <h1 className="greeting">{greeting}, <em>Will.</em></h1>
         <span className="stamp">{stamp}</span>
       </header>
 
