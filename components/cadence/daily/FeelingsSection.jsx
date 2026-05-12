@@ -21,7 +21,7 @@ export default function FeelingsSection({ form = {}, onField }) {
   }
 
   return (
-    <section className="section r r-8">
+    <section className="section r r-9">
       <div className="section-head">
         <span className="title">How it landed</span>
         <span className="meta">Optional · pulls into your journal</span>

@@ -48,7 +48,7 @@ export default function NutritionSection({
   ]
 
   return (
-    <section className="section r r-6">
+    <section className="section r r-7">
       <div className="section-head">
         <span className="title">Nutrition</span>
         <span className="meta">Manual entry · target shown on each</span>

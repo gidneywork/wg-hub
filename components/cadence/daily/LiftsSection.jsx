@@ -119,7 +119,7 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
   const metaSuffix = lifts.length > 0 ? ` · ${lifts.length} logged today` : ''
 
   return (
-    <section className="section r r-7">
+    <section className="section r r-8">
       <div className="section-head">
         <span className="title">Lifts</span>
         <span className="meta">Optional{metaSuffix}</span>

@@ -99,6 +99,19 @@ export function fmtHoursColon(hoursDecimal) {
   return `${h}:${m.toString().padStart(2, '0')}`
 }
 
+// Returns { hours, minutes } for the duration between two "HH:MM" strings,
+// handling overnight crossings (bedtime > wakeTime wraps past midnight).
+export function computeSleepDuration(bedtime, wakeTime) {
+  if (!bedtime || !wakeTime) return null
+  const [bh, bm] = bedtime.split(':').map(Number)
+  const [wh, wm] = wakeTime.split(':').map(Number)
+  if ([bh, bm, wh, wm].some(isNaN)) return null
+  const bedMins  = bh * 60 + bm
+  const wakeMins = wh * 60 + wm
+  const durMins  = wakeMins >= bedMins ? wakeMins - bedMins : 1440 - bedMins + wakeMins
+  return { hours: Math.floor(durMins / 60), minutes: durMins % 60 }
+}
+
 // ── Form scaffolding (shape mirrors the legacy mkEmpty in WGHub.jsx)
 //   body.steps is manual-only. body.caloriesOut falls back to
 //   whoop.energy_burned when the log field is empty.
@@ -108,10 +121,11 @@ export function mkEmptyForm() {
       rhr: '', hrv: '', weight: '', weightTime: '',
       steps: '', caloriesOut: '',
     },
-    sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '', bedTime: '' },
+    sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '' },
     nutrition: { calories: '', protein: '', carbs: '' },
     lifts:     [],
     feelings:  { mood: null, journal: '' },
+    schedule:  { bedtime: null, wakeTime: null },
   }
 }
 
@@ -129,6 +143,7 @@ export function loadFormFromLog(log, whoop) {
     nutrition: { ...empty.nutrition, ...(log.nutrition || {}) },
     lifts:     Array.isArray(log.lifts) ? log.lifts : [],
     feelings:  { ...empty.feelings,  ...(log.feelings  || {}) },
+    schedule:  { ...empty.schedule,  ...(log.schedule  || {}) },
   }
   if (whoop) {
     const fill = (current, whoopVal, round = true) => {
