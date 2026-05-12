@@ -100,9 +100,8 @@ export function fmtHoursColon(hoursDecimal) {
 }
 
 // ── Form scaffolding (shape mirrors the legacy mkEmpty in WGHub.jsx)
-//   body.steps + body.caloriesOut were added when those two fields
-//   moved from Phase 2 stub to real manual inputs. Whoop-sync of these
-//   fields remains future work; today they're manual-entry only.
+//   body.steps is manual-only. body.caloriesOut falls back to
+//   whoop.energy_burned when the log field is empty.
 export function mkEmptyForm() {
   return {
     body: {
@@ -137,8 +136,9 @@ export function loadFormFromLog(log, whoop) {
       if (whoopVal == null) return current
       return round ? String(Math.round(whoopVal)) : String(whoopVal)
     }
-    base.body.hrv  = fill(base.body.hrv,  whoop.hrv)
-    base.body.rhr  = fill(base.body.rhr,  whoop.rhr)
+    base.body.hrv         = fill(base.body.hrv,         whoop.hrv)
+    base.body.rhr         = fill(base.body.rhr,         whoop.rhr)
+    base.body.caloriesOut = fill(base.body.caloriesOut, whoop.energy_burned)
     base.sleep.sleepScore    = fill(base.sleep.sleepScore,    whoop.sleep_score)
     base.sleep.recoveryScore = fill(base.sleep.recoveryScore, whoop.recovery_score)
     base.sleep.hoursSlept    = fill(base.sleep.hoursSlept,    whoop.hours_slept, false)

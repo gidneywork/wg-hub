@@ -196,17 +196,17 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
 // ─── Chart: Steps & calories out ────────────────────────────────────
 // Dual-metric chart mirroring the HRV/RHR pattern: primary moss line
 // (Steps, left axis) with fade fill, secondary slate dashed line
-// (Calories out, right axis). Reads logs only — no Whoop merge since
-// neither field has a Whoop sync today.
-function StepsCaloriesOutChart({ logs, days, prevDays }) {
+// (Calories out, right axis). Steps stays logs-only; caloriesOut reads
+// merged Whoop data via mergeWhoopForDate (logs primary, Whoop fallback).
+function StepsCaloriesOutChart({ logs, whoopData, days, prevDays }) {
   const stepsValues = days.map(d => parseFloat(logs?.[d]?.body?.steps))
-  const coutValues  = days.map(d => parseFloat(logs?.[d]?.body?.caloriesOut))
+  const coutValues  = days.map(d => parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.caloriesOut))
   const stepsCurr   = stepsValues[stepsValues.length - 1]
   const coutCurr    = coutValues[coutValues.length - 1]
   const stepsAvg    = mean(stepsValues)
   const coutAvg     = mean(coutValues)
   const stepsPrev   = mean(prevDays.map(d => parseFloat(logs?.[d]?.body?.steps)))
-  const coutPrev    = mean(prevDays.map(d => parseFloat(logs?.[d]?.body?.caloriesOut)))
+  const coutPrev    = mean(prevDays.map(d => parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.caloriesOut)))
 
   const stepsLine = buildLine(stepsValues, 0, 15000)
   const coutLine  = buildLine(coutValues,  0, 4000)
@@ -702,7 +702,7 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
         <CaloriesWeightChart    logs={logs} activities={activities} days={days} prevDays={prevDays} />
         <AdherenceChart         plan={plan} activities={activities} />
         <NutritionChart         logs={logs} days={days} />
-        <StepsCaloriesOutChart  logs={logs} days={days} prevDays={prevDays} />
+        <StepsCaloriesOutChart  logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
       </div>
     </section>
   )

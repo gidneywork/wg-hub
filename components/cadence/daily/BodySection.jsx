@@ -55,6 +55,11 @@ export default function BodySection({
   const cOutBand = targetBand(cOutVal, cOutTarget)
   const cOutHelper = buildMacroHelper(cOutVal, cOutTarget, 'kcal')
   const cOutHasValue = cOutVal != null && cOutVal !== ''
+  const rawCOut = logs?.[date]?.body?.caloriesOut
+  const cOutFromWhoop = (rawCOut == null || rawCOut === '') && cOutHasValue
+  const cOutTargetRef = cOutFromWhoop
+    ? 'From Whoop'
+    : (cOutTarget?.value ? `Target ${cOutTarget.value} kcal` : null)
 
   // Resting HR — lower is better
   const rhrTarget = settings?.rhr
@@ -109,7 +114,7 @@ export default function BodySection({
 
         <FieldCard
           label="Calories burnt"
-          targetRef={cOutTarget?.value ? `Target ${cOutTarget.value} kcal` : null}
+          targetRef={cOutTargetRef}
           value={cOutVal}
           onChange={v => onField('body', 'caloriesOut', v)}
           unit="kcal"

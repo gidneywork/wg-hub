@@ -40,9 +40,10 @@ export function mergeWhoopForDate(date, log, whoopData) {
     ...log,
     body: {
       ...(log?.body || {}),
-      hrv:    pick(log?.body?.hrv, w.hrv),
-      rhr:    pick(log?.body?.rhr, w.rhr),
-      weight: log?.body?.weight || '',
+      hrv:         pick(log?.body?.hrv,         w.hrv),
+      rhr:         pick(log?.body?.rhr,         w.rhr),
+      caloriesOut: pick(log?.body?.caloriesOut, w.energy_burned),
+      weight:      log?.body?.weight || '',
     },
     sleep: {
       ...(log?.sleep || {}),
