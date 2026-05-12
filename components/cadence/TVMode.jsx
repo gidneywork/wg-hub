@@ -457,6 +457,25 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     ? `${nutLoggedDays} day${nutLoggedDays !== 1 ? 's' : ''} logged · ${nutPending} pending`
     : `${days.length} days · none logged`
 
+  // ── Today's training plan ────────────────────────────────────────────────────
+  const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  const todayName = WEEKDAYS[new Date().getDay()]
+  const todayIdx  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+  const todaySessions = plan?.[todayIdx]?.sessions || []
+
+  function sessionPipClass(type) {
+    if (type === 'run') return 'run'
+    if (['gym', 'functional', 'strength'].includes(type)) return 'strength'
+    return 'recovery'
+  }
+
+  // T3: first run → primary; else first session → primary; no sessions → no primary
+  const primaryIdx = (() => {
+    const runIdx = todaySessions.findIndex(s => s.type === 'run')
+    if (runIdx >= 0) return runIdx
+    return todaySessions.length > 0 ? 0 : -1
+  })()
+
   const periodLabel = DAYS_LABEL[range]
 
   return (
@@ -599,8 +618,33 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             />
           </div>
 
-          {/* Panel 3 — Training (TV: 6) */}
-          <div className="panel r r-10" />
+          {/* Panel 3 — Today's training */}
+          <div className="panel r r-10">
+            <div className="head">Today · {todayName}</div>
+            <div className="sub">
+              {todaySessions.length > 0
+                ? `${todaySessions.length} planned`
+                : 'no sessions planned'}
+            </div>
+            <div className="training-list">
+              {todaySessions.length === 0 ? (
+                <div className="rest-day">Rest day.</div>
+              ) : (
+                todaySessions.map((s, i) => {
+                  const name = s.details?.split('\n')[0]?.trim() || s.name || s.type
+                  return (
+                    <TrainingPill
+                      key={s.id || i}
+                      name={name}
+                      meta={null}
+                      pipClass={sessionPipClass(s.type)}
+                      isPrimary={i === primaryIdx}
+                    />
+                  )
+                })
+              )}
+            </div>
+          </div>
 
         </section>
 
