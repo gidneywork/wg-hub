@@ -1012,7 +1012,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                     <span>{heroConfig.metaStr}</span>
                   </>
                 ) : (
-                  <span className="awaiting">{heroConfig.metaStr || 'Awaiting data'}</span>
+                  <span className="awaiting">{isLift && heroConfig.metaStr ? heroConfig.metaStr : 'Awaiting data'}</span>
                 )}
               </div>
             </div>
