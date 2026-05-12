@@ -311,7 +311,7 @@ function runningHero(logs, stravaKmMap, range) {
 }
 
 // ─── CHART SVG ────────────────────────────────────────────────────────────────
-function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [] }) {
+function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [] }) {
   const hasData = bars.some(b => b.value !== null && isFinite(b.value))
   if (!hasData) {
     return (
@@ -366,6 +366,14 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
     prevPathD = prevPathD.trim()
   }
 
+  // Annotation markers — map annotation dates to their week bucket
+  const weekAnnots = new Map()
+  annotations.forEach(a => {
+    const wk = startOfWeek(new Date(a.date + 'T00:00:00')).toISOString().split('T')[0]
+    if (!weekAnnots.has(wk)) weekAnnots.set(wk, [])
+    weekAnnots.get(wk).push(a)
+  })
+
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
       {gridLineVals.map((v, i) => (
@@ -407,6 +415,25 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
         </>
       )}
       {prevPathD && <path className="prev-line" d={prevPathD} />}
+      {weekAnnots.size > 0 && bars.map((bar, i) => {
+        if (bar.value === null || !isFinite(bar.value) || !bar.weekKey) return null
+        const wkAnnots = weekAnnots.get(bar.weekKey)
+        if (!wkAnnots) return null
+        const cx  = barMid(i)
+        const bty = toY(bar.value)
+        return wkAnnots.map((a, k) => {
+          const apexY   = bty - 8  - k * 16
+          const stemY1  = bty - 14 - k * 16
+          const triTopY = apexY - 8
+          const triPath = `M ${cx - 6} ${triTopY} L ${cx + 6} ${triTopY} L ${cx} ${apexY} Z`
+          return (
+            <g key={`am-${i}-${k}`} className={`annot annot-marker ${a.kind}`}>
+              <line className="annot-line" x1={cx} y1={stemY1} x2={cx} y2={apexY} />
+              <path d={triPath} />
+            </g>
+          )
+        })
+      })}
     </svg>
   )
 }
@@ -850,6 +877,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               isBalance={activeTab === 'calories'}
               targetValue={compare === 'target' ? tabTarget : null}
               prevBars={compare === 'prev' ? prevChartBars : []}
+              annotations={activeTab === 'running' ? annotations : []}
             />
           </div>
 
@@ -872,6 +900,9 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="right">
+              <span className="chart-foot-meta">Hover any bar for week details</span>
             </div>
           </div>
 
