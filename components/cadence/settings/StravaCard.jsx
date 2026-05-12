@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { timeAgo } from './settingsHelpers'
+import CadenceDialog from '../CadenceDialog'
 
 /**
  * Strava integration card.
@@ -13,14 +14,16 @@ import { timeAgo } from './settingsHelpers'
  * in the mockups yet.
  */
 export default function StravaCard({ stravaConnection, onDisconnect, onSynced }) {
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState(null)
+  const [disconnecting,  setDisconnecting ] = useState(false)
+  const [syncing,        setSyncing       ] = useState(false)
+  const [syncResult,     setSyncResult    ] = useState(null)
+  const [confirmOpen,    setConfirmOpen   ] = useState(false)
   const connected = !!stravaConnection
 
-  const handleDisconnect = async () => {
-    if (typeof window !== 'undefined' &&
-        !window.confirm('Disconnect Strava? Your synced activities will remain in the database.')) return
+  const handleDisconnect = () => setConfirmOpen(true)
+
+  const handleConfirmDisconnect = async () => {
+    setConfirmOpen(false)
     setDisconnecting(true)
     try { await onDisconnect?.() } finally { setDisconnecting(false) }
   }
@@ -58,6 +61,17 @@ export default function StravaCard({ stravaConnection, onDisconnect, onSynced })
           {connected ? 'Connected' : 'Not connected'}
         </span>
       </div>
+
+      <CadenceDialog
+        open={confirmOpen}
+        title="Disconnect Strava?"
+        body="Your synced activities will remain in the database."
+        confirmLabel="Disconnect"
+        cancelLabel="Cancel"
+        confirmClass="btn-danger"
+        onConfirm={handleConfirmDisconnect}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       {connected ? (
         <div className="integration-body">
