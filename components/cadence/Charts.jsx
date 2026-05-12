@@ -194,6 +194,19 @@ const fmtInt = v => v != null ? Math.round(v).toString() : '—'
 const fmtDp1 = v => v != null ? v.toFixed(1) : '—'
 const hasVal = v => v !== '—'
 
+// "today" / "yesterday" / "N days ago" / "N weeks ago" — for lift tile
+function fmtLastLogged(isoDate) {
+  if (!isoDate) return '—'
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(isoDate + 'T00:00:00')
+  const diffDays = Math.round((today - d) / 86400000)
+  if (diffDays === 0) return 'today'
+  if (diffDays === 1) return 'yesterday'
+  if (diffDays < 14)  return `${diffDays} days ago`
+  const weeks = Math.round(diffDays / 7)
+  return `${weeks} week${weeks !== 1 ? 's' : ''} ago`
+}
+
 // ─── ANNOTATION DATE FORMAT ("08 MAY 2026") ───────────────────────────────────
 function formatAnnotDate(d) {
   return new Date(d + 'T00:00:00')
@@ -588,6 +601,66 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
   }, [logs, whoopData, rangeDays])
 
+  // ── Lift PB data (squat + pullup tabs) ──────────────────────────
+  const liftData = useMemo(() => {
+    if (activeTab !== 'squat' && activeTab !== 'pullup') return null
+
+    const matchFn = activeTab === 'squat'
+      ? l => l.exercise === 'Back squat'
+      : l => typeof l.exercise === 'string' && l.exercise.startsWith('Pull-up') && parseFloat(l.weight) > 0
+
+    // All-time PB — no range filter, scan all log dates
+    let allTimePB = null
+    let bestSet   = null
+    let lastDate  = null
+
+    Object.entries(logs).forEach(([date, log]) => {
+      ;(Array.isArray(log?.lifts) ? log.lifts : []).filter(matchFn).forEach(lift => {
+        const w   = parseFloat(lift.weight)
+        const r   = parseInt(lift.reps, 10)
+        if (!isFinite(w) || !isFinite(r) || r < 1 || w <= 0) return
+        const orm = w * (1 + r / 30)
+        if (allTimePB == null || orm > allTimePB) { allTimePB = orm; bestSet = { weight: w, reps: r } }
+        if (!lastDate || date > lastDate) lastDate = date
+      })
+    })
+
+    // Range-filtered week buckets: max 1RM per week
+    const n      = rangeDays ?? 730
+    const days   = daysWindow(n)
+    const daySet = new Set(days)
+    const byWeek = {}
+    const weekOrder = []
+
+    days.forEach(d => {
+      const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+      if (!byWeek[wk]) { byWeek[wk] = null; weekOrder.push(wk) }
+    })
+
+    Object.entries(logs).forEach(([date, log]) => {
+      if (!daySet.has(date)) return
+      const wk = startOfWeek(new Date(date + 'T00:00:00')).toISOString().split('T')[0]
+      if (!(wk in byWeek)) return
+      ;(Array.isArray(log?.lifts) ? log.lifts : []).filter(matchFn).forEach(lift => {
+        const w   = parseFloat(lift.weight)
+        const r   = parseInt(lift.reps, 10)
+        if (!isFinite(w) || !isFinite(r) || r < 1 || w <= 0) return
+        const orm = w * (1 + r / 30)
+        if (byWeek[wk] == null || orm > byWeek[wk]) byWeek[wk] = orm
+      })
+    })
+
+    const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+    const bars = weekOrder.map(wk => ({
+      weekKey:   wk,
+      weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),
+      value:     byWeek[wk],
+      isCurrent: wk === currentWk,
+    }))
+
+    return { allTimePB, bestSet, lastDate, bars }
+  }, [activeTab, logs, rangeDays])
+
   // ── Hero config driven by activeTab ─────────────────────────────
   const heroConfig = useMemo(() => {
     const wtTarget = settings?.weightTarget?.value
@@ -748,9 +821,36 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }
     }
 
-    // Fallback (lift tabs handled separately)
+    if (activeTab === 'squat' || activeTab === 'pullup') {
+      const label = activeTab === 'squat' ? 'Back squat' : 'Weighted pull-up'
+      if (!liftData?.allTimePB) {
+        return {
+          eyebrow: `${label} · est. 1RM`,
+          heroStr: '—',
+          unitStr: '',
+          delta:   null,
+          metaStr: 'No lifts logged yet',
+          tiles:   [],
+        }
+      }
+      const { allTimePB, bestSet, lastDate } = liftData
+      const bestSetStr = bestSet ? `${bestSet.weight}kg × ${bestSet.reps}` : '—'
+      return {
+        eyebrow: `${label} · est. 1RM`,
+        heroStr: allTimePB.toFixed(1),
+        unitStr: 'kg est. 1RM · all time',
+        delta:   null,
+        metaStr: lastDate ? `Last logged · ${fmtTileDate(lastDate)}` : '',
+        tiles: [
+          { label: 'All-time PB', val: allTimePB.toFixed(1), unit: 'kg est. 1RM', ctx: 'Epley formula'                              },
+          { label: 'Best set',    val: bestSetStr,            unit: '',            ctx: 'Weight × reps'                              },
+          { label: 'Last logged', val: fmtLastLogged(lastDate), unit: '',          ctx: lastDate ? fmtTileDate(lastDate) : 'No data' },
+        ],
+      }
+    }
+
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings])
+  }, [activeTab, runKm, allMetrics, range, settings, liftData])
 
   // ── Annotations for the running tab ─────────────────────────────
   const annotations = useMemo(() => {
@@ -777,7 +877,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   }, [activeTab])
 
   const chartBars = useMemo(() => {
-    if (activeTab === 'squat' || activeTab === 'pullup') return []
+    if (activeTab === 'squat' || activeTab === 'pullup') return liftData?.bars ?? []
     const n    = rangeDays ?? 730
     const days = daysWindow(n)
     if (activeTab === 'running') {
@@ -795,7 +895,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
-  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics])
+  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, liftData])
 
   const animKey   = `${activeTab}-${range}`
   const metricMeta = METRIC_META[activeTab] ?? METRIC_META_FALLBACK
@@ -888,13 +988,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       </nav>
 
       {/* Hero chart card */}
-      {isLift ? (
-        <section className="hero-chart-card r r-3">
-          <div className="lift-empty">
-            Lift PBs coming with Phase 2.
-          </div>
-        </section>
-      ) : (
+      {(
         <section className="hero-chart-card r r-3">
 
           <div className="chart-head">
@@ -915,7 +1009,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                     <span>{heroConfig.metaStr}</span>
                   </>
                 ) : (
-                  <span className="awaiting">Awaiting data</span>
+                  <span className="awaiting">{heroConfig.metaStr || 'Awaiting data'}</span>
                 )}
               </div>
             </div>
@@ -936,26 +1030,28 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-              <div className="control-group">
-                <span className="gl">Compare</span>
-                {[
-                  { val: 'off',    label: 'Off'      },
-                  { val: 'target', label: 'vs Target' },
-                  { val: 'prev',   label: 'vs Prev'   },
-                ].map(c => {
-                  const disabled = c.val === 'prev' && range === 'all'
-                  return (
-                    <button
-                      key={c.val}
-                      className={`filter-pill${compare === c.val ? ' active' : ''}`}
-                      data-disabled={disabled ? 'true' : undefined}
-                      onClick={() => { if (!disabled) setCompare(c.val) }}
-                    >
-                      {c.label}
-                    </button>
-                  )
-                })}
-              </div>
+              {!isLift && (
+                <div className="control-group">
+                  <span className="gl">Compare</span>
+                  {[
+                    { val: 'off',    label: 'Off'      },
+                    { val: 'target', label: 'vs Target' },
+                    { val: 'prev',   label: 'vs Prev'   },
+                  ].map(c => {
+                    const disabled = c.val === 'prev' && range === 'all'
+                    return (
+                      <button
+                        key={c.val}
+                        className={`filter-pill${compare === c.val ? ' active' : ''}`}
+                        data-disabled={disabled ? 'true' : undefined}
+                        onClick={() => { if (!disabled) setCompare(c.val) }}
+                      >
+                        {c.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1001,8 +1097,8 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         </section>
       )}
 
-      {/* Stat tiles */}
-      {!isLift && (
+      {/* Stat tiles — shown for all tabs including lift */}
+      {heroConfig.tiles.length > 0 && (
         <section className="stats-grid r r-4">
           {heroConfig.tiles.map(tile => (
             <StatTile key={tile.label} {...tile} />
