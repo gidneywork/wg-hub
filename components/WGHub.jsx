@@ -15,6 +15,7 @@ import CadenceDaily from './cadence/Daily'
 import CadenceTVMode from './cadence/TVMode'
 import CadenceCharts from './cadence/Charts'
 import OnboardingFlow from './cadence/OnboardingFlow'
+import AssistantConfig from './cadence/AssistantConfig'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -215,8 +216,9 @@ export default function WGHub({ onSignOut }) {
   const [activities, setActivities] = useState([])
   const [whoopData,  setWhoopData ] = useState({})
   const [ready,    setReady   ] = useState(false)
-  const [userProfile,    setUserProfile   ] = useState(null)
-  const [onboardingDone, setOnboardingDone] = useState(null) // null=loading, false=show onboarding, true=done
+  const [userProfile,      setUserProfile     ] = useState(null)
+  const [assistantConfig,  setAssistantConfig ] = useState(null)
+  const [onboardingDone,   setOnboardingDone  ] = useState(null) // null=loading, false=show onboarding, true=done
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -225,7 +227,7 @@ export default function WGHub({ onSignOut }) {
 
     ;(async () => {
       try {
-        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD, profileData] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD, profileData, configData] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
@@ -233,6 +235,7 @@ export default function WGHub({ onSignOut }) {
           db.loadActivities(),
           db.loadWhoopData(),
           db.loadUserProfile(),
+          db.loadAssistantConfig(),
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
@@ -240,6 +243,7 @@ export default function WGHub({ onSignOut }) {
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])
         setWhoopData(whoopD || {})
+        if (configData) setAssistantConfig(configData)
         if (profileData) {
           setUserProfile(profileData)
           setOnboardingDone(true)
@@ -269,10 +273,11 @@ export default function WGHub({ onSignOut }) {
     return () => { unsubActivities(); unsubLogs(); unsubWhoop() }
   }, [])
 
-  const saveLog            = async (date, data) => { await db.saveLog(date, data);     setLogs(p => ({...p, [date]: data})) }
-  const saveSettings       = async (s)          => { await db.saveSettings(s);         setSettings(s) }
-  const savePlan           = async (p)          => { await db.savePlan(p);             setPlan(p) }
-  const saveUserProfileFn  = async (p)          => { await db.saveUserProfile(p);      setUserProfile(p) }
+  const saveLog                = async (date, data) => { await db.saveLog(date, data);          setLogs(p => ({...p, [date]: data})) }
+  const saveSettings           = async (s)          => { await db.saveSettings(s);              setSettings(s) }
+  const savePlan               = async (p)          => { await db.savePlan(p);                  setPlan(p) }
+  const saveUserProfileFn      = async (p)          => { await db.saveUserProfile(p);           setUserProfile(p) }
+  const saveAssistantConfigFn  = async (c)          => { await db.saveAssistantConfig(c);       setAssistantConfig(c) }
 
   const handleOnboardingComplete = async (profile) => {
     await db.saveUserProfile(profile)
@@ -338,7 +343,10 @@ export default function WGHub({ onSignOut }) {
           saveUserProfile={saveUserProfileFn}
         />
       ) : view === 'assistant-config' ? (
-        <div className="cadence-empty">coming soon</div>
+        <AssistantConfig
+          assistantConfig={assistantConfig ?? DEFAULT_ASSISTANT_CONFIG}
+          saveAssistantConfig={saveAssistantConfigFn}
+        />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
