@@ -329,6 +329,8 @@ const METRIC_META = {
   running:  { unit: 'km',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   hrv:      { unit: 'ms',   lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   rhr:      { unit: 'bpm',  lowerIsBetter: true,  fmt: v => Math.round(v).toString()                        },
+  squat:    { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
+  pullup:   { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   weight:   { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   sleep:    { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
@@ -873,6 +875,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const tab = TABS.find(t => t.id === activeTab)
     if (tab?.pip === 'sleep')  return 'var(--slate)'
     if (tab?.pip === 'intake') return 'var(--sand)'
+    if (tab?.pip === 'lift')   return 'var(--clay)'
     return 'var(--moss)'
   }, [activeTab])
 
