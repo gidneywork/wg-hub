@@ -1,0 +1,557 @@
+/* =====================================================================
+   CADENCE — CHARTS PAGE
+   Scoped to [data-cadence] .charts-page and descendant selectors.
+   Token base: design/cadence-tokens.css (loaded by app/layout.js).
+   cadence.css handles the shell, sidebar, and shared .r stagger system.
+   ===================================================================== */
+
+/* -----------------------------------------------------------------
+   LOCAL TOKEN EXTENSIONS
+   Annotation kind-badge border and background variants.
+   Light theme uses existing moss-soft / clay-soft tokens directly.
+   Dark theme needs explicit rgba overrides that aren't in the token
+   set — same pattern as tv-mode.css and login.css.
+   ----------------------------------------------------------------- */
+:root {
+  --annot-pb-border:      var(--moss-soft);
+  --annot-race-border:    var(--moss-soft);
+  --annot-race-bg:        var(--moss-soft);
+  --annot-illness-border: var(--clay-soft);
+}
+[data-theme="dark"] {
+  --annot-pb-border:      rgba(141, 160, 117, 0.4);
+  --annot-race-border:    rgba(141, 160, 117, 0.4);
+  --annot-race-bg:        rgba(141, 160, 117, 0.15);
+  --annot-illness-border: rgba(201, 126, 98, 0.4);
+}
+
+/* -----------------------------------------------------------------
+   THEME TRANSITIONS
+   Add Charts-specific elements to cadence.css's transition list.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-tab,
+[data-cadence] .filter-pill,
+[data-cadence] .stat-tile,
+[data-cadence] .annot-row,
+[data-cadence] .control-group,
+[data-cadence] .hero-chart-card,
+[data-cadence] .annot-list {
+  transition: background-color var(--t-theme) var(--ease),
+              border-color var(--t-theme) var(--ease),
+              color var(--t-theme) var(--ease);
+}
+
+/* -----------------------------------------------------------------
+   PAGE HEAD
+   ----------------------------------------------------------------- */
+[data-cadence] .charts-page .page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+  gap: 24px;
+}
+[data-cadence] .charts-page .page-head .eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+[data-cadence] .charts-page .page-head h1 {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 56px;
+  letter-spacing: -0.04em;
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  line-height: 1;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+[data-cadence] .charts-page .page-head .sub {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 17px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+[data-cadence] .charts-page .page-head .meta {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  padding-bottom: 4px;
+}
+
+/* -----------------------------------------------------------------
+   CHART TAB BAR
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+[data-cadence] .chart-tabs::-webkit-scrollbar { height: 4px; }
+[data-cadence] .chart-tabs::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+[data-cadence] .chart-tab {
+  background: transparent;
+  border: none;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-cadence] .chart-tab:hover { color: var(--text); }
+[data-cadence] .chart-tab.active { color: var(--text); }
+[data-cadence] .chart-tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  background: var(--moss);
+}
+
+/* Pip colours are semantic category signals, not decoration */
+[data-cadence] .chart-tab .pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+[data-cadence] .chart-tab .pip.body   { background: var(--moss); }
+[data-cadence] .chart-tab .pip.sleep  { background: var(--slate); }
+[data-cadence] .chart-tab .pip.intake { background: var(--sand); }
+[data-cadence] .chart-tab .pip.lift   { background: var(--clay); }
+
+/* -----------------------------------------------------------------
+   HERO CHART CARD
+   ----------------------------------------------------------------- */
+[data-cadence] .hero-chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 32px 32px 28px;
+  margin-bottom: 20px;
+}
+[data-cadence] .chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  margin-bottom: 28px;
+}
+[data-cadence] .chart-head .left .eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+[data-cadence] .chart-head .left .hero-num {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 80px;
+  letter-spacing: -0.04em;
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+}
+[data-cadence] .chart-head .left .hero-num .unit {
+  font-family: var(--sans);
+  font-size: 18px;
+  color: var(--text-muted);
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+[data-cadence] .chart-head .left .hero-meta {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+[data-cadence] .chart-head .left .hero-meta .delta.up   { color: var(--moss-deep); }
+[data-cadence] .chart-head .left .hero-meta .delta.down { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .chart-head .left .hero-meta .delta.up   { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .chart-head .left .hero-meta .delta.down { color: var(--clay); }
+
+[data-cadence] .chart-head .right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* -----------------------------------------------------------------
+   CONTROL GROUPS (range / compare / smoothing)
+   ----------------------------------------------------------------- */
+[data-cadence] .control-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+[data-cadence] .control-group .gl {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+[data-cadence] .filter-pill {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-cadence] .filter-pill:hover { color: var(--text); }
+
+/* Active state: ink fill in light, moss fill in dark */
+[data-cadence] .filter-pill.active {
+  background: var(--text);
+  color: var(--bg);
+}
+[data-theme="dark"] [data-cadence] .filter-pill.active {
+  background: var(--moss);
+  color: var(--on-moss);
+}
+
+/* -----------------------------------------------------------------
+   CHART CANVAS — placeholder for Session 9
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas {
+  width: 100%;
+  margin-bottom: 18px;
+}
+[data-cadence] .chart-canvas--placeholder {
+  height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+[data-cadence] .chart-placeholder-note {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 15px;
+  color: var(--text-faint);
+  letter-spacing: -0.005em;
+}
+
+/* -----------------------------------------------------------------
+   CHART CONTROLS ROW (bottom strip of hero card)
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+[data-cadence] .chart-controls-row .left,
+[data-cadence] .chart-controls-row .right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+[data-cadence] .chart-foot-meta {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+
+/* -----------------------------------------------------------------
+   SUPPORTING STAT TILES
+   ----------------------------------------------------------------- */
+[data-cadence] .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 32px;
+}
+[data-cadence] .stat-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+}
+[data-cadence] .stat-tile .label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  margin-bottom: 8px;
+}
+[data-cadence] .stat-tile .value {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 36px;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+[data-cadence] .stat-tile .value .unit {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+[data-cadence] .stat-tile .ctx {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+
+/* -----------------------------------------------------------------
+   ANNOTATIONS SECTION
+   ----------------------------------------------------------------- */
+[data-cadence] .annot-section { margin-top: 32px; }
+
+[data-cadence] .annot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-left: 14px;
+  border-left: 2px solid var(--moss);
+}
+[data-cadence] .annot-head .title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  line-height: 1;
+}
+[data-cadence] .annot-head .meta {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+
+[data-cadence] .annot-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+[data-cadence] .annot-row {
+  display: grid;
+  grid-template-columns: 110px 16px 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  cursor: pointer;
+}
+[data-cadence] .annot-row + .annot-row {
+  border-top: 1px dashed var(--border);
+}
+[data-cadence] .annot-row:hover { background: var(--bg-paper); }
+
+[data-cadence] .annot-row .date {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .annot-row .pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+[data-cadence] .annot-row .pip.pb      { background: var(--moss); }
+[data-cadence] .annot-row .pip.race    { background: var(--moss-deep); }
+[data-cadence] .annot-row .pip.deload  { background: var(--sand); }
+[data-cadence] .annot-row .pip.illness { background: var(--clay); }
+[data-theme="dark"] [data-cadence] .annot-row .pip.race {
+  background: var(--moss);
+  filter: brightness(0.85);
+}
+
+[data-cadence] .annot-row .body { min-width: 0; }
+[data-cadence] .annot-row .body .title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  line-height: 1.15;
+  margin-bottom: 4px;
+}
+[data-cadence] .annot-row .body .note {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+
+/* Kind badges */
+[data-cadence] .annot-row .kind {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+[data-cadence] .annot-row .kind.pb {
+  color: var(--moss-deep);
+  border-color: var(--annot-pb-border);
+}
+[data-cadence] .annot-row .kind.race {
+  color: var(--moss-deep);
+  border-color: var(--annot-race-border);
+  background: var(--annot-race-bg);
+}
+[data-cadence] .annot-row .kind.deload {
+  color: var(--sand);
+  border-color: var(--sand);
+}
+[data-cadence] .annot-row .kind.illness {
+  color: var(--clay-deep);
+  border-color: var(--annot-illness-border);
+}
+[data-theme="dark"] [data-cadence] .annot-row .kind.pb      { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .annot-row .kind.race    { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .annot-row .kind.illness { color: var(--clay); }
+
+/* Empty state — always render section, show this when no annotations */
+[data-cadence] .annot-empty {
+  padding: 32px 22px;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 15px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+}
+
+/* Add annotation button — non-functional, renders silently */
+[data-cadence] .add-annot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  background: transparent;
+  border: none;
+  border-top: 1px dashed var(--border);
+  width: 100%;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  justify-content: center;
+}
+[data-cadence] .add-annot:hover {
+  background: var(--bg-paper);
+  color: var(--text);
+}
+[data-cadence] .add-annot svg { width: 12px; height: 12px; }
+
+/* -----------------------------------------------------------------
+   LIFT TABS EMPTY STATE
+   Matches Daily Data lifts section visual pattern.
+   ----------------------------------------------------------------- */
+[data-cadence] .lift-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 17px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  text-align: center;
+  padding: 48px 32px;
+}
+
+/* -----------------------------------------------------------------
+   RESPONSIVE
+   ----------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  [data-cadence] .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  [data-cadence] .chart-head { flex-direction: column; align-items: stretch; }
+  [data-cadence] .chart-head .right {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  [data-cadence] .chart-head .left .hero-num { font-size: 64px; }
+}
+@media (max-width: 800px) {
+  [data-cadence] .stats-grid { grid-template-columns: 1fr; }
+  [data-cadence] .annot-row { grid-template-columns: 1fr; gap: 8px; }
+  [data-cadence] .annot-row .pip { width: 8px; height: 8px; }
+  [data-cadence] .annot-row .kind { justify-self: start; }
+}
