@@ -28,6 +28,15 @@ const TABS = [
 // ─── RANGE DAYS ───────────────────────────────────────────────────────────────
 const RANGE_DAYS = { '1m': 30, '3m': 91, '6m': 182, '1y': 365, 'all': null }
 
+// ─── SVG CHART CONSTANTS ──────────────────────────────────────────────────────
+const SVG_W   = 1100  // viewBox width
+const SVG_H   = 340   // viewBox height
+const CL      = 50    // chart left x — y-axis label margin
+const CR      = 1050  // chart right x — 50px right for target label overflow
+const CT      = 22    // chart top y
+const CB      = 300   // chart bottom y / baseline for non-balance charts
+const LABEL_Y = 320   // x-axis label row y
+
 function rangeLabel(range) {
   if (range === '1m') return '1M average'
   if (range === '3m') return '3M average'
@@ -49,6 +58,68 @@ function fmtRangeWindow(range, days) {
   const start = new Date(); start.setDate(start.getDate() - (days - 1))
   const fmt   = d => d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
   return `${fmt(start)} → ${fmt(end)}`
+}
+
+// ─── CHART HELPERS ────────────────────────────────────────────────────────────
+
+function niceNum(v) {
+  if (!v || v <= 0) return 10
+  const exp = Math.pow(10, Math.floor(Math.log10(v)))
+  const f   = v / exp
+  if (f <= 1.5) return 1.5 * exp
+  if (f <= 3)   return 3   * exp
+  if (f <= 6)   return 6   * exp
+  return 10 * exp
+}
+
+// Computes Y-axis scale from bars data.
+// isBalance: chart has signed values (calories balance).
+function computeYScale(bars, isBalance) {
+  const vals = bars.map(b => b.value).filter(v => v !== null && isFinite(v))
+  const make = (yTop, yBot) => {
+    const span       = yTop - yBot
+    const gridLevels = [yBot, yBot + span / 3, yBot + span * 2 / 3, yTop]
+    const toY        = v => CB - ((v - yBot) / span) * (CB - CT)
+    return { yTop, yBot, gridLevels, toY }
+  }
+  if (!vals.length) return make(isBalance ? 100 : 100, isBalance ? -100 : 0)
+  if (isBalance) {
+    const ext = Math.max(Math.abs(Math.max(...vals)), Math.abs(Math.min(...vals)))
+    const yTop = Math.max(niceNum(ext * 1.2), 100)
+    return make(yTop, -yTop)
+  }
+  return make(Math.max(niceNum(Math.max(...vals) * 1.15), 1), 0)
+}
+
+function fmtGridLabel(v) {
+  if (v === 0) return '0'
+  const sign = v < 0 ? '−' : ''
+  const abs  = Math.abs(v)
+  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`
+  return `${sign}${Math.round(abs)}`
+}
+
+// Buckets allMetrics.X.vals (per-day { date, value }) into Monday-anchored
+// weeks. allDays establishes ordering — weeks with no data get value: null.
+function buildChartBars(metricVals, allDays) {
+  const byWeek    = {}
+  const weekOrder = []
+  allDays.forEach(d => {
+    const wk = startOfWeek(new Date(d + 'T00:00:00')).toISOString().split('T')[0]
+    if (!byWeek[wk]) { byWeek[wk] = []; weekOrder.push(wk) }
+  })
+  ;(metricVals || []).forEach(({ date, value }) => {
+    const wk = startOfWeek(new Date(date + 'T00:00:00')).toISOString().split('T')[0]
+    if (byWeek[wk]) byWeek[wk].push(value)
+  })
+  const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+  return weekOrder.map(wk => {
+    const vals  = byWeek[wk]
+    const value = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    const d     = new Date(wk + 'T00:00:00')
+    const weekLabel = 'WEEK OF ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()
+    return { weekKey: wk, weekLabel, value, isCurrent: wk === currentWk }
+  })
 }
 
 // ─── METRIC BUILDER ───────────────────────────────────────────────────────────
@@ -224,6 +295,76 @@ function runningHero(logs, stravaKmMap, range) {
     totalKm:       totalKm    > 0 ? totalKm.toFixed(0)     : '—',
     rangeWeeks:    weekVals.length,
   }
+}
+
+// ─── CHART SVG ────────────────────────────────────────────────────────────────
+function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false }) {
+  const hasData = bars.some(b => b.value !== null && isFinite(b.value))
+  if (!hasData) {
+    return (
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
+        <text className="chart-empty" x={SVG_W / 2} y={SVG_H / 2}>Awaiting data</text>
+      </svg>
+    )
+  }
+  const n      = bars.length
+  const SLOT_W = (CR - CL) / n
+  const BAR_W  = Math.max(2, Math.min(30, SLOT_W * 0.72))
+  const barX   = i => CL + i * SLOT_W + (SLOT_W - BAR_W) / 2
+  const barMid = i => barX(i) + BAR_W / 2
+  const delay  = Math.min(40, 800 / Math.max(n, 1))
+  const { gridLevels, toY } = computeYScale(bars, isBalance)
+  const baselineY = toY(0)
+  const gridLineVals = isBalance ? gridLevels : gridLevels.slice(1)
+  const yLabelVals = isBalance
+    ? [...new Set([...gridLevels, 0])].sort((a, b) => b - a)
+    : gridLevels
+  const xLabels = []
+  const seenMos = new Set()
+  bars.forEach((bar, i) => {
+    if (!bar.weekKey) return
+    const mo = bar.weekKey.slice(0, 7)
+    if (!seenMos.has(mo)) {
+      seenMos.add(mo)
+      const d = new Date(bar.weekKey + 'T00:00:00')
+      xLabels.push({ x: barMid(i), label: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase() })
+    }
+  })
+  const step       = Math.ceil(xLabels.length / 12)
+  const visXLabels = xLabels.filter((_, i) => i % step === 0)
+  return (
+    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
+      {gridLineVals.map((v, i) => (
+        <line key={`g${i}`} className="grid-line" x1={CL} y1={toY(v)} x2={CR} y2={toY(v)} />
+      ))}
+      <line className="baseline" x1={CL} y1={baselineY} x2={CR} y2={baselineY} />
+      {yLabelVals.map((v, i) => (
+        <text key={`y${i}`} className="axis-label y" x={CL - 8} y={toY(v) + 4}>{fmtGridLabel(v)}</text>
+      ))}
+      {bars.map((bar, i) => {
+        if (bar.value === null || !isFinite(bar.value)) return null
+        const v  = bar.value
+        const py = isBalance && v < 0 ? baselineY : toY(v)
+        const ht = isBalance ? Math.abs(toY(v) - baselineY) : baselineY - toY(v)
+        if (ht <= 0) return null
+        return (
+          <rect
+            key={`${animKey}-${i}`}
+            className={`bar${bar.isCurrent ? ' current' : ''}`}
+            x={barX(i)} y={py} width={BAR_W} height={ht}
+            style={{
+              fill: barColor,
+              animationDelay: `${Math.round(200 + i * delay)}ms`,
+              ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
+            }}
+          />
+        )
+      })}
+      {visXLabels.map((l, i) => (
+        <text key={`x${i}`} className="axis-label x" x={l.x} y={LABEL_Y}>{l.label}</text>
+      ))}
+    </svg>
+  )
 }
 
 // ─── STAT TILE ────────────────────────────────────────────────────────────────
@@ -467,6 +608,36 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     [range, rangeDays]
   )
 
+  const barColor = useMemo(() => {
+    const tab = TABS.find(t => t.id === activeTab)
+    if (tab?.pip === 'sleep')  return 'var(--slate)'
+    if (tab?.pip === 'intake') return 'var(--sand)'
+    return 'var(--moss)'
+  }, [activeTab])
+
+  const chartBars = useMemo(() => {
+    if (activeTab === 'squat' || activeTab === 'pullup') return []
+    const n    = rangeDays ?? 730
+    const days = daysWindow(n)
+    if (activeTab === 'running') {
+      const byWeek    = buildWeekBuckets(days, logs, stravaKmMap)
+      const weekOrder = Object.keys(byWeek).sort()
+      const currentWk = startOfWeek(new Date()).toISOString().split('T')[0]
+      return weekOrder.map(wk => ({
+        weekKey:   wk,
+        weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),
+        value:     byWeek[wk] > 0 ? byWeek[wk] : null,
+        isCurrent: wk === currentWk,
+      }))
+    }
+    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', calories: 'calsBalance' }[activeTab]
+    const metric = metricKey ? allMetrics[metricKey] : null
+    if (!metric) return []
+    return buildChartBars(metric.vals, days)
+  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics])
+
+  const animKey = `${activeTab}-${range}`
+
   return (
     <div className="charts-page">
 
@@ -559,13 +730,14 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
             </div>
           </div>
 
-          {/* Chart canvas — placeholder until Session 9 */}
+          {/* Chart canvas */}
           <div className="chart-canvas">
-            <div className="chart-canvas--placeholder">
-              <span className="chart-placeholder-note">
-                Chart rendering coming in Session 9.
-              </span>
-            </div>
+            <ChartSVG
+              bars={chartBars}
+              barColor={barColor}
+              animKey={animKey}
+              isBalance={activeTab === 'calories'}
+            />
           </div>
 
           {/* Bottom controls */}
