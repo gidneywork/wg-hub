@@ -257,6 +257,24 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     return () => clearInterval(id)
   }, [])
 
+  // ── Auto-advance: 20s cycle ──────────────────────────────────────────────────
+  // Fires on every range change (manual or automatic). The 20s timer restarts
+  // each time range state changes, so a manual click naturally resets the cycle.
+  // The breathing transition (setDataChanging) mirrors the changeRange path so
+  // both triggers feel identical to the viewer.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const nextRange = RANGES[(RANGES.indexOf(range) + 1) % RANGES.length]
+      setProgressKey(k => k + 1)
+      setDataChanging(true)
+      setTimeout(() => {
+        setRange(nextRange)
+        setDataChanging(false)
+      }, 280)
+    }, 20000)
+    return () => clearTimeout(id)
+  }, [range])
+
   // ── ESC key → exit ──────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') setView('dashboard') }
