@@ -145,6 +145,30 @@ export default function Settings({
       <WhoopUpload onAuditWritten={bumpAudit} />
 
       <ActivityLog auditVersion={auditVersion} />
+
+      <section className="settings-section r r-9">
+        <div className="section-head">
+          <span className="section-label">Display</span>
+        </div>
+        <div className="section-body">
+          <div className="ay-field">
+            <div className="ay-label">Auto theme</div>
+            <label className="ac-toggle-label">
+              <input
+                type="checkbox"
+                className="ac-toggle-input"
+                checked={!!local.autoTheme}
+                onChange={e => setLocal(prev => ({ ...prev, autoTheme: e.target.checked }))}
+              />
+              <span className="ac-toggle-track"><span className="ac-toggle-thumb" /></span>
+              <span className="ac-toggle-text">{local.autoTheme ? 'Enabled' : 'Disabled'}</span>
+            </label>
+            {local.autoTheme && (
+              <div className="ay-helper">Light from 06:00 · Dark from 21:00</div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

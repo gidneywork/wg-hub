@@ -2527,6 +2527,12 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-muted);
   margin-bottom: var(--space-1);
 }
+[data-cadence] .settings-page .ay-helper {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-quiet);
+  margin-top: var(--space-2);
+}
 [data-cadence] .settings-page .ay-field input,
 [data-cadence] .settings-page .ay-field select,
 [data-cadence] .settings-page .ay-field textarea {
@@ -3691,21 +3697,21 @@ html::-webkit-scrollbar-track { background: transparent; }
   gap: var(--space-4);
 }
 
-/* Toggle */
-[data-cadence] .ac-page .ac-toggle-input {
+/* Toggle — shared across .ac-page and .settings-page */
+[data-cadence] .ac-toggle-input {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
 }
-[data-cadence] .ac-page .ac-toggle-label {
+[data-cadence] .ac-toggle-label {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
   cursor: pointer;
   user-select: none;
 }
-[data-cadence] .ac-page .ac-toggle-track {
+[data-cadence] .ac-toggle-track {
   position: relative;
   width: 36px;
   height: 20px;
@@ -3714,10 +3720,10 @@ html::-webkit-scrollbar-track { background: transparent; }
   flex-shrink: 0;
   transition: background var(--t-ui) var(--ease);
 }
-[data-cadence] .ac-page .ac-toggle-input:checked + .ac-toggle-track {
+[data-cadence] .ac-toggle-input:checked + .ac-toggle-track {
   background: var(--moss);
 }
-[data-cadence] .ac-page .ac-toggle-thumb {
+[data-cadence] .ac-toggle-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -3727,11 +3733,11 @@ html::-webkit-scrollbar-track { background: transparent; }
   background: var(--text-quiet);
   transition: left var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
 }
-[data-cadence] .ac-page .ac-toggle-input:checked + .ac-toggle-track .ac-toggle-thumb {
+[data-cadence] .ac-toggle-input:checked + .ac-toggle-track .ac-toggle-thumb {
   left: 18px;
   background: var(--on-moss);
 }
-[data-cadence] .ac-page .ac-toggle-text {
+[data-cadence] .ac-toggle-text {
   font-family: var(--mono);
   font-size: var(--type-label);
   letter-spacing: 0.08em;

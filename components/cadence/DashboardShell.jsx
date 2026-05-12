@@ -12,7 +12,7 @@ import Sidebar from './Sidebar'
  * itself in [data-legacy="true"] so its CSS variables stay scoped and
  * do not override the Cadence token set.
  */
-export default function DashboardShell({ view, setView, userName, userMeta, onSignOut, children }) {
+export default function DashboardShell({ view, setView, userName, userMeta, onSignOut, onThemeToggle, children }) {
   return (
     <div data-cadence>
       <div className="shell">
@@ -22,6 +22,7 @@ export default function DashboardShell({ view, setView, userName, userMeta, onSi
           userName={userName}
           userMeta={userMeta}
           onSignOut={onSignOut}
+          onThemeToggle={onThemeToggle}
         />
         <main>
           {children}

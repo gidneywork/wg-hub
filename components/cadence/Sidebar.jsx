@@ -63,15 +63,7 @@ function NavGroup({ eyebrow, items, view, setView }) {
   )
 }
 
-function toggleTheme() {
-  if (typeof document === 'undefined') return
-  const current = document.documentElement.getAttribute('data-theme')
-  const next = current === 'dark' ? 'light' : 'dark'
-  document.documentElement.setAttribute('data-theme', next)
-  try { localStorage.setItem('cadence-theme', next) } catch {}
-}
-
-export default function Sidebar({ view, setView, userName = 'You', userMeta = 'PRO · GMT', onSignOut }) {
+export default function Sidebar({ view, setView, userName = 'You', userMeta = 'PRO · GMT', onSignOut, onThemeToggle }) {
   const initial = (userName || 'W').trim().charAt(0).toUpperCase() || 'W'
 
   return (
@@ -112,7 +104,7 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
         <button
           type="button"
           className="theme-toggle"
-          onClick={toggleTheme}
+          onClick={onThemeToggle}
           aria-label="Toggle theme"
           title="Toggle light/dark"
         >

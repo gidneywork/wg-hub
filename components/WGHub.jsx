@@ -83,6 +83,7 @@ const DEFAULT_SETTINGS = {
   hoursSlept:       {value:8,     label:'Hours Slept Target',        unit:'hrs',   lowerIsBetter:false},
   hrv:              {value:70,    label:'HRV Target',                unit:'',      lowerIsBetter:false},
   rhr:              {value:52,    label:'Resting HR Target',         unit:'bpm',   lowerIsBetter:true},
+  autoTheme:        false,
 }
 
 const DEFAULT_ASSISTANT_CONFIG = {
@@ -286,6 +287,48 @@ export default function WGHub({ onSignOut }) {
     setOnboardingDone(true)
   }
 
+  // ── Auto theme ──────────────────────────────────────────────────────────────
+  // When settings.autoTheme is on, checks the hour every 60s and applies
+  // light (06:00–21:00) or dark (21:00–06:00). A manual toggle sets an
+  // override in localStorage that suppresses auto-switching until 06:00.
+  useEffect(() => {
+    if (!settings.autoTheme) return
+    function applyAutoTheme() {
+      try {
+        const overrideUntil = parseInt(localStorage.getItem('cadence-theme-override-until') || '0', 10)
+        if (overrideUntil) {
+          if (Date.now() < overrideUntil) return
+          localStorage.removeItem('cadence-theme-override-until')
+        }
+      } catch {}
+      const hour  = new Date().getHours()
+      const next  = (hour >= 6 && hour < 21) ? 'light' : 'dark'
+      const curr  = document.documentElement.getAttribute('data-theme')
+      if (curr !== next) {
+        document.documentElement.setAttribute('data-theme', next)
+        try { localStorage.setItem('cadence-theme', next) } catch {}
+      }
+    }
+    applyAutoTheme()
+    const id = setInterval(applyAutoTheme, 60_000)
+    return () => clearInterval(id)
+  }, [settings.autoTheme])
+
+  const handleThemeToggle = () => {
+    if (typeof document === 'undefined') return
+    const current = document.documentElement.getAttribute('data-theme')
+    const next    = current === 'dark' ? 'light' : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    try { localStorage.setItem('cadence-theme', next) } catch {}
+    if (settings.autoTheme) {
+      const now     = new Date()
+      const nextSix = new Date(now)
+      nextSix.setHours(6, 0, 0, 0)
+      if (nextSix <= now) nextSix.setDate(nextSix.getDate() + 1)
+      try { localStorage.setItem('cadence-theme-override-until', String(nextSix.getTime())) } catch {}
+    }
+  }
+
   const LEGACY_VIEWS = ['plan','planner','finance']
   const isLegacy = LEGACY_VIEWS.includes(view)
 
@@ -310,7 +353,7 @@ export default function WGHub({ onSignOut }) {
   }
 
   return (
-    <DashboardShell view={view} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'} onSignOut={onSignOut}>
+    <DashboardShell view={view} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'} onSignOut={onSignOut} onThemeToggle={handleThemeToggle}>
       {!ready ? (
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
