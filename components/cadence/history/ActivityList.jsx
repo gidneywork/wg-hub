@@ -37,7 +37,7 @@ function Chevron() {
   )
 }
 
-function ActivityRow({ activity, isPB }) {
+function ActivityRow({ activity, isPB, onEditActivity }) {
   const bucket = typeBucket(activity)
   const canonical = canonicalType(activity)
   const source = activitySource(activity)
@@ -68,7 +68,7 @@ function ActivityRow({ activity, isPB }) {
   const { num, dow, mon } = fmtRowDate(activity.start_date)
 
   return (
-    <div className="activity-row" data-type={bucket} data-source={source}>
+    <div className="activity-row" data-type={bucket} data-source={source} onClick={() => onEditActivity?.(activity)}>
       <div className="date">
         <span className="num">{num}</span>{dow} {mon}
       </div>
@@ -92,7 +92,7 @@ function ActivityRow({ activity, isPB }) {
   )
 }
 
-function WeekSection({ weekGroup, pbIds }) {
+function WeekSection({ weekGroup, pbIds, onEditActivity }) {
   const t = weekTotals(weekGroup.activities)
   return (
     <section className="week">
@@ -108,7 +108,7 @@ function WeekSection({ weekGroup, pbIds }) {
       </div>
       <div className="activity-list">
         {weekGroup.activities.map(a => (
-          <ActivityRow key={a.id} activity={a} isPB={pbIds.has(a.id)} />
+          <ActivityRow key={a.id} activity={a} isPB={pbIds.has(a.id)} onEditActivity={onEditActivity} />
         ))}
       </div>
     </section>
@@ -162,7 +162,7 @@ function ArchiveStub({ archiveCount, archiveYear, archiveFromLabel }) {
   )
 }
 
-export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable, onLoadMore }) {
+export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable, onLoadMore, onEditActivity }) {
   // Flat children so the mockup's :first-of-type margin reset on
   // year-banner / month-divider behaves as expected. Wrapping each
   // group in a div would make every banner :first-of-type within its
@@ -173,7 +173,7 @@ export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable
     yg.months.forEach(mg => {
       nodes.push(<MonthDivider key={`m-${mg.key}`} monthGroup={mg} pbIds={pbIds} />)
       mg.weeks.forEach(wg => {
-        nodes.push(<WeekSection key={`w-${wg.key}`} weekGroup={wg} pbIds={pbIds} />)
+        nodes.push(<WeekSection key={`w-${wg.key}`} weekGroup={wg} pbIds={pbIds} onEditActivity={onEditActivity} />)
       })
     })
   })

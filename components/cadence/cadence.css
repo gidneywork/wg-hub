@@ -1674,6 +1674,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   position: relative;
 }
 [data-cadence] .history .activity-row + .activity-row { border-top: 1px dashed var(--border); }
+[data-cadence] .history .activity-row { cursor: pointer; }
 [data-cadence] .history .activity-row:hover { background: var(--bg-paper); }
 [data-cadence] .history .activity-row .date {
   font-family: var(--mono);
@@ -3639,6 +3640,46 @@ html::-webkit-scrollbar-track { background: transparent; }
 @keyframes cadenceDialogSlide {
   from { opacity: 0; transform: translateY(-6px) }
   to   { opacity: 1; transform: translateY(0) }
+}
+
+/* Edit form — inside CadenceDialog body */
+[data-cadence] .cadence-dialog .edit-form { display: flex; flex-direction: column; gap: var(--space-3); }
+[data-cadence] .cadence-dialog .edit-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+[data-cadence] .cadence-dialog .edit-input,
+[data-cadence] .cadence-dialog .edit-select,
+[data-cadence] .cadence-dialog .edit-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--t-ui) var(--ease);
+}
+[data-cadence] .cadence-dialog .edit-input:focus,
+[data-cadence] .cadence-dialog .edit-select:focus,
+[data-cadence] .cadence-dialog .edit-textarea:focus { border-color: var(--moss); }
+[data-cadence] .cadence-dialog .edit-input::placeholder,
+[data-cadence] .cadence-dialog .edit-textarea::placeholder { color: var(--text-faint); }
+[data-cadence] .cadence-dialog .edit-textarea { resize: vertical; }
+[data-cadence] .cadence-dialog .edit-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+  cursor: pointer;
 }
 
 /* Daily Data — two breakpoints inherited verbatim from the mockup */
