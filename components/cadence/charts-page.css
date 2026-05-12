@@ -273,11 +273,19 @@
 }
 
 /* -----------------------------------------------------------------
-   CHART CANVAS — placeholder for Session 9
+   CHART CANVAS
+   position: relative anchors the hover tooltip inside the canvas.
    ----------------------------------------------------------------- */
 [data-cadence] .chart-canvas {
   width: 100%;
   margin-bottom: 18px;
+  position: relative;
+}
+[data-cadence] .chart-canvas svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
 }
 [data-cadence] .chart-canvas--placeholder {
   height: 340px;
@@ -295,6 +303,204 @@
   color: var(--text-faint);
   letter-spacing: -0.005em;
 }
+
+/* -----------------------------------------------------------------
+   SVG CHART — THEME TRANSITIONS
+   All SVG chart elements crossfade fill/stroke on theme toggle,
+   matching the shell and card transition pattern from cadence.css.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas svg rect,
+[data-cadence] .chart-canvas svg path,
+[data-cadence] .chart-canvas svg line,
+[data-cadence] .chart-canvas svg text {
+  transition: fill var(--t-theme) var(--ease), stroke var(--t-theme) var(--ease);
+}
+
+/* -----------------------------------------------------------------
+   SVG CHART — BARS
+   fill is set inline (varies by tab category: moss/slate/sand).
+   filter: brightness() on hover works regardless of inline fill.
+   transform-box: fill-box anchors transform-origin: bottom to the
+   rect's own bounding box so growBar scales from the baseline up.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  animation: growBar 800ms var(--ease) forwards;
+  cursor: pointer;
+}
+[data-cadence] .chart-canvas .bar:hover {
+  filter: brightness(0.85);
+}
+[data-theme="dark"] [data-cadence] .chart-canvas .bar:hover {
+  filter: brightness(1.2);
+}
+[data-cadence] .chart-canvas .bar.current { opacity: 0.45; }
+[data-cadence] .chart-canvas .bar.low     { opacity: 0.6; }
+[data-cadence] .chart-canvas .bar.deload  { opacity: 0.7; }
+
+/* -----------------------------------------------------------------
+   SVG CHART — GRID AND AXES
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .grid-line {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+[data-cadence] .chart-canvas .baseline {
+  stroke: var(--chart-baseline);
+  stroke-width: 1;
+}
+[data-cadence] .chart-canvas .axis-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--text-quiet);
+}
+[data-cadence] .chart-canvas .axis-label.x { text-anchor: middle; }
+[data-cadence] .chart-canvas .axis-label.y { text-anchor: end; }
+
+/* -----------------------------------------------------------------
+   SVG CHART — TARGET LINE (compare = target)
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .target-line {
+  stroke: var(--chart-target);
+  stroke-width: 1.25;
+  stroke-dasharray: 6 4;
+  opacity: 0.7;
+}
+[data-cadence] .chart-canvas .target-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--chart-target);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* -----------------------------------------------------------------
+   SVG CHART — PREVIOUS PERIOD LINE (compare = prev)
+   Dashed clay line, no fill. M commands in the path break at gaps.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .prev-line {
+  stroke: var(--clay);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  fill: none;
+  opacity: 0.7;
+}
+
+/* -----------------------------------------------------------------
+   SVG CHART — ANNOTATION MARKERS
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .annot {
+  opacity: 0;
+  animation: fadeIn 600ms var(--ease) forwards;
+  animation-delay: 1.4s;
+}
+[data-cadence] .chart-canvas .annot-line {
+  stroke: var(--chart-baseline);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.5;
+}
+[data-cadence] .chart-canvas .annot-marker          { cursor: pointer; }
+[data-cadence] .chart-canvas .annot-marker.pb       path { fill: var(--moss); }
+[data-cadence] .chart-canvas .annot-marker.race     path { fill: var(--moss-deep); }
+[data-cadence] .chart-canvas .annot-marker.deload   path { fill: var(--sand); }
+[data-cadence] .chart-canvas .annot-marker.illness  path { fill: var(--clay); }
+[data-theme="dark"] [data-cadence] .chart-canvas .annot-marker.race path {
+  fill: var(--moss);
+  filter: brightness(0.85);
+}
+
+/* -----------------------------------------------------------------
+   SVG CHART — EMPTY STATE
+   Italic Fraunces "Awaiting data" centred in canvas area —
+   same voice as hero-meta .awaiting from charts-page.css.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .chart-empty {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 15px;
+  fill: var(--text-faint);
+  letter-spacing: -0.005em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* -----------------------------------------------------------------
+   HOVER TOOLTIP (paper card)
+   Absolutely positioned inside .chart-canvas (position: relative).
+   pointer-events: none — never captures the hover that triggered it.
+   transform: translateX(-50%) centres it on the bar's mid-x.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-tooltip {
+  position: absolute;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  pointer-events: none;
+  z-index: var(--z-dropdown);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+[data-cadence] .chart-tooltip .tt-value {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+[data-cadence] .chart-tooltip .tt-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+}
+[data-cadence] .chart-tooltip .tt-week {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+}
+[data-cadence] .chart-tooltip .tt-delta {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* -----------------------------------------------------------------
+   DISABLED FILTER PILL (vs Prev when range = All)
+   pointer-events: none prevents hover — the muted colour signals
+   this control is not meaningful for the current range.
+   ----------------------------------------------------------------- */
+[data-cadence] .filter-pill[data-disabled="true"] {
+  color: var(--text-faint);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* -----------------------------------------------------------------
+   KEYFRAMES
+   growBar: bars scale from baseline upward (transform-origin: bottom).
+   fadeIn: annotation markers appear after all bars have grown.
+   ----------------------------------------------------------------- */
+@keyframes growBar { to { transform: scaleY(1); } }
+@keyframes fadeIn  { to { opacity: 1; } }
 
 /* -----------------------------------------------------------------
    CHART CONTROLS ROW (bottom strip of hero card)
