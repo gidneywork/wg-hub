@@ -2857,6 +2857,15 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .daily-page .field-card.saved .save-tick { opacity: 1; }
 [data-theme="dark"] [data-cadence] .daily-page .field-card .save-tick { color: var(--moss); }
 
+[data-cadence] .daily-page .field-card .field-source-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: 6px;
+}
+
 [data-cadence] .daily-page .field-card .progress {
   height: 4px;
   background: var(--bg-elevated);

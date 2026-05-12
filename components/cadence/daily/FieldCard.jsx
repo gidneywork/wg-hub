@@ -6,7 +6,9 @@ import { useEffect, useRef, useState } from 'react'
  * Generic Daily Data field card — used 6 times across Body + Nutrition.
  *
  *   label       short uppercase mono label, e.g. "Weight"
- *   targetRef   right-side mono ref text, e.g. "Target 70 kg" or "From Whoop"
+ *   targetRef   right-side mono ref text, e.g. "Target 70 kg"
+ *   sourcePill  optional source attribution pill, e.g. "From Whoop", rendered
+ *               between the input shell and the progress bar
  *   value       controlled input value (string)
  *   onChange    (newStr) => void
  *   unit        right-side unit, e.g. "kg"
@@ -27,6 +29,7 @@ import { useEffect, useRef, useState } from 'react'
 export default function FieldCard({
   label,
   targetRef,
+  sourcePill = null,
   value,
   onChange,
   unit,
@@ -81,6 +84,7 @@ export default function FieldCard({
           <path d="M5 12l5 5L20 7" />
         </svg>
       </div>
+      {sourcePill ? <div className="field-source-pill">{sourcePill}</div> : null}
       <div className="progress">
         <div className={fillClass} style={{ width: `${renderedPct}%` }} />
       </div>
