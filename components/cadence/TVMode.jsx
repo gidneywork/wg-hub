@@ -434,6 +434,34 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
   })()
 
+  // ── Stat tile: Bedtime ───────────────────────────────────────────────────────
+  // Circular mean — times before 04:00 are shifted +1440 before averaging so that
+  // e.g. 23:45 and 00:15 average to 00:00 rather than 12:00.
+  const { avgBedtime, bedtimeDaysLogged } = useMemo(() => {
+    const PIVOT = 240
+    const mins = days.map(d => {
+      const t = logs?.[d]?.schedule?.bedtime
+      if (!t) return null
+      const [h, m] = t.split(':').map(Number)
+      if (isNaN(h) || isNaN(m)) return null
+      const raw = h * 60 + m
+      return raw < PIVOT ? raw + 1440 : raw
+    }).filter(v => v !== null)
+    if (!mins.length) return { avgBedtime: null, bedtimeDaysLogged: 0 }
+    const mean = Math.round(mins.reduce((a, b) => a + b, 0) / mins.length) % 1440
+    const hh = String(Math.floor(mean / 60) % 24).padStart(2, '0')
+    const mm = String(mean % 60).padStart(2, '0')
+    return { avgBedtime: `${hh}:${mm}`, bedtimeDaysLogged: mins.length }
+  }, [days, logs])
+
+  const bedtimeStatus = (() => {
+    if (avgBedtime == null) return { text: 'no data', cls: 'no-data' }
+    return {
+      text: `● ${bedtimeDaysLogged} day${bedtimeDaysLogged !== 1 ? 's' : ''} logged`,
+      cls:  'flat',
+    }
+  })()
+
   // ── Km hero data ─────────────────────────────────────────────────────────────
   const stravaKmMap = useMemo(() => kmByDateMap(activities), [activities])
 
@@ -592,6 +620,12 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             value={avgHours != null ? formatHoursColon(avgHours) : null} unit="h"
             status={hoursStatus.text} statusClass={hoursStatus.cls}
             sparkValues={sparkHours}  revealClass="r-8"
+          />
+          <StatTile
+            label="Bedtime"    sub={periodLabel}
+            value={avgBedtime ?? null} unit=""
+            status={bedtimeStatus.text} statusClass={bedtimeStatus.cls}
+            sparkValues={null}  revealClass="r-9"
           />
         </section>
 

@@ -262,11 +262,11 @@
 [data-theme="dark"]  .tv-page .theme-toggle .t-sun  { display: block; }
 
 /* -----------------------------------------------------------------
-   STAT GRID — 6-up horizontal tiles
+   STAT GRID — 7-up horizontal tiles
    ----------------------------------------------------------------- */
 .tv-page .stat-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 14px;
   margin-bottom: 36px;
 }
@@ -680,7 +680,7 @@
   }
 }
 @media (max-width: 1200px) {
-  .tv-page .stat-grid                       { grid-template-columns: repeat(3, 1fr); }
+  .tv-page .stat-grid                       { grid-template-columns: repeat(4, 1fr); }
   .tv-page .bottom-grid                     { grid-template-columns: 1fr 1fr; }
   .tv-page .bottom-grid .panel:nth-child(3) { grid-column: 1 / -1; }
 }

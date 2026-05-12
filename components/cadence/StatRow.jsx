@@ -49,6 +49,18 @@ function deltaClass(delta, direction = 'higher') {
   return better ? 'up' : 'down'
 }
 
+// Parses "HH:MM" to minutes, shifting times before 04:00 (pivot) by +1440
+// so overnight bedtimes (e.g. 23:30) compare correctly against early times (e.g. 00:30).
+const BEDTIME_PIVOT = 240
+
+function parseBedtimeMins(str) {
+  if (!str) return null
+  const [h, m] = str.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return null
+  const raw = h * 60 + m
+  return raw < BEDTIME_PIVOT ? raw + 1440 : raw
+}
+
 export default function StatRow({ logs, whoopData, settings, activities }) {
   const today = todayStr()
   const todayMerged = mergeWhoopForDate(today, logs?.[today], whoopData)
@@ -99,6 +111,19 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
   })
   const sleepTarget = parseFloat(settings?.hoursSlept?.value)
   const sleepAtTarget = hoursValid && isFinite(sleepTarget) && hours >= sleepTarget
+
+  // ── Bedtime ──────────────────────────────────────────────────
+  // Reads schedule.bedtime directly from logs — manually entered, no Whoop source.
+  const todayBedtimeStr   = logs?.[today]?.schedule?.bedtime ?? null
+  const todayBedtimeMins  = parseBedtimeMins(todayBedtimeStr)
+  const last7BedtimeMins  = last7.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
+  const prior7BedtimeMins = last7BedtimeMins.slice(0, -1).filter(v => v !== null)
+  const avgPrior7BedtimeMins = prior7BedtimeMins.length
+    ? prior7BedtimeMins.reduce((a, b) => a + b, 0) / prior7BedtimeMins.length
+    : null
+  const bedtimeDeltaMins = todayBedtimeMins != null && avgPrior7BedtimeMins != null
+    ? Math.round(todayBedtimeMins - avgPrior7BedtimeMins)
+    : null
 
   // ── HRV ─────────────────────────────────────────────────────
   const hrv = parseFloat(todayMerged?.body?.hrv)
@@ -176,6 +201,18 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
                 : '—'}
           </span>
           <MiniSpark values={last7Hours} />
+        </div>
+      </div>
+
+      <div className="stat">
+        <div className="label">Bedtime</div>
+        <div className="value">{todayBedtimeStr ?? '—'}</div>
+        <div className="row">
+          <span className="delta flat">
+            {bedtimeDeltaMins != null
+              ? <>{arrow(bedtimeDeltaMins)} {Math.abs(bedtimeDeltaMins)}m · 7d avg</>
+              : 'no baseline'}
+          </span>
         </div>
       </div>
 
