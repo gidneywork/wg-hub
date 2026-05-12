@@ -122,6 +122,19 @@ function buildChartBars(metricVals, allDays) {
   })
 }
 
+// Trailing rolling mean. Partial windows (first N-1 bars) are averaged
+// over available data and flagged smoothPartial for faded rendering.
+function smoothBars(bars, window) {
+  if (window <= 1) return bars
+  return bars.map((bar, i) => {
+    const slice = bars.slice(Math.max(0, i - window + 1), i + 1)
+    const valid = slice.filter(b => b.value !== null && isFinite(b.value))
+    if (!valid.length) return { ...bar, value: null, smoothPartial: false }
+    const avg = valid.reduce((s, b) => s + b.value, 0) / valid.length
+    return { ...bar, value: avg, smoothPartial: valid.length < window }
+  })
+}
+
 // ─── METRIC BUILDER ───────────────────────────────────────────────────────────
 // accessor(mergedLog, whoopDay, dateStr) → number | null | ''
 function buildMetric(days, priorDays, accessor, logs, whoopData) {
@@ -298,7 +311,7 @@ function runningHero(logs, stravaKmMap, range) {
 }
 
 // ─── CHART SVG ────────────────────────────────────────────────────────────────
-function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false }) {
+function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [] }) {
   const hasData = bars.some(b => b.value !== null && isFinite(b.value))
   if (!hasData) {
     return (
@@ -332,6 +345,27 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
   })
   const step       = Math.ceil(xLabels.length / 12)
   const visXLabels = xLabels.filter((_, i) => i % step === 0)
+
+  // Target line
+  const targetLineY = (targetValue !== null && isFinite(targetValue)) ? toY(targetValue) : null
+  const showTarget  = targetLineY !== null && targetLineY >= CT && targetLineY <= CB
+
+  // Prev-period path — M commands at gap edges, no interpolation
+  let prevPathD = ''
+  if (prevBars.length > 0) {
+    let inLine = false
+    const count = Math.min(prevBars.length, n)
+    for (let i = 0; i < count; i++) {
+      const bar = prevBars[i]
+      if (bar.value === null || !isFinite(bar.value)) { inLine = false; continue }
+      const x = barMid(i)
+      const y = toY(bar.value)
+      prevPathD += inLine ? `L ${x} ${y} ` : `M ${x} ${y} `
+      inLine = true
+    }
+    prevPathD = prevPathD.trim()
+  }
+
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
       {gridLineVals.map((v, i) => (
@@ -356,6 +390,7 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
               fill: barColor,
               animationDelay: `${Math.round(200 + i * delay)}ms`,
               ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
+              ...(bar.smoothPartial ? { opacity: 0.35 } : {}),
             }}
           />
         )
@@ -363,6 +398,15 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
       {visXLabels.map((l, i) => (
         <text key={`x${i}`} className="axis-label x" x={l.x} y={LABEL_Y}>{l.label}</text>
       ))}
+      {showTarget && (
+        <>
+          <line className="target-line" x1={CL} y1={targetLineY} x2={CR} y2={targetLineY} />
+          <text className="target-label" x={CR - 4} y={targetLineY - 3}>
+            TARGET {fmtGridLabel(targetValue)}
+          </text>
+        </>
+      )}
+      {prevPathD && <path className="prev-line" d={prevPathD} />}
     </svg>
   )
 }
@@ -638,6 +682,66 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const animKey = `${activeTab}-${range}`
 
+  const smoothWindow = smoothing === '4w' ? 4 : smoothing === '12w' ? 12 : 1
+
+  const displayBars = useMemo(
+    () => smoothBars(chartBars, smoothWindow),
+    [chartBars, smoothWindow]
+  )
+
+  const tabTarget = useMemo(() => {
+    if (activeTab === 'weight') {
+      const v = settings?.weightTarget?.value
+      return v != null && v !== '' ? parseFloat(v) : null
+    }
+    return null
+  }, [activeTab, settings])
+
+  const prevChartBars = useMemo(() => {
+    if (compare !== 'prev' || !rangeDays) return []
+    if (activeTab === 'squat' || activeTab === 'pullup') return []
+    const n = rangeDays
+    const priorEnd = new Date()
+    priorEnd.setDate(priorEnd.getDate() - n)
+    const priorDays = daysWindow(n, priorEnd)
+    if (activeTab === 'running') {
+      const byWeek    = buildWeekBuckets(priorDays, logs, stravaKmMap)
+      const weekOrder = Object.keys(byWeek).sort()
+      return weekOrder.map(wk => ({
+        weekKey:   wk,
+        weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),
+        value:     byWeek[wk] > 0 ? byWeek[wk] : null,
+        isCurrent: false,
+      }))
+    }
+    const accMap = {
+      hrv:         (m)       => m?.body?.hrv,
+      rhr:         (m)       => m?.body?.rhr,
+      weight:      (m)       => m?.body?.weight,
+      sleep:       (m)       => m?.sleep?.sleepScore,
+      recovery:    (m)       => m?.sleep?.recoveryScore,
+      strain:      (m, w)    => w?.day_strain,
+      calsBalance: (m, w, d) => {
+        const intake = logs[d]?.nutrition?.calories
+        if (intake === '' || intake == null) return null
+        const burned = w?.energy_burned
+        if (burned == null) return null
+        return parseFloat(intake) - burned
+      },
+    }
+    const metricKeyMap = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', calories: 'calsBalance' }
+    const metricKey = metricKeyMap[activeTab]
+    const acc = metricKey ? accMap[metricKey] : null
+    if (!acc) return []
+    const metricVals = priorDays.map(d => {
+      const merged = mergeWhoopForDate(d, logs[d], whoopData)
+      const raw    = acc(merged, whoopData[d], d)
+      const v      = raw !== null && raw !== undefined && raw !== '' ? parseFloat(raw) : NaN
+      return { date: d, value: isNaN(v) ? null : v }
+    }).filter(x => x.value !== null)
+    return buildChartBars(metricVals, priorDays)
+  }, [compare, rangeDays, activeTab, logs, whoopData, stravaKmMap])
+
   return (
     <div className="charts-page">
 
@@ -705,7 +809,10 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   <button
                     key={r}
                     className={`filter-pill${range === r ? ' active' : ''}`}
-                    onClick={() => setRange(r)}
+                    onClick={() => {
+                      setRange(r)
+                      if (r === 'all' && compare === 'prev') setCompare('off')
+                    }}
                   >
                     {r === 'all' ? 'All' : r.toUpperCase()}
                   </button>
@@ -717,15 +824,19 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   { val: 'off',    label: 'Off'      },
                   { val: 'target', label: 'vs Target' },
                   { val: 'prev',   label: 'vs Prev'   },
-                ].map(c => (
-                  <button
-                    key={c.val}
-                    className={`filter-pill${compare === c.val ? ' active' : ''}`}
-                    onClick={() => setCompare(c.val)}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+                ].map(c => {
+                  const disabled = c.val === 'prev' && range === 'all'
+                  return (
+                    <button
+                      key={c.val}
+                      className={`filter-pill${compare === c.val ? ' active' : ''}`}
+                      data-disabled={disabled ? 'true' : undefined}
+                      onClick={() => { if (!disabled) setCompare(c.val) }}
+                    >
+                      {c.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -733,10 +844,12 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
           {/* Chart canvas */}
           <div className="chart-canvas">
             <ChartSVG
-              bars={chartBars}
+              bars={displayBars}
               barColor={barColor}
               animKey={animKey}
               isBalance={activeTab === 'calories'}
+              targetValue={compare === 'target' ? tabTarget : null}
+              prevBars={compare === 'prev' ? prevChartBars : []}
             />
           </div>
 

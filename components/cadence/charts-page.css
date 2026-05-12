@@ -329,6 +329,7 @@
   transform: scaleY(0);
   animation: growBar 800ms var(--ease) forwards;
   cursor: pointer;
+  transition: y 400ms var(--ease), height 400ms var(--ease);
 }
 [data-cadence] .chart-canvas .bar:hover {
   filter: brightness(0.85);
@@ -375,6 +376,7 @@
   fill: var(--chart-target);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  text-anchor: end;
 }
 
 /* -----------------------------------------------------------------
