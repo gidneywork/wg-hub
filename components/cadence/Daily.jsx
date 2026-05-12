@@ -200,7 +200,10 @@ export default function Daily({
         onLiftsChange={onLiftsChange}
       />
 
-      <FeelingsSection />
+      <FeelingsSection
+        form={form}
+        onField={onField}
+      />
 
       <DayFooter
         entryCount={logs ? Object.keys(logs).length : 0}

@@ -1,39 +1,30 @@
 'use client'
 
-/**
- * How it landed — Phase 2 stub.
- *
- * Phase 2 will:
- *   - flip FEELINGS_ENABLED to true
- *   - wire the mood pip click handler + selected-pip state
- *   - wire the journal input as a controlled field with onChange
- *   - restore the mockup-verbatim section meta "Optional · pulls
- *     into your journal"
- *
- * Until then this renders the mood row (5 inert pips at .stub
- * styling, "Not logged" word in italic Fraunces var(--text-faint))
- * and the journal row with a disabled input carrying the mockup
- * placeholder verbatim. The mood-word and journal-input keep their
- * normal markup so flipping the flag is a one-line change.
- */
-const FEELINGS_ENABLED = false
-
 const MOOD_PIPS = [
   { mood: 1, word: 'rough' },
-  { mood: 2, word: 'flat' },
-  { mood: 3, word: 'okay' },
-  { mood: 4, word: 'good' },
-  { mood: 5, word: 'strong' },
+  { mood: 2, word: 'flat'  },
+  { mood: 3, word: 'okay'  },
+  { mood: 4, word: 'good'  },
+  { mood: 5, word: 'strong'},
 ]
 
-export default function FeelingsSection() {
-  const stub = !FEELINGS_ENABLED
+export default function FeelingsSection({ form = {}, onField }) {
+  const feelings = form.feelings || {}
+  const selectedMood = feelings.mood ?? null
+  const journal      = feelings.journal ?? ''
+
+  const moodWord = MOOD_PIPS.find(p => p.mood === selectedMood)?.word ?? ''
+
+  function handlePipClick(mood) {
+    // Clicking the active pip deselects
+    onField?.('feelings', 'mood', selectedMood === mood ? null : mood)
+  }
 
   return (
     <section className="section r r-8">
       <div className="section-head">
         <span className="title">How it landed</span>
-        <span className="meta">Optional</span>
+        <span className="meta">Optional · pulls into your journal</span>
       </div>
       <div className="feelings-card">
 
@@ -46,18 +37,18 @@ export default function FeelingsSection() {
                 <button
                   key={p.mood}
                   type="button"
-                  className={`mood-pip${stub ? ' stub' : ''}`}
+                  className={`mood-pip${selectedMood === p.mood ? ' selected' : ''}`}
                   data-mood={p.mood}
                   data-word={p.word}
                   aria-label={p.word}
-                  disabled={stub}
+                  onClick={() => handlePipClick(p.mood)}
                 />
               ))}
             </div>
             <span className="anchor right">Strong</span>
           </div>
-          <span className={`mood-word${stub ? ' empty' : ''}`}>
-            {stub ? 'Not logged' : ''}
+          <span className={`mood-word${moodWord ? '' : ' empty'}`}>
+            {moodWord || 'Not logged'}
           </span>
         </div>
 
@@ -67,7 +58,8 @@ export default function FeelingsSection() {
             className="journal-input"
             type="text"
             placeholder="A line on the day."
-            disabled={stub}
+            value={journal}
+            onChange={e => onField?.('feelings', 'journal', e.target.value)}
           />
         </div>
 
