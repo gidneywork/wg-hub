@@ -1,0 +1,360 @@
+/* ============================================================
+   CADENCE — ONBOARDING FLOW
+   Scoped to .onboarding-page
+   Visual language mirrors login.css (full-screen, focused, Fraunces hero)
+   ============================================================ */
+
+.onboarding-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-10) var(--space-6) var(--space-10);
+  overflow-y: auto;
+  position: relative;
+  font-size: var(--type-body);
+  line-height: 1.5;
+  font-feature-settings: "ss01", "cv11";
+  opacity: 0;
+  animation: obFadeIn 500ms var(--ease) forwards;
+}
+
+/* Ambient gradient */
+.ob-ambient {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(107, 122, 90, 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(74, 95, 110, 0.03), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme="dark"] .ob-ambient {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(141, 160, 117, 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(107, 131, 152, 0.04), transparent 70%);
+}
+
+/* Shell */
+.onboarding-shell {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Wordmark ───────────────────────────────────────────────── */
+.onboarding-wordmark {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: 28px;
+  letter-spacing: -0.045em;
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  color: var(--text);
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1;
+  margin-bottom: var(--space-8);
+}
+.onboarding-wordmark .dot {
+  width: 5px;
+  height: 5px;
+  background: var(--moss);
+  border-radius: 50%;
+  margin-left: 3px;
+  margin-bottom: 4px;
+}
+
+/* ── Progress dots (steps 1–5) ──────────────────────────────── */
+.ob-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--space-7);
+}
+.ob-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background-color var(--t-ui) var(--ease);
+}
+.ob-dot--active { background: var(--moss); }
+.ob-dot--done   { background: var(--moss-soft); }
+
+/* ── Step container ─────────────────────────────────────────── */
+.ob-step {
+  animation: obStepIn 280ms var(--ease) forwards;
+}
+
+/* ── Section title + tagline ────────────────────────────────── */
+.ob-title {
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: var(--type-h3);
+  letter-spacing: -0.015em;
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  color: var(--text);
+  margin: 0 0 var(--space-2);
+  line-height: 1.1;
+}
+.ob-tagline {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: var(--type-body-lg);
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  margin: 0 0 var(--space-7);
+}
+
+/* ── Form fields ────────────────────────────────────────────── */
+.ob-field {
+  margin-bottom: var(--space-4);
+}
+.ob-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+.ob-field input,
+.ob-field select,
+.ob-field textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow  var(--t-ui) var(--ease);
+}
+.ob-field input:focus,
+.ob-field select:focus,
+.ob-field textarea:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+.ob-field input::placeholder,
+.ob-field textarea::placeholder {
+  color: var(--text-faint);
+}
+
+/* Select — custom chevron, suppress native arrow */
+.ob-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A867D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+[data-theme="dark"] .ob-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236F6B62' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+}
+
+/* Textarea */
+.ob-field textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+.ob-field textarea.tall {
+  min-height: 140px;
+}
+
+/* ── Number input with unit label ───────────────────────────── */
+.ob-input-unit {
+  position: relative;
+}
+.ob-input-unit input {
+  padding-right: 88px;
+}
+.ob-unit {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-quiet);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Two-column field row ───────────────────────────────────── */
+.ob-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* ── Bottom nav ─────────────────────────────────────────────── */
+.ob-nav {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-8);
+  gap: var(--space-2);
+}
+.ob-nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.ob-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: var(--moss);
+  color: var(--on-moss);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) var(--ease),
+    transform var(--t-ui) var(--ease);
+}
+.ob-btn-primary:hover { background: var(--moss-deep); }
+[data-theme="dark"] .ob-btn-primary:hover { filter: brightness(1.1); }
+.ob-btn-primary:active { transform: scale(0.99); }
+.ob-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.ob-btn-primary svg { width: 12px; height: 12px; opacity: 0.85; }
+.ob-btn-loading::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--on-moss);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: obSpin 700ms linear infinite;
+  display: inline-block;
+}
+
+.ob-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 0;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  cursor: pointer;
+  transition: color var(--t-ui) var(--ease);
+}
+.ob-btn-ghost:hover { color: var(--text); }
+
+/* Skip — deliberate, no error state. Skip writes nulls; row still gets written. */
+.ob-btn-skip {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--text-quiet);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  cursor: pointer;
+  transition:
+    color var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
+}
+.ob-btn-skip:hover {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+/* ── Welcome step ───────────────────────────────────────────── */
+.ob-step--welcome { padding-top: var(--space-4); }
+
+.ob-welcome-title {
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: var(--type-h1-sm);
+  letter-spacing: var(--tracking-h1);
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  color: var(--text);
+  line-height: 1.05;
+  margin: 0 0 var(--space-5);
+}
+.ob-welcome-sub {
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 var(--space-9);
+  max-width: 360px;
+}
+
+/* ── Done step ──────────────────────────────────────────────── */
+.ob-step--done { padding-top: var(--space-4); }
+
+.ob-done-title {
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: var(--type-h1-sm);
+  letter-spacing: var(--tracking-h1);
+  font-variation-settings: "opsz" 144, "SOFT" 60;
+  color: var(--text);
+  line-height: 1.05;
+  margin: 0 0 var(--space-4);
+}
+.ob-done-sub {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: var(--type-body-lg);
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  margin: 0 0 var(--space-9);
+}
+
+/* ── Mobile — single-column collapse at ≤640px ──────────────── */
+@media (max-width: 640px) {
+  .onboarding-page {
+    padding: var(--space-8) var(--space-5) var(--space-8);
+  }
+  .ob-field-row {
+    grid-template-columns: 1fr;
+  }
+  .ob-welcome-title,
+  .ob-done-title {
+    font-size: var(--type-h2);
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes obFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes obStepIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes obSpin {
+  to { transform: rotate(360deg); }
+}

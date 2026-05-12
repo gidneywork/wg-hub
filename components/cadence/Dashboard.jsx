@@ -18,7 +18,7 @@ import Recent from './Recent'
  * outer element — the mockup applies .r-2 / .r-3 to the inner columns
  * so the text and the chart enter on slightly different beats.
  */
-export default function Dashboard({ logs, settings, activities, whoopData, plan, setView }) {
+export default function Dashboard({ logs, settings, activities, whoopData, plan, setView, userName = 'You' }) {
   const now = new Date()
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 19 ? 'Good afternoon' : 'Good evening'
@@ -33,7 +33,7 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
   return (
     <>
       <header className="header r r-1">
-        <h1 className="greeting">{greeting}, <em>Will.</em></h1>
+        <h1 className="greeting">{greeting}, <em>{userName}.</em></h1>
         <span className="stamp">{stamp}</span>
       </header>
 

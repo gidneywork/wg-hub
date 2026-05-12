@@ -14,6 +14,7 @@ import CadenceSettings from './cadence/Settings'
 import CadenceDaily from './cadence/Daily'
 import CadenceTVMode from './cadence/TVMode'
 import CadenceCharts from './cadence/Charts'
+import OnboardingFlow from './cadence/OnboardingFlow'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -81,6 +82,13 @@ const DEFAULT_SETTINGS = {
   hoursSlept:       {value:8,     label:'Hours Slept Target',        unit:'hrs',   lowerIsBetter:false},
   hrv:              {value:70,    label:'HRV Target',                unit:'',      lowerIsBetter:false},
   rhr:              {value:52,    label:'Resting HR Target',         unit:'bpm',   lowerIsBetter:true},
+}
+
+const DEFAULT_ASSISTANT_CONFIG = {
+  identity:    { name: 'Cadence', voiceGender: 'neutral', accent: 'british' },
+  personality: { style: 'direct-and-brief', verbosity: 'medium', firstNameUse: 'occasional' },
+  behavioural: { proactiveNudges: true, reminderStyle: 'text-only', timeWindowStart: '07:00', timeWindowEnd: '21:00', timezone: null },
+  forbiddenTopics: '',
 }
 
 const todayStr   = () => new Date().toISOString().split('T')[0]
@@ -207,6 +215,8 @@ export default function WGHub({ onSignOut }) {
   const [activities, setActivities] = useState([])
   const [whoopData,  setWhoopData ] = useState({})
   const [ready,    setReady   ] = useState(false)
+  const [userProfile,    setUserProfile   ] = useState(null)
+  const [onboardingDone, setOnboardingDone] = useState(null) // null=loading, false=show onboarding, true=done
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -215,13 +225,14 @@ export default function WGHub({ onSignOut }) {
 
     ;(async () => {
       try {
-        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD, profileData] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
           db.loadStravaConnection(),
           db.loadActivities(),
           db.loadWhoopData(),
+          db.loadUserProfile(),
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
@@ -229,10 +240,17 @@ export default function WGHub({ onSignOut }) {
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])
         setWhoopData(whoopD || {})
+        if (profileData) {
+          setUserProfile(profileData)
+          setOnboardingDone(true)
+        } else {
+          setOnboardingDone(false)
+        }
         if (stravaStatus === 'connected') setView('history')
       } catch (e) {
         console.error('Initial load failed:', e)
         setPlan(getDefaultPlan())
+        setOnboardingDone(true) // on error, skip onboarding rather than loop forever
       }
       setReady(true)
     })()
@@ -255,8 +273,21 @@ export default function WGHub({ onSignOut }) {
   const saveSettings = async (s)          => { await db.saveSettings(s);         setSettings(s) }
   const savePlan     = async (p)          => { await db.savePlan(p);             setPlan(p) }
 
+  const handleOnboardingComplete = async (profile) => {
+    await db.saveUserProfile(profile)
+    await db.saveAssistantConfig(DEFAULT_ASSISTANT_CONFIG)
+    setUserProfile(profile)
+    setOnboardingDone(true)
+  }
+
   const LEGACY_VIEWS = ['plan','planner','finance']
   const isLegacy = LEGACY_VIEWS.includes(view)
+
+  // Show onboarding if user_profile row is absent (first login).
+  // onboardingDone===null during initial load — the !ready spinner handles that.
+  if (onboardingDone === false) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />
+  }
 
   // TV mode bypasses DashboardShell entirely — no sidebar, dark-by-default
   if (view === 'tv') {
@@ -273,11 +304,11 @@ export default function WGHub({ onSignOut }) {
   }
 
   return (
-    <DashboardShell view={view} setView={setView} userName="Will" onSignOut={onSignOut}>
+    <DashboardShell view={view} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'} onSignOut={onSignOut}>
       {!ready ? (
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
-        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
+        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'}/>
       ) : view === 'charts' ? (
         <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData}/>
       ) : view === 'history' ? (
@@ -508,7 +539,7 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
               <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted)',marginTop:6}}>consecutive days</div>
               <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{streak===0?'Log today to start a streak':streak<7?'Building momentum':streak<30?'Strong consistency':streak<90?'Elite dedication':'Unstoppable'}</div>
             </div>
-            <AIAssistant logs={logs} activities={activities} whoopData={whoopData} settings={settings}/>
+            <AIAssistant logs={logs} activities={activities} whoopData={whoopData} settings={settings} userName={userProfile?.identity?.displayName ?? 'You'}/>
           </div>
 
           <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'20px 22px',marginBottom:12}}>
@@ -554,7 +585,7 @@ function Dashboard({ logs, settings, activities, whoopData, setView }) {
 }
 
 // ─── AI PERSONAL ASSISTANT ────────────────────────────────────────────────────
-function AIAssistant({ logs, activities, whoopData, settings }) {
+function AIAssistant({ logs, activities, whoopData, settings, userName = 'You' }) {
   const STORAGE_KEY = 'wghub_ai_messages'
   const SUMMARY_KEY = 'wghub_ai_summary_date'
 
@@ -630,7 +661,7 @@ function AIAssistant({ logs, activities, whoopData, settings }) {
     // Targets
     const targets = Object.entries(settings).map(([k,v]) => `${v.label}: ${v.value}${v.unit}`).join(', ')
 
-    return `You are WG Hub's personal performance assistant for Will, an ultra-marathon runner training for a 100km race. Be concise, direct and data-driven. Use the training data below to answer questions and proactively flag issues.
+    return `You are WG Hub's personal performance assistant for ${userName}, an ultra-marathon runner training for a 100km race. Be concise, direct and data-driven. Use the training data below to answer questions and proactively flag issues.
 
 TARGETS: ${targets}
 
