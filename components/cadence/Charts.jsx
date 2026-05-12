@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import {
+  localIso,
   daysWindow,
   startOfWeek,
   mergeWhoopForDate,
@@ -757,7 +758,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const allPBs = detectRunningPBs(logs, stravaKmMap)
     if (!rangeDays) return allPBs  // "all" range — show everything
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - rangeDays)
-    const cutoffStr = cutoff.toISOString().split('T')[0]
+    const cutoffStr = localIso(cutoff)
     return allPBs.filter(a => a.date >= cutoffStr)
   }, [activeTab, logs, stravaKmMap, rangeDays])
 

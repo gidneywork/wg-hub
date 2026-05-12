@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import {
+  localIso,
   daysWindow,
   mergeWhoopForDate,
   kmByDateMap,
@@ -264,7 +265,7 @@ function WeeklyKmChart({ logs, activities, settings }) {
     const monday = new Date(currentMonday); monday.setDate(currentMonday.getDate() - 7 * i)
     const days = Array.from({ length: 7 }, (_, j) => {
       const d = new Date(monday); d.setDate(monday.getDate() + j)
-      return d.toISOString().split('T')[0]
+      return localIso(d)
     })
     const km = days.reduce((s, d) => s + getKmForDate(d, logs, stravaKm), 0)
     weeks.push({ monday, days, km, isCurrent: i === 0 })
@@ -518,7 +519,7 @@ function AdherenceChart({ plan, activities }) {
     const monday = new Date(currentMonday); monday.setDate(currentMonday.getDate() - 7 * i)
     const days = Array.from({ length: 7 }, (_, j) => {
       const d = new Date(monday); d.setDate(monday.getDate() + j)
-      return { date: d.toISOString().split('T')[0], dow: j }
+      return { date: localIso(d), dow: j }
     })
     const isCurrent = i === 0
     let completed = 0

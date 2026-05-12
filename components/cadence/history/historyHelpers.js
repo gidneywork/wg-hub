@@ -12,6 +12,9 @@
  * the scaffold compiles and downstream commits have a single import path.
  */
 
+const localIso = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 // ── Type bucketing (run / strength / recovery)
 //    Mirrors components/cadence/Recent.jsx PIP_MAP, kept independent so
 //    future divergence (e.g. "long" run highlighting) lives here.
@@ -135,7 +138,7 @@ export function rollingDays(n, endDate = new Date()) {
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(endDate)
     d.setDate(d.getDate() - i)
-    out.push(d.toISOString().split('T')[0])
+    out.push(localIso(d))
   }
   return out
 }
@@ -185,7 +188,7 @@ export function densityBars(kmMap, endDate = new Date()) {
   const dates = rollingDays(30, endDate)
   const values = dates.map(d => kmMap[d] || 0)
   const maxKm = Math.max(0, ...values)
-  const todayIso = endDate.toISOString().split('T')[0]
+  const todayIso = localIso(endDate)
   const colPitch = 20
   const barWidth = 14
   const axisY = 50

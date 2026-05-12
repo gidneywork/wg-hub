@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  localIso,
   todayStr,
   daysWindow,
   mergeWhoopForDate,
@@ -70,7 +71,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart)
     d.setDate(d.getDate() + i)
-    return d.toISOString().split('T')[0]
+    return localIso(d)
   })
   const todayIdx = (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
   const weekLoads = weekDays.map((d, i) => i <= todayIdx ? computeLoadForDay(d, logs, activities, stravaKm) : null)
@@ -80,7 +81,7 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
   // Prior week (Mon..Sun fully complete)
   const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7)
   const lastWeekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(lastWeekStart); d.setDate(d.getDate() + i); return d.toISOString().split('T')[0]
+    const d = new Date(lastWeekStart); d.setDate(d.getDate() + i); return localIso(d)
   })
   const lastWeekLoad = lastWeekDays.reduce((s, d) => s + computeLoadForDay(d, logs, activities, stravaKm), 0)
   const weekLoadDelta = weeklyLoadValue && lastWeekLoad

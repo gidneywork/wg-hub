@@ -30,9 +30,12 @@ export function fmtSaveTime(d = new Date()) {
   return `${hh}:${mm}`
 }
 
+const localIso = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 // Today as YYYY-MM-DD (local time).
 export function todayIso() {
-  return new Date().toISOString().split('T')[0]
+  return localIso()
 }
 
 // ── Week strip data
@@ -48,7 +51,7 @@ export function weekStripData(activeDate, logs = {}) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today)
     d.setDate(d.getDate() - i)
-    const iso = d.toISOString().split('T')[0]
+    const iso = localIso(d)
     days.push({
       iso,
       dow:      d.toLocaleDateString('en-GB', { weekday: 'short' }),
@@ -66,7 +69,7 @@ export function weekStripData(activeDate, logs = {}) {
 export function shiftIso(iso, delta) {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + delta)
-  const next = d.toISOString().split('T')[0]
+  const next = localIso(d)
   if (delta > 0 && next > todayIso()) return null
   return next
 }

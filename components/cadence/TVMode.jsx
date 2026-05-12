@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import './tv-mode.css'
 import {
+  localIso,
   mergeWhoopForDate,
   sparklinePath,
   formatHoursColon,
@@ -92,7 +93,7 @@ function periodDays(rangeKey) {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (n - 1 - i))
-    return d.toISOString().split('T')[0]
+    return localIso(d)
   })
 }
 
@@ -102,7 +103,7 @@ function priorPeriodDays(rangeKey) {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (2 * n - 1 - i))
-    return d.toISOString().split('T')[0]
+    return localIso(d)
   })
 }
 

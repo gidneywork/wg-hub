@@ -1,5 +1,8 @@
 'use client'
 
+const localIso = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 const PIP_BY_TYPE = {
   run: 'run',
   swim: 'run',
@@ -75,7 +78,7 @@ export default function WeekGrid({ plan }) {
     const session = primarySession(planDay)
     const type = session?.type || 'custom'
     return {
-      key: date.toISOString().split('T')[0],
+      key: localIso(date),
       isToday: i === dow,
       isRest: type === 'rest',
       dayName: date.toLocaleDateString('en-GB', { weekday: 'short' }),

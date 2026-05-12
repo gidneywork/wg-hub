@@ -5,13 +5,16 @@
  * shape without duplicating database access.
  */
 
-export const todayStr = () => new Date().toISOString().split('T')[0]
+export const localIso = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+export const todayStr = () => localIso()
 
 export function daysWindow(n, endDate = new Date()) {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date(endDate)
     d.setDate(d.getDate() - (n - 1 - i))
-    return d.toISOString().split('T')[0]
+    return localIso(d)
   })
 }
 

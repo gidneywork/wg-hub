@@ -3,6 +3,7 @@
  */
 
 import {
+  localIso,
   startOfWeek,
   daysWindow,
   mergeWhoopForDate,
@@ -59,13 +60,13 @@ export function targetState(actual, def) {
 // over merged Whoop + log data; nutrition is a 7-day mean from logs.
 export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
   const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = localIso(today)
 
   // Weekly run km — sum from start of this Monday-week through today.
   const weekStart = startOfWeek(today)
   const weekDates = []
   for (let d = new Date(weekStart); d <= today; d.setDate(d.getDate() + 1)) {
-    weekDates.push(d.toISOString().split('T')[0])
+    weekDates.push(localIso(d))
   }
   const kmMap = kmByDateMap(activities)
   const weeklyKm = weekDates.reduce((s, d) => s + (kmMap[d] || 0), 0)
