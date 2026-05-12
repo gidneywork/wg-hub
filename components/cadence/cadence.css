@@ -40,6 +40,26 @@
 }
 
 /* -----------------------------------------------------------------
+   SCROLLBAR — slim, token-coloured, app-wide
+   html targets the page-level scroll; [data-cadence] * covers every
+   overflow container inside the shell (chart-tabs, history list, etc).
+   ----------------------------------------------------------------- */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+html::-webkit-scrollbar { width: 4px; height: 4px; }
+html::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+html::-webkit-scrollbar-track { background: transparent; }
+[data-cadence] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+[data-cadence] *::-webkit-scrollbar { width: 4px; height: 4px; }
+[data-cadence] *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+[data-cadence] *::-webkit-scrollbar-track { background: transparent; }
+
+/* -----------------------------------------------------------------
    BASE — applied only when the Cadence shell is mounted
    ----------------------------------------------------------------- */
 [data-cadence] {

@@ -98,12 +98,6 @@
   margin-bottom: 18px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
-  scrollbar-width: thin;
-}
-[data-cadence] .chart-tabs::-webkit-scrollbar { height: 4px; }
-[data-cadence] .chart-tabs::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
 }
 [data-cadence] .chart-tab {
   background: transparent;
