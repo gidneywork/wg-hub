@@ -321,10 +321,17 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
 
   const wStatus = (() => {
     if (avgW == null) return { text: 'no data', cls: 'no-data' }
+    const target    = parseFloat(settings?.weightTarget?.value)
+    const hasTarget = isFinite(target)
+    const towardTarget = hasTarget && deltaW != null && (
+      (avgW > target && deltaW < 0) ||
+      (avgW < target && deltaW > 0)
+    )
     const d = deltaW != null
-      ? `${arrow(deltaW)} ${Math.abs(deltaW).toFixed(1)} kg · target`
+      ? `${arrow(deltaW)} ${Math.abs(deltaW).toFixed(1)} kg${hasTarget ? ' · target' : ''}`
       : '—'
-    return { text: d, cls: 'down' }
+    const cls = (hasTarget && deltaW != null) ? (towardTarget ? '' : 'down') : 'down'
+    return { text: d, cls }
   })()
 
   // ── Stat tile: HRV ───────────────────────────────────────────────────────────
