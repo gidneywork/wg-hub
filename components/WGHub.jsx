@@ -13,6 +13,7 @@ import CadenceHistory from './cadence/History'
 import CadenceSettings from './cadence/Settings'
 import CadenceDaily from './cadence/Daily'
 import CadenceTVMode from './cadence/TVMode'
+import CadenceCharts from './cadence/Charts'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -277,6 +278,8 @@ export default function WGHub({ onSignOut }) {
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView}/>
+      ) : view === 'charts' ? (
+        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection}/>
       ) : view === 'log' ? (
