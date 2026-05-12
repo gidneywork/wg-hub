@@ -23,7 +23,10 @@ export default function DashboardShell({ view, setView, userName, userMeta, onSi
           userMeta={userMeta}
           onSignOut={onSignOut}
         />
-        <main>{children}</main>
+        <main>
+          {children}
+          <div className="page-credit">lovingly vibe coded by gidney</div>
+        </main>
       </div>
     </div>
   )

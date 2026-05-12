@@ -137,6 +137,8 @@ function LoginScreen() {
         <span>Cadence</span>
         <span className="sep">·</span>
         <span>v1.0</span>
+        <span className="sep">·</span>
+        <span>lovingly vibe coded by gidney</span>
       </div>
     </div>
   )

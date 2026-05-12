@@ -239,6 +239,17 @@
   padding: 24px 40px 56px;
   max-width: 1280px;
 }
+[data-cadence] .page-credit {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+  text-align: right;
+  padding-top: 14px;
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+}
 
 /* Header */
 [data-cadence] .header {
