@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   localIso,
   daysWindow,
@@ -10,6 +10,8 @@ import {
   getKmForDate,
   mean,
 } from './helpers'
+import { db } from '../../lib/db'
+import CadenceDialog from './CadenceDialog'
 import './charts-page.css'
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
@@ -340,7 +342,7 @@ const METRIC_META = {
 const METRIC_META_FALLBACK = { unit: '', lowerIsBetter: false, fmt: v => Math.round(v).toString() }
 
 // ─── CHART SVG ────────────────────────────────────────────────────────────────
-function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [], metricMeta = METRIC_META_FALLBACK }) {
+function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [], metricMeta = METRIC_META_FALLBACK, onAnnotationClick = null, onPBClick = null }) {
   // Hooks first — Rules of Hooks require unconditional ordering
   const [tooltip,     setTooltip    ] = useState(null)
   const [showTooltip, setShowTooltip] = useState(false)
@@ -469,13 +471,17 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
           const py = isBalance && v < 0 ? baselineY : toY(v)
           const ht = isBalance ? Math.abs(toY(v) - baselineY) : baselineY - toY(v)
           if (ht <= 0) return null
+          const annotFill = bar.annotClass === 'deload' ? 'var(--sand)'
+                          : bar.annotClass === 'low'    ? 'var(--clay)'
+                          : null
+          const barClass = `bar${bar.isCurrent ? ' current' : ''}${bar.annotClass ? ` ${bar.annotClass}` : ''}`
           return (
             <rect
               key={`${animKey}-${i}`}
-              className={`bar${bar.isCurrent ? ' current' : ''}`}
+              className={barClass}
               x={barX(i)} y={py} width={BAR_W} height={ht}
               style={{
-                fill: barColor,
+                fill: annotFill ?? barColor,
                 animationDelay: `${Math.round(200 + i * delay)}ms`,
                 ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
                 ...(bar.smoothPartial ? { opacity: 0.35 } : {}),
@@ -508,8 +514,11 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
             const stemY1  = bty - 14 - k * 16
             const triTopY = apexY - 8
             const triPath = `M ${cx - 6} ${triTopY} L ${cx + 6} ${triTopY} L ${cx} ${apexY} Z`
+            const handleClick = a.kind === 'pb'
+              ? () => onPBClick?.(a)
+              : () => onAnnotationClick?.(a)
             return (
-              <g key={`am-${i}-${k}`} className={`annot annot-marker ${a.kind}`}>
+              <g key={`am-${i}-${k}`} className={`annot annot-marker ${a.kind}`} onClick={handleClick}>
                 <line className="annot-line" x1={cx} y1={stemY1} x2={cx} y2={apexY} />
                 <path d={triPath} />
               </g>
@@ -558,11 +567,91 @@ function StatTile({ label, val, unit, ctx }) {
 }
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
+// ─── ANNOTATION FORM BLANK STATE ─────────────────────────────────────────────
+const BLANK_FORM = { kind: '', title: '', note: '', start_date: '', end_date: '' }
+
 export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {} }) {
   const [activeTab, setActiveTab] = useState('running')
   const [range,     setRange    ] = useState('6m')
   const [compare,   setCompare  ] = useState('target')
   const [smoothing, setSmoothing] = useState('raw')
+
+  // ── User annotations (chart_annotations table) ──────────────────
+  const [userAnnotations, setUserAnnotations] = useState([])
+
+  useEffect(() => {
+    db.loadAnnotations().then(setUserAnnotations).catch(console.error)
+  }, [])
+
+  // ── Annotation dialog state ──────────────────────────────────────
+  // mode: null | 'create' | 'edit' | 'pb'
+  const [annotDialog, setAnnotDialog] = useState({ mode: null, data: null })
+  const [annotForm,   setAnnotForm  ] = useState(BLANK_FORM)
+  const [annotSaving, setAnnotSaving] = useState(false)
+
+  const openCreate = useCallback(() => {
+    const today = localIso(new Date())
+    setAnnotForm({ ...BLANK_FORM, start_date: today })
+    setAnnotDialog({ mode: 'create', data: null })
+  }, [])
+
+  const openEdit = useCallback((annotation) => {
+    setAnnotForm({
+      kind:       annotation.kind,
+      title:      annotation.title,
+      note:       annotation.note       || '',
+      start_date: annotation.start_date || '',
+      end_date:   annotation.end_date   || '',
+    })
+    setAnnotDialog({ mode: 'edit', data: annotation })
+  }, [])
+
+  const openPB = useCallback((annotation) => {
+    setAnnotDialog({ mode: 'pb', data: annotation })
+  }, [])
+
+  const closeAnnotDialog = useCallback(() => {
+    setAnnotDialog({ mode: null, data: null })
+    setAnnotForm(BLANK_FORM)
+  }, [])
+
+  const handleAnnotSave = useCallback(async () => {
+    if (!annotForm.kind || !annotForm.title.trim() || !annotForm.start_date) return
+    if (annotForm.end_date && annotForm.end_date < annotForm.start_date) return
+    setAnnotSaving(true)
+    try {
+      await db.saveAnnotation({
+        id:         annotDialog.data?.id,
+        kind:       annotForm.kind,
+        title:      annotForm.title.trim(),
+        note:       annotForm.note.trim() || null,
+        start_date: annotForm.start_date,
+        end_date:   annotForm.end_date || null,
+      })
+      const fresh = await db.loadAnnotations()
+      setUserAnnotations(fresh)
+      closeAnnotDialog()
+    } catch (e) {
+      console.error('handleAnnotSave:', e)
+    } finally {
+      setAnnotSaving(false)
+    }
+  }, [annotForm, annotDialog, closeAnnotDialog])
+
+  const handleAnnotDelete = useCallback(async () => {
+    if (!annotDialog.data?.id) return
+    setAnnotSaving(true)
+    try {
+      await db.deleteAnnotation(annotDialog.data.id)
+      const fresh = await db.loadAnnotations()
+      setUserAnnotations(fresh)
+      closeAnnotDialog()
+    } catch (e) {
+      console.error('handleAnnotDelete:', e)
+    } finally {
+      setAnnotSaving(false)
+    }
+  }, [annotDialog, closeAnnotDialog])
 
   const stravaKmMap = useMemo(() => kmByDateMap(activities), [activities])
   const rangeDays   = RANGE_DAYS[range]
@@ -854,15 +943,27 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
   }, [activeTab, runKm, allMetrics, range, settings, liftData])
 
-  // ── Annotations for the running tab ─────────────────────────────
+  // ── Annotations — merged user annotations + auto-detected PBs ──
+  // User annotations: all tabs, date = start_date for marker placement
+  // Auto PBs: running tab only
   const annotations = useMemo(() => {
-    if (activeTab !== 'running') return []
-    const allPBs = detectRunningPBs(logs, stravaKmMap)
-    if (!rangeDays) return allPBs  // "all" range — show everything
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - rangeDays)
-    const cutoffStr = localIso(cutoff)
-    return allPBs.filter(a => a.date >= cutoffStr)
-  }, [activeTab, logs, stravaKmMap, rangeDays])
+    const cutoffStr = rangeDays
+      ? localIso((() => { const d = new Date(); d.setDate(d.getDate() - rangeDays); return d })())
+      : null
+
+    // User annotations — filter to range window
+    const userInRange = userAnnotations
+      .filter(a => !cutoffStr || a.start_date >= cutoffStr)
+      .map(a => ({ ...a, date: a.start_date }))
+
+    // Auto-PBs — running tab only
+    const pbs = activeTab === 'running'
+      ? detectRunningPBs(logs, stravaKmMap).filter(a => !cutoffStr || a.date >= cutoffStr)
+      : []
+
+    // Merge: user annotations first, then PBs; deduplicate by date+title
+    return [...userInRange, ...pbs].sort((a, b) => b.date.localeCompare(a.date))
+  }, [activeTab, logs, stravaKmMap, rangeDays, userAnnotations])
 
   const isLift = activeTab === 'squat' || activeTab === 'pullup'
 
@@ -909,6 +1010,28 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     () => smoothBars(chartBars, smoothWindow),
     [chartBars, smoothWindow]
   )
+
+  // Item 9 — enrich bars with annotClass for deload/illness annotation overlap.
+  // Bar's week range: weekKey (Monday) through Sunday (+6 days).
+  // Overlap: Monday <= annotEnd AND Sunday >= annotStart.
+  const annotatedBars = useMemo(() => {
+    const relevant = userAnnotations.filter(a => a.kind === 'deload' || a.kind === 'illness')
+    if (!relevant.length) return displayBars
+    return displayBars.map(bar => {
+      if (!bar.weekKey) return bar
+      const mon = bar.weekKey
+      const sun = localIso(new Date(new Date(bar.weekKey + 'T00:00:00').getTime() + 6 * 86400000))
+      let annotClass = null
+      for (const a of relevant) {
+        const aEnd = a.end_date || a.start_date
+        if (mon <= aEnd && sun >= a.start_date) {
+          annotClass = a.kind === 'deload' ? 'deload' : 'low'
+          break
+        }
+      }
+      return annotClass ? { ...bar, annotClass } : bar
+    })
+  }, [displayBars, userAnnotations])
 
   const tabTarget = useMemo(() => {
     if (activeTab === 'weight') {
@@ -1061,14 +1184,16 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
           {/* Chart canvas */}
           <div className="chart-canvas">
             <ChartSVG
-              bars={displayBars}
+              bars={annotatedBars}
               barColor={barColor}
               animKey={animKey}
               isBalance={activeTab === 'calories'}
               targetValue={compare === 'target' ? tabTarget : null}
               prevBars={compare === 'prev' ? prevChartBars : []}
-              annotations={activeTab === 'running' ? annotations : []}
+              annotations={annotations}
               metricMeta={metricMeta}
+              onAnnotationClick={openEdit}
+              onPBClick={openPB}
             />
           </div>
 
@@ -1109,44 +1234,149 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         </section>
       )}
 
-      {/* Annotations — always visible except on lift tabs */}
-      {!isLift && (
-        <section className="annot-section r r-5">
-          <div className="annot-head">
-            <span className="title">Annotations · this view</span>
-            <span className="meta">
-              {activeTab === 'running' && annotations.length > 0
-                ? `${annotations.length} PB${annotations.length !== 1 ? 's' : ''} in this view · auto-detected from runs`
-                : 'Pulled from Cadence + manual notes'
-              }
-            </span>
-          </div>
-          <div className="annot-list">
-            {activeTab === 'running' && annotations.length > 0 ? (
-              annotations.map(a => (
-                <div className="annot-row" key={a.date + a.title}>
-                  <div className="date">{formatAnnotDate(a.date)}</div>
-                  <div className={`pip ${a.kind}`} />
-                  <div className="body">
-                    <div className="title">{a.title}</div>
-                    {a.note && <div className="note">{a.note}</div>}
-                  </div>
-                  <div className={`kind ${a.kind}`}>PB</div>
+      {/* Annotations — all tabs */}
+      <section className="annot-section r r-5">
+        <div className="annot-head">
+          <span className="title">Annotations · this view</span>
+          <span className="meta">
+            {annotations.length > 0
+              ? `${annotations.length} event${annotations.length !== 1 ? 's' : ''} in this view`
+              : 'Add your own · PBs detected from runs'
+            }
+          </span>
+        </div>
+        <div className="annot-list">
+          {annotations.length > 0 ? (
+            annotations.map(a => (
+              <div
+                className="annot-row"
+                key={(a.id || a.date) + a.title}
+                onClick={a.kind === 'pb' ? () => openPB(a) : () => openEdit(a)}
+              >
+                <div className="date">{formatAnnotDate(a.date)}</div>
+                <div className={`pip ${a.kind}`} />
+                <div className="body">
+                  <div className="title">{a.title}</div>
+                  {a.note && <div className="note">{a.note}</div>}
                 </div>
-              ))
-            ) : (
-              <div className="annot-empty">
-                <span>Nothing logged yet — PBs detected from runs, other types come later.</span>
+                <div className={`kind ${a.kind}`}>{a.kind === 'pb' ? 'PB' : a.kind.charAt(0).toUpperCase() + a.kind.slice(1)}</div>
               </div>
-            )}
-            <button className="add-annot" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              Add annotation
+            ))
+          ) : (
+            <div className="annot-empty">
+              <span>No annotations yet. Add a race, deload week, or illness below.</span>
+            </div>
+          )}
+          <button className="add-annot" type="button" onClick={openCreate}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add annotation
+          </button>
+        </div>
+      </section>
+
+      {/* Annotation dialogs — create / edit / PB read-only */}
+      {annotDialog.mode === 'pb' && (
+        <CadenceDialog
+          open
+          title="Personal best"
+          body={
+            <div className="annot-pb-body">
+              <div className="pb-title">{annotDialog.data?.title}</div>
+              <div className="pb-date">{annotDialog.data?.date ? formatAnnotDate(annotDialog.data.date) : ''}</div>
+              {annotDialog.data?.note && <div className="pb-note">{annotDialog.data.note}</div>}
+            </div>
+          }
+          confirmLabel="Close"
+          confirmClass="btn-ghost"
+          cancelLabel={null}
+          onConfirm={closeAnnotDialog}
+          onCancel={closeAnnotDialog}
+        />
+      )}
+
+      {(annotDialog.mode === 'create' || annotDialog.mode === 'edit') && (
+        <CadenceDialog
+          open
+          title={annotDialog.mode === 'create' ? 'Add annotation' : 'Edit annotation'}
+          body={
+            <div>
+              <div className="annot-field">
+                <label>Kind</label>
+                <div className="annot-kind-row">
+                  {['race', 'deload', 'illness'].map(k => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`filter-pill${annotForm.kind === k ? ' active' : ''}`}
+                      onClick={() => setAnnotForm(f => ({ ...f, kind: k }))}
+                    >
+                      {k.charAt(0).toUpperCase() + k.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="annot-field">
+                <label>Title</label>
+                <input
+                  className="annot-field-input"
+                  type="text"
+                  placeholder="e.g. London Marathon, Deload week, Flu"
+                  value={annotForm.title}
+                  onChange={e => setAnnotForm(f => ({ ...f, title: e.target.value }))}
+                  maxLength={120}
+                />
+              </div>
+              <div className="annot-date-row">
+                <div className="annot-field">
+                  <label>Start date</label>
+                  <input
+                    className="annot-field-input"
+                    type="date"
+                    value={annotForm.start_date}
+                    onChange={e => setAnnotForm(f => ({ ...f, start_date: e.target.value }))}
+                  />
+                </div>
+                <div className="annot-field">
+                  <label>End date (optional)</label>
+                  <input
+                    className="annot-field-input"
+                    type="date"
+                    value={annotForm.end_date}
+                    min={annotForm.start_date || undefined}
+                    onChange={e => setAnnotForm(f => ({ ...f, end_date: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="annot-field">
+                <label>Note (optional)</label>
+                <textarea
+                  className="annot-field-textarea"
+                  placeholder="Context, how it felt, outcome…"
+                  value={annotForm.note}
+                  onChange={e => setAnnotForm(f => ({ ...f, note: e.target.value }))}
+                  maxLength={500}
+                />
+              </div>
+            </div>
+          }
+          confirmLabel={annotSaving ? 'Saving…' : 'Save'}
+          confirmClass="btn-primary"
+          cancelLabel="Cancel"
+          footerExtra={annotDialog.mode === 'edit' ? (
+            <button
+              type="button"
+              className="btn-annot-delete"
+              onClick={handleAnnotDelete}
+              disabled={annotSaving}
+            >
+              Delete
             </button>
-          </div>
-        </section>
+          ) : null}
+          onConfirm={handleAnnotSave}
+          onCancel={closeAnnotDialog}
+        />
       )}
 
     </div>
