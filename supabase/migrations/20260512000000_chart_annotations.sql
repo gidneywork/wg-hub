@@ -1,14 +1,9 @@
--- chart_annotations: user-added annotations surfaced on the Charts page.
---
--- Kinds: 'race' | 'deload' | 'illness'
--- PBs are auto-derived from activity data, never stored here.
---
--- RLS: permissive — any authenticated user can CRUD all rows.
--- This matches the pattern on daily_logs, app_settings, whoop_data,
--- strava_activities (all single-tenant, no user_id column).
+-- chart_annotations: user-added annotation events (Race, Deload, Illness).
+-- PB annotations are auto-derived from activity data and not stored here.
 --
 -- Note: when multi-user transition lands, add user_id column to all data
--- tables in a coordinated migration. Do not add it asymmetrically here now.
+-- tables in a coordinated migration. Asymmetric schema migration now solves
+-- nothing — single-user app uses permissive RLS (any authenticated user).
 
 create table if not exists chart_annotations (
   id         uuid        primary key default gen_random_uuid(),
@@ -24,37 +19,37 @@ create table if not exists chart_annotations (
 
 -- updated_at trigger
 create or replace function set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger as $$
 begin
   new.updated_at = now();
   return new;
 end;
-$$;
+$$ language plpgsql;
 
 create trigger chart_annotations_updated_at
   before update on chart_annotations
-  for each row execute procedure set_updated_at();
+  for each row execute function set_updated_at();
 
--- RLS: enable, then grant authenticated users full access
+-- RLS: any authenticated user can read/write (single-user app)
 alter table chart_annotations enable row level security;
 
-create policy "authenticated users can select annotations"
+create policy "Authenticated users can select annotations"
   on chart_annotations for select
   to authenticated
   using (true);
 
-create policy "authenticated users can insert annotations"
+create policy "Authenticated users can insert annotations"
   on chart_annotations for insert
   to authenticated
   with check (true);
 
-create policy "authenticated users can update annotations"
+create policy "Authenticated users can update annotations"
   on chart_annotations for update
   to authenticated
   using (true)
   with check (true);
 
-create policy "authenticated users can delete annotations"
+create policy "Authenticated users can delete annotations"
   on chart_annotations for delete
   to authenticated
   using (true);
