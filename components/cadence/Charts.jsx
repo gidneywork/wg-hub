@@ -583,6 +583,13 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     db.loadAnnotations().then(setUserAnnotations).catch(console.error)
   }, [])
 
+  useEffect(() => {
+    const unsub = db.subscribeToAnnotations(() => {
+      db.loadAnnotations().then(setUserAnnotations).catch(console.error)
+    })
+    return unsub
+  }, [])
+
   // ── Annotation dialog state ──────────────────────────────────────
   // mode: null | 'create' | 'edit' | 'pb'
   const [annotDialog, setAnnotDialog] = useState({ mode: null, data: null })
@@ -1240,7 +1247,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
           <span className="title">Annotations · this view</span>
           <span className="meta">
             {annotations.length > 0
-              ? `${annotations.length} event${annotations.length !== 1 ? 's' : ''} in this view`
+              ? `${annotations.length} event${annotations.length !== 1 ? 's' : ''} in this view · pulled from Cadence + manual notes`
               : 'Add your own · PBs detected from runs'
             }
           </span>
@@ -1363,6 +1370,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
           }
           confirmLabel={annotSaving ? 'Saving…' : 'Save'}
           confirmClass="btn-primary"
+          confirmDisabled={annotSaving || !annotForm.kind || !annotForm.title.trim() || !annotForm.start_date}
           cancelLabel="Cancel"
           footerExtra={annotDialog.mode === 'edit' ? (
             <button

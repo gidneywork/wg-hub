@@ -21,10 +21,11 @@ export default function CadenceDialog({
   open,
   title,
   body,
-  confirmLabel = 'Confirm',
-  cancelLabel  = 'Cancel',
-  confirmClass = 'btn-danger',
-  footerExtra  = null,
+  confirmLabel    = 'Confirm',
+  cancelLabel     = 'Cancel',
+  confirmClass    = 'btn-danger',
+  confirmDisabled = false,
+  footerExtra     = null,
   onConfirm,
   onCancel,
 }) {
@@ -56,7 +57,7 @@ export default function CadenceDialog({
                 {cancelLabel}
               </button>
             )}
-            <button type="button" className={`btn ${confirmClass}`} onClick={onConfirm}>
+            <button type="button" className={`btn ${confirmClass}`} onClick={onConfirm} disabled={confirmDisabled}>
               {confirmLabel}
             </button>
           </div>
