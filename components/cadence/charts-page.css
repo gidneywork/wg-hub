@@ -83,6 +83,9 @@
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--text-quiet);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding-bottom: 4px;
 }
 
@@ -202,6 +205,17 @@
 [data-cadence] .chart-head .left .hero-meta .delta.down { color: var(--clay-deep); }
 [data-theme="dark"] [data-cadence] .chart-head .left .hero-meta .delta.up   { color: var(--moss); }
 [data-theme="dark"] [data-cadence] .chart-head .left .hero-meta .delta.down { color: var(--clay); }
+
+/* "Awaiting data" — italic Fraunces override inside the mono hero-meta row */
+[data-cadence] .chart-head .left .hero-meta .awaiting {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 15px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
 
 [data-cadence] .chart-head .right {
   display: flex;

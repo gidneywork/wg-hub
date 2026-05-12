@@ -522,7 +522,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                     <span>{heroConfig.metaStr}</span>
                   </>
                 ) : (
-                  <span>{heroConfig.metaStr}</span>
+                  <span className="awaiting">Awaiting data</span>
                 )}
               </div>
             </div>
@@ -587,11 +587,6 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="right">
-              <span className="chart-foot-meta">
-                Hover any bar for week details · click an annotation marker to open
-              </span>
             </div>
           </div>
 
