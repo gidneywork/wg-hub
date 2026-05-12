@@ -5,6 +5,13 @@ export const metadata = {
   title: 'Cadence — Dashboard',
   description: 'A premium dashboard for the body, a calm assistant for the day.',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Cadence',
+  },
+  themeColor: '#6B7A5A',
 }
 
 const themeInitScript = `(function() {
