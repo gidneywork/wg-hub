@@ -1,39 +1,31 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { buildLiftHistory, isLiftPB } from './dailyHelpers'
-
-const SEED_EXERCISES = [
-  'Back squat',
-  'Front squat',
-  'Deadlift',
-  'Bench press',
-  'Overhead press',
-  'Pull-up · weighted',
-  'Pull-up · bodyweight',
-  'Romanian deadlift',
-  'Hip thrust',
-  'Bulgarian split squat',
-]
-
-const NEW_SENTINEL = '__new__'
+import { listExercises, getExerciseByName, resolveMuscle } from '../../../lib/exercises'
 
 export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsChange }) {
-  const [showAddRow,      setShowAddRow     ] = useState(false)
-  const [addExercise,     setAddExercise    ] = useState('')
-  const [addWeight,       setAddWeight      ] = useState('')
-  const [addReps,         setAddReps        ] = useState('')
-  const [showNewExercise, setShowNewExercise] = useState(false)
-  const [newName,         setNewName        ] = useState('')
-  const [newError,        setNewError       ] = useState(false)
+  const [showAddRow,  setShowAddRow ] = useState(false)
+  const [addWeight,   setAddWeight  ] = useState('')
+  const [addReps,     setAddReps    ] = useState('')
 
-  const errorTimerRef = useRef(null)
-  const selectRef     = useRef(null)
-  const newInputRef   = useRef(null)
+  // ── Combobox state
+  const [query,       setQuery      ] = useState('')
+  const [dropOpen,    setDropOpen   ] = useState(false)
+  const [highlighted, setHighlighted] = useState(-1)
+  const [selected,    setSelected   ] = useState(null)
 
-  // Exercises from prior log entries not in the seed list
+  const comboRef   = useRef(null)
+  const inputRef   = useRef(null)
+  const weightRef  = useRef(null)
+  const listRef    = useRef(null)
+
+  // PB history excludes today
+  const history = useMemo(() => buildLiftHistory(allLogs, date), [allLogs, date])
+
+  // Custom exercises from prior logs that aren't in the DB
   const customExercises = useMemo(() => {
-    const seen = new Set(SEED_EXERCISES.map(e => e.toLowerCase()))
+    const seen = new Set(listExercises().map(e => e.name.toLowerCase()))
     const out  = []
     Object.values(allLogs).forEach(log => {
       ;(Array.isArray(log?.lifts) ? log.lifts : []).forEach(({ exercise }) => {
@@ -45,69 +37,123 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
     return out
   }, [allLogs])
 
-  const allExercises = [...SEED_EXERCISES, ...customExercises]
+  // DB entries excluding cardio + any custom entries from logs
+  const dbExercises = useMemo(
+    () => listExercises().filter(e => !e.cardio),
+    []
+  )
 
-  // PB history excludes today — today's lifts compare against prior days only
-  const history = useMemo(() => buildLiftHistory(allLogs, date), [allLogs, date])
+  // Filtered list for the dropdown
+  const filteredList = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const dbMatches = dbExercises.filter(e => e.name.toLowerCase().includes(q))
+    const customMatches = customExercises.filter(
+      e => !getExerciseByName(e) && e.toLowerCase().includes(q)
+    )
+    return [
+      ...dbMatches.map(e => e.name),
+      ...customMatches,
+    ]
+  }, [query, dbExercises, customExercises])
 
-  // ── Add-row handlers
+  // Auto-highlight first match whenever the filtered list changes
+  useEffect(() => {
+    setHighlighted(filteredList.length > 0 ? 0 : -1)
+  }, [filteredList])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropOpen) return
+    function handleMouseDown(e) {
+      if (comboRef.current && !comboRef.current.contains(e.target)) {
+        setDropOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [dropOpen])
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (!listRef.current || highlighted < 0) return
+    const item = listRef.current.children[highlighted]
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [highlighted])
+
   function openAdd() {
     setShowAddRow(true)
-    setAddExercise('')
+    setQuery('')
+    setSelected(null)
     setAddWeight('')
     setAddReps('')
-    setTimeout(() => selectRef.current?.focus(), 50)
+    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   function cancelAdd() {
     setShowAddRow(false)
-    setShowNewExercise(false)
-    setAddExercise('')
+    setDropOpen(false)
+    setQuery('')
+    setSelected(null)
     setAddWeight('')
     setAddReps('')
-    setNewName('')
-    setNewError(false)
   }
 
-  function handleExerciseSelect(e) {
-    const val = e.target.value
-    if (val === NEW_SENTINEL) {
-      setShowNewExercise(true)
-      setAddExercise('')
-      setTimeout(() => newInputRef.current?.focus(), 50)
-    } else {
-      setAddExercise(val)
-      setShowNewExercise(false)
-    }
-  }
-
-  function commitNewExercise() {
-    const name = newName.trim()
+  function confirmSelection(name) {
     if (!name) return
-    if (allExercises.some(e => e.toLowerCase() === name.toLowerCase())) {
-      setNewError(true)
-      clearTimeout(errorTimerRef.current)
-      errorTimerRef.current = setTimeout(() => setNewError(false), 2000)
-      return
+    setSelected(name)
+    setQuery(name)
+    setDropOpen(false)
+    setHighlighted(-1)
+    setTimeout(() => weightRef.current?.focus(), 50)
+  }
+
+  function handleInputChange(e) {
+    const v = e.target.value
+    setQuery(v)
+    setSelected(null)
+    setDropOpen(true)
+  }
+
+  function handleInputKeyDown(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!dropOpen) { setDropOpen(true); return }
+      setHighlighted(i => Math.min(i + 1, filteredList.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlighted(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (dropOpen && highlighted >= 0 && filteredList[highlighted]) {
+        confirmSelection(filteredList[highlighted])
+      } else if (query.trim()) {
+        // Custom entry — use exactly as typed
+        confirmSelection(query.trim())
+      }
+    } else if (e.key === 'Escape') {
+      setDropOpen(false)
+      setHighlighted(-1)
     }
-    setShowNewExercise(false)
-    setAddExercise(name)
-    setNewName('')
-    setTimeout(() => selectRef.current?.focus(), 50)
+  }
+
+  function handleInputFocus() {
+    setDropOpen(true)
   }
 
   function saveLift() {
-    if (!addExercise) { selectRef.current?.focus(); return }
+    const name = selected || query.trim()
+    if (!name) { inputRef.current?.focus(); return }
     if (!addWeight || !addReps) return
     const entry = {
-      exercise: addExercise,
+      exercise: name,
       weight:   parseFloat(addWeight) || 0,
       reps:     parseInt(addReps, 10) || 0,
     }
     onLiftsChange?.([...lifts, entry])
     setShowAddRow(false)
-    setShowNewExercise(false)
-    setAddExercise('')
+    setDropOpen(false)
+    setQuery('')
+    setSelected(null)
     setAddWeight('')
     setAddReps('')
   }
@@ -128,19 +174,24 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
 
         {lifts.map((lift, idx) => {
           const pb = isLiftPB(lift, history)
+          const muscle = resolveMuscle(lift.exercise)
+          const muscleLabel = muscle ? muscle.charAt(0).toUpperCase() + muscle.slice(1) : null
           return (
             <div key={idx} className="lift-row">
               <span className="exercise">{lift.exercise}</span>
-              {pb ? (
-                <span className="pb-tag">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12l5 5L20 7"/>
-                  </svg>
-                  New PB
-                </span>
-              ) : (
-                <span />
-              )}
+              <div className="lift-tags">
+                {pb && (
+                  <span className="pb-tag">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12l5 5L20 7"/>
+                    </svg>
+                    New PB
+                  </span>
+                )}
+                {muscleLabel && (
+                  <span className="muscle-chip">{muscleLabel}</span>
+                )}
+              </div>
               <span className="weight">
                 {lift.weight > 0 ? lift.weight : '—'}
                 {lift.weight > 0 && <span className="unit">kg</span>}
@@ -166,36 +217,55 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
 
         {showAddRow && (
           <div className="lift-add-row">
-            {showNewExercise ? (
-              <div className="lift-new-exercise">
-                <input
-                  ref={newInputRef}
-                  type="text"
-                  className="lift-new-exercise-input"
-                  placeholder="Exercise name"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') commitNewExercise() }}
-                />
-                <button type="button" className="btn" onClick={commitNewExercise}>Add</button>
-                {newError && (
-                  <span key={Date.now()} className="lift-new-exercise-error">Already exists</span>
-                )}
-              </div>
-            ) : (
-              <select
-                ref={selectRef}
+            <div className="lift-combobox" ref={comboRef}>
+              <input
+                ref={inputRef}
+                type="text"
+                className="lift-combobox-input"
+                placeholder="Exercise"
+                autoComplete="off"
                 aria-label="Exercise"
-                value={addExercise}
-                onChange={handleExerciseSelect}
-              >
-                <option value="">Choose exercise…</option>
-                {allExercises.map(o => <option key={o} value={o}>{o}</option>)}
-                <option value={NEW_SENTINEL}>+ New exercise</option>
-              </select>
-            )}
+                role="combobox"
+                aria-expanded={dropOpen}
+                aria-haspopup="listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={highlighted >= 0 ? `lift-opt-${highlighted}` : undefined}
+                value={query}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
+                onKeyDown={handleInputKeyDown}
+              />
+              {dropOpen && filteredList.length > 0 && (
+                <ul
+                  ref={listRef}
+                  className="lift-combobox-list"
+                  role="listbox"
+                  aria-label="Exercises"
+                >
+                  {filteredList.map((name, i) => (
+                    <li
+                      key={name}
+                      id={`lift-opt-${i}`}
+                      role="option"
+                      aria-selected={i === highlighted}
+                      className={`lift-combobox-option${i === highlighted ? ' highlighted' : ''}`}
+                      onMouseDown={e => { e.preventDefault(); confirmSelection(name) }}
+                      onMouseEnter={() => setHighlighted(i)}
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {dropOpen && filteredList.length === 0 && query.trim() && (
+                <div className="lift-combobox-empty">
+                  No match — Enter to log as custom
+                </div>
+              )}
+            </div>
             <span />
             <input
+              ref={weightRef}
               type="text"
               inputMode="decimal"
               placeholder="kg"
