@@ -806,9 +806,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-[data-cadence] .charts-grid .chart-card:last-child {
-  grid-column: 1 / -1;
-}
 [data-cadence] .chart-card {
   background: var(--bg-paper);
   border: 1px solid var(--border);
