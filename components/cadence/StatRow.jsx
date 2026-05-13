@@ -1,15 +1,10 @@
 'use client'
 
 import {
-  localIso,
   todayStr,
   daysWindow,
   mergeWhoopForDate,
-  mean,
   formatHoursColon,
-  computeLoadForDay,
-  kmByDateMap,
-  startOfWeek,
   sparklinePath,
 } from './helpers'
 
@@ -61,7 +56,7 @@ function parseBedtimeMins(str) {
   return raw < BEDTIME_PIVOT ? raw + 1440 : raw
 }
 
-export default function StatRow({ logs, whoopData, settings, activities }) {
+export default function StatRow({ logs, whoopData, settings }) {
   const today = todayStr()
   const todayMerged = mergeWhoopForDate(today, logs?.[today], whoopData)
 
@@ -76,29 +71,6 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
   const prior30Rhr = last30Rhr.slice(0, -1).filter(v => v !== null)
   const avgPrior30Rhr = prior30Rhr.length ? prior30Rhr.reduce((a, b) => a + b, 0) / prior30Rhr.length : null
   const rhrDelta = (rhrNum != null && avgPrior30Rhr != null) ? Math.round(rhrNum - avgPrior30Rhr) : null
-
-  // ── Weekly load ─────────────────────────────────────────────
-  const stravaKm = kmByDateMap(activities)
-  const weekStart = startOfWeek()
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + i)
-    return localIso(d)
-  })
-  const todayIdx = (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
-  const weekLoads = weekDays.map((d, i) => i <= todayIdx ? computeLoadForDay(d, logs, activities, stravaKm) : null)
-  const weeklyLoadValue = weekLoads.filter(v => v !== null).reduce((s, v) => s + v, 0)
-  const weeklyLoadRound = Math.round(weeklyLoadValue)
-
-  // Prior week (Mon..Sun fully complete)
-  const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7)
-  const lastWeekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(lastWeekStart); d.setDate(d.getDate() + i); return localIso(d)
-  })
-  const lastWeekLoad = lastWeekDays.reduce((s, d) => s + computeLoadForDay(d, logs, activities, stravaKm), 0)
-  const weekLoadDelta = weeklyLoadValue && lastWeekLoad
-    ? Math.round(weeklyLoadValue - lastWeekLoad)
-    : null
 
   // ── Sleep ───────────────────────────────────────────────────
   const hours = parseFloat(todayMerged?.sleep?.hoursSlept)
@@ -170,19 +142,6 @@ export default function StatRow({ logs, whoopData, settings, activities }) {
               : 'no baseline'}
           </span>
           <MiniSpark values={last30Rhr} />
-        </div>
-      </div>
-
-      <div className="stat">
-        <div className="label">Weekly load</div>
-        <div className="value">{weeklyLoadRound > 0 ? weeklyLoadRound : '—'}</div>
-        <div className="row">
-          <span className={`delta ${deltaClass(weekLoadDelta, 'higher')}`}>
-            {weekLoadDelta != null
-              ? <>{arrow(weekLoadDelta)} {Math.abs(weekLoadDelta)} · wk</>
-              : 'no baseline'}
-          </span>
-          <MiniSpark values={weekLoads} />
         </div>
       </div>
 
