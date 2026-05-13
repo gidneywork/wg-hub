@@ -124,7 +124,6 @@ export default function StatRow({ logs, whoopData, settings }) {
   const stepsDelta = (stepsNum != null && avgPrior7Steps != null)
     ? Math.round(stepsNum - avgPrior7Steps)
     : null
-  const stepsAvgPrior = avgPrior7Steps != null ? Math.round(avgPrior7Steps) : null
 
   return (
     <section className="stat-row r r-4" aria-label="Daily stats">
@@ -200,10 +199,8 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="row">
           <span className={`delta ${deltaClass(stepsDelta, 'higher')}`}>
             {stepsDelta != null
-              ? <>{arrow(stepsDelta)} {Math.abs(stepsDelta)} vs prev 7d avg</>
-              : stepsAvgPrior != null
-                ? <>avg {stepsAvgPrior} last 7d</>
-                : 'no data yet'}
+              ? <>{arrow(stepsDelta)} {Math.abs(stepsDelta)} · 7d</>
+              : null}
           </span>
           <MiniSpark values={last7Steps} />
         </div>
