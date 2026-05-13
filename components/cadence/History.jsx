@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import SummaryStrip from './history/SummaryStrip'
 import Filters from './history/Filters'
 import ActivityList from './history/ActivityList'
+import MuscleVolumePanel from './history/MuscleVolumePanel'
 import CadenceDialog from './CadenceDialog'
 import { db } from '../../lib/db'
+import { localIso, startOfWeek } from './helpers'
 import {
   fmtLastSync,
   filterByRange,
@@ -22,7 +24,7 @@ const INITIAL_WEEKS = 4
  * Cadence — History page.
  * Mockup: design/mockups/cadence-history.html
  */
-export default function History({ activities = [], stravaConnection = null }) {
+export default function History({ activities = [], stravaConnection = null, logs = {} }) {
   const [range, setRange] = useState('this-month')
   const [rangeOpen, setRangeOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -81,6 +83,8 @@ export default function History({ activities = [], stravaConnection = null }) {
   // result set could carry stale "Load earlier weeks" state.
   useEffect(() => { setWeeksVisible(INITIAL_WEEKS) }, [range, typeFilter, sourceFilter, search])
 
+  const currentWeekStart = localIso(startOfWeek())
+
   const totalSessions = activities.length
   const lastSync = fmtLastSync(stravaConnection?.last_synced_at)
 
@@ -138,6 +142,8 @@ export default function History({ activities = [], stravaConnection = null }) {
       </header>
 
       <SummaryStrip activities={activities} />
+
+      <MuscleVolumePanel logs={logs} currentWeekStart={currentWeekStart} />
 
       <Filters
         search={search} setSearch={setSearch}

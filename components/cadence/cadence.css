@@ -1127,7 +1127,8 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .history .search-input,
 [data-cadence] .history .range-btn,
 [data-cadence] .history .load-more,
-[data-cadence] .history .density-card {
+[data-cadence] .history .density-card,
+[data-cadence] .history .muscle-volume-panel {
   transition: background-color var(--t-theme) var(--ease),
               border-color var(--t-theme) var(--ease),
               color var(--t-theme) var(--ease);
@@ -1334,6 +1335,119 @@ html::-webkit-scrollbar-track { background: transparent; }
   stroke: var(--chart-grid);
   stroke-width: 1;
   stroke-dasharray: 2 4;
+}
+
+/* Muscle volume panel ------------------------------------------------- */
+[data-cadence] .history .muscle-volume-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px 24px;
+  margin-bottom: 20px;
+}
+[data-cadence] .history .mvp-head {
+  margin-bottom: 14px;
+}
+[data-cadence] .history .mvp-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+[data-cadence] .history .mvp-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+[data-cadence] .history .mvp-number {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-64);
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+}
+[data-cadence] .history .mvp-unit {
+  font-family: var(--sans);
+  font-size: var(--type-14);
+  color: var(--text-muted);
+  font-weight: 400;
+}
+[data-cadence] .history .mvp-sets {
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+[data-cadence] .history .mvp-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+[data-cadence] .history .mvp-bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 72px;
+  align-items: center;
+  gap: 10px;
+}
+[data-cadence] .history .mvp-label {
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+[data-cadence] .history .mvp-track {
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+[data-cadence] .history .mvp-fill {
+  height: 100%;
+  background: var(--border-strong);
+  border-radius: var(--radius-sm);
+  transition: width var(--t-paint) var(--ease);
+}
+[data-theme="dark"] [data-cadence] .history .mvp-fill {
+  background: var(--text-quiet);
+}
+[data-cadence] .history .mvp-fill.peak {
+  background: var(--moss);
+}
+[data-theme="dark"] [data-cadence] .history .mvp-fill.peak {
+  background: var(--moss);
+}
+[data-cadence] .history .mvp-value {
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+[data-cadence] .history .mvp-empty {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-14);
+  color: var(--text-muted);
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+[data-cadence] .history .mvp-unattributed {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-faint);
+  margin: 10px 0 0;
 }
 
 /* Filters bar --------------------------------------------------------- */
