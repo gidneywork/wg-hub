@@ -666,106 +666,6 @@ function NutritionChart({ logs, days }) {
   )
 }
 
-// ─── Chart: Lifts volume ─────────────────────────────────────────────
-// Weekly weight×reps sum across all loaded exercises. Bodyweight lifts
-// (weight === 0) are excluded. 6-week window, clay bars.
-function LiftsVolumeChart({ logs }) {
-  const now = new Date(); now.setHours(0, 0, 0, 0)
-  const currentMonday = startOfWeek(now)
-  const weeks = []
-  for (let i = 5; i >= 0; i--) {
-    const monday = new Date(currentMonday); monday.setDate(currentMonday.getDate() - 7 * i)
-    const days = Array.from({ length: 7 }, (_, j) => {
-      const d = new Date(monday); d.setDate(monday.getDate() + j)
-      return localIso(d)
-    })
-    const vol = days.reduce((s, d) => {
-      const lifts = Array.isArray(logs?.[d]?.lifts) ? logs[d].lifts : []
-      return s + lifts.reduce((ls, lift) => {
-        const w = parseFloat(lift.weight)
-        const r = parseInt(lift.reps, 10) || 0
-        return ls + (isFinite(w) && w > 0 ? w * r : 0)
-      }, 0)
-    }, 0)
-    weeks.push({ monday, days, vol, isCurrent: i === 0 })
-  }
-
-  const thisWeekVol = weeks[5].vol
-  const prev4Vols = weeks.slice(1, 5).filter(w => w.vol > 0)
-  const prev4avg  = prev4Vols.length
-    ? prev4Vols.reduce((s, w) => s + w.vol, 0) / prev4Vols.length
-    : null
-  const delta = prev4avg != null && thisWeekVol > 0 ? Math.round(thisWeekVol - prev4avg) : null
-
-  const dataMax = Math.max(...weeks.map(w => w.vol), 0)
-  const yTop = dataMax > 0 ? Math.max(1000, Math.ceil((dataMax * 1.1) / 500) * 500) : 5000
-  const yMid = Math.round(yTop * 2 / 3)
-  const yLow = Math.round(yTop / 3)
-  const fmtY = v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
-  const valueToY = (v) => BOT - (Math.min(Math.max(v, 0), yTop) / yTop) * H
-
-  const barWidth  = 50
-  const slotWidth = W / weeks.length
-  const xFor      = (i) => i * slotWidth + (slotWidth - barWidth) / 2
-  const hasAny    = weeks.some(w => w.vol > 0)
-
-  return (
-    <div className="chart-card">
-      <div className="chart-head">
-        <div>
-          <div className="label">Lifts · weekly volume</div>
-          <div className="value">
-            {thisWeekVol > 0 ? Math.round(thisWeekVol).toLocaleString('en-GB') : '—'}
-            <span className="unit">kg · this week</span>
-          </div>
-        </div>
-        <div className="meta-right">
-          {delta != null && (
-            <div className={`delta-line${delta < 0 ? ' down' : ''}`}>
-              {delta > 0 ? '▲' : delta < 0 ? '▼' : '●'} {Math.abs(delta).toLocaleString('en-GB')} kg
-            </div>
-          )}
-          <div className="meta-sub">vs prev 4w avg</div>
-        </div>
-      </div>
-      <svg viewBox="0 0 560 170" preserveAspectRatio="none" style={{ overflow: 'visible', width: '100%', height: 'auto' }}>
-        <GridLines />
-        <YAxisLeft labels={[fmtY(yTop), fmtY(yMid), fmtY(yLow)]} />
-        {!hasAny && (
-          <text x="280" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" style={{ fill: 'var(--chart-axis)' }}>No lifts logged yet</text>
-        )}
-        {weeks.map((w, i) => {
-          if (w.vol <= 0) return null
-          const y = valueToY(w.vol)
-          const height = BOT - y
-          if (height <= 0) return null
-          return (
-            <g key={i}>
-              <rect
-                x={xFor(i)} y={y} width={barWidth} height={height}
-                style={{ fill: 'var(--clay)' }} rx="2"
-                className="draw-bar"
-                opacity={w.isCurrent ? 0.85 : 1}
-              />
-              <text x={xFor(i) + barWidth / 2} y={y - 6} textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" style={{ fill: 'var(--chart-highlight)' }}>
-                {w.vol >= 1000 ? `${(w.vol / 1000).toFixed(1)}k` : Math.round(w.vol)}
-              </text>
-            </g>
-          )
-        })}
-        {weeks.map((w, i) => (
-          <text key={i} x={xFor(i)} y="168" fontFamily="JetBrains Mono" fontSize="9" style={{ fill: 'var(--chart-axis)' }}>
-            {w.monday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}
-          </text>
-        ))}
-      </svg>
-      <div className="legend">
-        <span className="item"><span className="swatch clay" />Volume · kg (weighted only)</span>
-      </div>
-    </div>
-  )
-}
-
 // ─── Section wrapper ────────────────────────────────────────────────
 export default function Trends({ logs, whoopData, activities, settings, plan }) {
   const [period, setPeriod] = useState('30D')
@@ -803,7 +703,6 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
         <AdherenceChart         plan={plan} activities={activities} />
         <NutritionChart         logs={logs} days={days} />
         <StepsCaloriesOutChart  logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
-        <LiftsVolumeChart       logs={logs} />
       </div>
     </section>
   )
