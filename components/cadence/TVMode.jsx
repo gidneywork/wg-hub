@@ -625,7 +625,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             label="Bedtime"    sub={periodLabel}
             value={avgBedtime ?? null} unit=""
             status={bedtimeStatus.text} statusClass={bedtimeStatus.cls}
-            sparkValues={null}  revealClass="r-9"
+            sparkValues={[]}  revealClass="r-9"
           />
         </section>
 

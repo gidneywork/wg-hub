@@ -129,6 +129,7 @@ export function mean(values) {
 // Build an SVG path string for a sparkline from a values array.
 // Skips null/undefined/NaN values. Returns null if fewer than 2 valid points.
 export function sparklinePath(values, width, height, pad = 2) {
+  if (!values || values.length < 2) return null
   const clean = values.map(v => {
     const n = typeof v === 'number' ? v : parseFloat(v)
     return isFinite(n) ? n : null
