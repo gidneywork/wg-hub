@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { getMuscleGroups } from '../../../lib/exercises'
 import { computeWeeklyMuscleVolume } from '../../../lib/volume'
+import BodyGraph from './BodyGraph'
 
 const MUSCLE_GROUPS = getMuscleGroups().filter(m => m !== 'cardio')
 
@@ -37,46 +38,54 @@ export default function MuscleVolumePanel({ logs, currentWeekStart }) {
         )}
       </div>
 
-      {!hasAnyLifts ? (
-        <p className="mvp-empty">No lifts logged this week.</p>
-      ) : !hasAttributedLifts ? (
-        <p className="mvp-empty">
-          All lifts unattributed — add to the exercise list to break down by muscle.
-        </p>
-      ) : (
-        <>
-          <div className="mvp-bars">
-            {MUSCLE_GROUPS.map(muscle => {
-              const data = byMuscle[muscle]
-              const tonnage = data?.tonnage ?? 0
-              const isMax = tonnage > 0 && tonnage === maxMuscleTonnage
-              const pct = maxMuscleTonnage > 0 && tonnage > 0
-                ? Math.max(4, (tonnage / maxMuscleTonnage) * 100)
-                : 0
-              return (
-                <div key={muscle} className="mvp-bar-row">
-                  <span className="mvp-label">{muscle}</span>
-                  <div className="mvp-track">
-                    <div
-                      className={`mvp-fill${isMax ? ' peak' : ''}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="mvp-value">
-                    {tonnage > 0 ? fmtTonnage(tonnage) : '—'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+      <div className="mvp-content">
 
-          {unattributedTonnage > 0 && (
-            <p className="mvp-unattributed">
-              {fmtTonnage(unattributedTonnage)} kg unattributed — add to the exercise list to break down by muscle.
+        <div className="mvp-left">
+          {!hasAnyLifts ? (
+            <p className="mvp-empty">No lifts logged this week.</p>
+          ) : !hasAttributedLifts ? (
+            <p className="mvp-empty">
+              All lifts unattributed — add to the exercise list to break down by muscle.
             </p>
+          ) : (
+            <>
+              <div className="mvp-bars">
+                {MUSCLE_GROUPS.map(muscle => {
+                  const data = byMuscle[muscle]
+                  const tonnage = data?.tonnage ?? 0
+                  const isMax = tonnage > 0 && tonnage === maxMuscleTonnage
+                  const pct = maxMuscleTonnage > 0 && tonnage > 0
+                    ? Math.max(4, (tonnage / maxMuscleTonnage) * 100)
+                    : 0
+                  return (
+                    <div key={muscle} className="mvp-bar-row">
+                      <span className="mvp-label">{muscle}</span>
+                      <div className="mvp-track">
+                        <div
+                          className={`mvp-fill${isMax ? ' peak' : ''}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="mvp-value">
+                        {tonnage > 0 ? fmtTonnage(tonnage) : '—'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {unattributedTonnage > 0 && (
+                <p className="mvp-unattributed">
+                  {fmtTonnage(unattributedTonnage)} kg unattributed — add to the exercise list to break down by muscle.
+                </p>
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+
+        <BodyGraph byMuscle={byMuscle} maxTonnage={maxMuscleTonnage} />
+
+      </div>
 
     </section>
   )
