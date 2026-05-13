@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { getMuscleGroups } from '../../../lib/exercises'
-import { computeWeeklyMuscleVolume } from '../../../lib/volume'
+import { computeWeeklyMuscleVolume, computeMuscleBaseline, classifyMuscleLoad } from '../../../lib/volume'
 import BodyGraph from './BodyGraph'
 
 const MUSCLE_GROUPS = getMuscleGroups().filter(m => m !== 'cardio')
@@ -16,6 +16,15 @@ export default function MuscleVolumePanel({ logs, currentWeekStart }) {
   )
 
   const { totalTonnage, totalSets, byMuscle, unattributedTonnage } = volume
+
+  const baseline = useMemo(
+    () => computeMuscleBaseline(logs, currentWeekStart),
+    [logs, currentWeekStart]
+  )
+
+  const heavyMuscles = MUSCLE_GROUPS.filter(
+    m => classifyMuscleLoad(byMuscle[m]?.tonnage ?? 0, baseline[m] ?? 0) === 'heavy'
+  )
 
   const hasAnyLifts = totalSets > 0
   const hasAttributedLifts = MUSCLE_GROUPS.some(m => byMuscle[m]?.sets > 0)
@@ -53,7 +62,9 @@ export default function MuscleVolumePanel({ logs, currentWeekStart }) {
                 {MUSCLE_GROUPS.map(muscle => {
                   const data = byMuscle[muscle]
                   const tonnage = data?.tonnage ?? 0
+                  const isHeavy = heavyMuscles.includes(muscle)
                   const isMax = tonnage > 0 && tonnage === maxMuscleTonnage
+                  const fillClass = isHeavy ? ' heavy' : isMax ? ' peak' : ''
                   const pct = maxMuscleTonnage > 0 && tonnage > 0
                     ? Math.max(4, (tonnage / maxMuscleTonnage) * 100)
                     : 0
@@ -62,7 +73,7 @@ export default function MuscleVolumePanel({ logs, currentWeekStart }) {
                       <span className="mvp-label">{muscle}</span>
                       <div className="mvp-track">
                         <div
-                          className={`mvp-fill${isMax ? ' peak' : ''}`}
+                          className={`mvp-fill${fillClass}`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -83,7 +94,7 @@ export default function MuscleVolumePanel({ logs, currentWeekStart }) {
           )}
         </div>
 
-        <BodyGraph byMuscle={byMuscle} maxTonnage={maxMuscleTonnage} />
+        <BodyGraph byMuscle={byMuscle} maxTonnage={maxMuscleTonnage} heavyMuscles={heavyMuscles} />
 
       </div>
 

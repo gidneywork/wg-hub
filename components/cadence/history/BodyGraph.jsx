@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import { SILHOUETTE, FRONT_REGIONS, BACK_REGIONS, muscleOpacity } from '../../../lib/bodyPaths'
 
-function Figure({ regions, byMuscle, maxTonnage }) {
+function Figure({ regions, byMuscle, maxTonnage, heavyMuscles }) {
   return (
     <svg viewBox="0 0 100 220" aria-hidden="true">
       {regions.map((region, i) => {
         const tonnage = byMuscle[region.muscle]?.tonnage ?? 0
         const opacity = muscleOpacity(tonnage, maxTonnage)
         const isActive = opacity > 0
-        const cls = `mvp-region${isActive ? ' active' : ''}`
+        const isHeavy = isActive && heavyMuscles.includes(region.muscle)
+        const cls = `mvp-region${isActive ? ' active' : ''}${isHeavy ? ' heavy' : ''}`
         const style = isActive ? { fillOpacity: opacity } : undefined
 
         if (region.type === 'ellipse') {
@@ -44,18 +45,18 @@ function Figure({ regions, byMuscle, maxTonnage }) {
   )
 }
 
-export default function BodyGraph({ byMuscle, maxTonnage }) {
+export default function BodyGraph({ byMuscle, maxTonnage, heavyMuscles = [] }) {
   const [view, setView] = useState('front')
 
   return (
     <div className="mvp-body-graph" data-view={view}>
       <div className="mvp-figures">
         <div className="mvp-figure mvp-figure-front">
-          <Figure regions={FRONT_REGIONS} byMuscle={byMuscle} maxTonnage={maxTonnage} />
+          <Figure regions={FRONT_REGIONS} byMuscle={byMuscle} maxTonnage={maxTonnage} heavyMuscles={heavyMuscles} />
           <span className="mvp-figure-label">Front</span>
         </div>
         <div className="mvp-figure mvp-figure-back">
-          <Figure regions={BACK_REGIONS} byMuscle={byMuscle} maxTonnage={maxTonnage} />
+          <Figure regions={BACK_REGIONS} byMuscle={byMuscle} maxTonnage={maxTonnage} heavyMuscles={heavyMuscles} />
           <span className="mvp-figure-label">Back</span>
         </div>
       </div>

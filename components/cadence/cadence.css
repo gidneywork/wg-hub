@@ -1425,6 +1425,12 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-theme="dark"] [data-cadence] .history .mvp-fill.peak {
   background: var(--moss);
 }
+[data-cadence] .history .mvp-fill.heavy {
+  background: var(--clay);
+}
+[data-theme="dark"] [data-cadence] .history .mvp-fill.heavy {
+  background: var(--clay);
+}
 [data-cadence] .history .mvp-value {
   font-family: var(--mono);
   font-size: var(--type-11);
@@ -1498,6 +1504,10 @@ html::-webkit-scrollbar-track { background: transparent; }
   fill: var(--moss);
   stroke: var(--moss);
   stroke-width: 1;
+}
+[data-cadence] .history .mvp-region.active.heavy {
+  fill: var(--clay);
+  stroke: var(--clay);
 }
 [data-cadence] .history .mvp-silhouette {
   fill: none;
