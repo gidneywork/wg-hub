@@ -11,6 +11,7 @@ import {
   mean,
 } from './helpers'
 import { db } from '../../lib/db'
+import { computeAdherenceSeries } from './scheduledAnalytics'
 import CadenceDialog from './CadenceDialog'
 import './charts-page.css'
 
@@ -23,9 +24,10 @@ const TABS = [
   { id: 'sleep',    label: 'Sleep score',      pip: 'sleep' },
   { id: 'recovery', label: 'Recovery',         pip: 'sleep' },
   { id: 'strain',   label: 'Strain',           pip: 'body'  },
-  { id: 'calories', label: 'Calories',          pip: 'intake'},
-  { id: 'squat',    label: 'Back squat PB',    pip: 'lift'  },
-  { id: 'pullup',   label: 'Pull-up PB',       pip: 'lift'  },
+  { id: 'calories',   label: 'Calories',        pip: 'intake'},
+  { id: 'adherence', label: 'Adherence',       pip: 'body'  },
+  { id: 'squat',     label: 'Back squat PB',   pip: 'lift'  },
+  { id: 'pullup',    label: 'Pull-up PB',      pip: 'lift'  },
 ]
 
 // ─── RANGE DAYS ───────────────────────────────────────────────────────────────
@@ -337,7 +339,8 @@ const METRIC_META = {
   sleep:    { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   strain:   { unit: '',     lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
-  calories: { unit: 'kcal', lowerIsBetter: false, fmt: v => Math.round(v).toLocaleString() },
+  calories:   { unit: 'kcal', lowerIsBetter: false, fmt: v => Math.round(v).toLocaleString() },
+  adherence:  { unit: '%',   lowerIsBetter: false, fmt: v => Math.round(v) + '%' },
 }
 const METRIC_META_FALLBACK = { unit: '', lowerIsBetter: false, fmt: v => Math.round(v).toString() }
 
@@ -690,6 +693,15 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   const [compare,   setCompare  ] = useState('target')
   const [smoothing, setSmoothing] = useState('raw')
 
+  // ── Scheduled sessions — 365-day window for adherence chart ────
+  const [adherenceSessions, setAdherenceSessions] = useState([])
+
+  useEffect(() => {
+    const end   = localIso(new Date())
+    const start = localIso((() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return d })())
+    db.listScheduledSessions(start, end).then(setAdherenceSessions).catch(console.error)
+  }, [])
+
   // ── User annotations (chart_annotations table) ──────────────────
   const [userAnnotations, setUserAnnotations] = useState([])
 
@@ -1030,6 +1042,53 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }
     }
 
+    if (activeTab === 'adherence') {
+      const n      = rangeDays ?? 365
+      const cutoff = rangeDays
+        ? localIso((() => { const d = new Date(); d.setDate(d.getDate() - n); return d })())
+        : null
+      const inRange   = cutoff ? adherenceSessions.filter(s => s.scheduled_date >= cutoff) : adherenceSessions
+      const today     = localIso(new Date())
+      const completed = inRange.filter(s => s.status === 'completed').length
+      const skipped   = inRange.filter(s => s.status === 'skipped').length
+      const missed    = inRange.filter(s => s.status === 'scheduled' && s.scheduled_date < today).length
+      const denom     = completed + skipped + missed
+      const pct       = denom > 0 ? Math.round(completed / denom * 100) : null
+
+      // Best streak — consecutive weeks with adherence >= 75%
+      const weekBuckets = {}
+      inRange.forEach(s => {
+        const wk = localIso(startOfWeek(new Date(s.scheduled_date + 'T00:00:00')))
+        if (!weekBuckets[wk]) weekBuckets[wk] = { c: 0, d: 0 }
+        if (s.status === 'completed') weekBuckets[wk].c++
+        else if (s.status === 'skipped' || (s.status === 'scheduled' && s.scheduled_date < today)) weekBuckets[wk].d++
+      })
+      let bestStreak = 0, cur = 0
+      Object.keys(weekBuckets).sort().forEach(wk => {
+        const { c, d } = weekBuckets[wk]
+        const wkDenom = c + d
+        const wkPct   = wkDenom > 0 ? Math.round(c / wkDenom * 100) : null
+        if (wkPct !== null && wkPct >= 75) { cur++; bestStreak = Math.max(bestStreak, cur) }
+        else cur = 0
+      })
+
+      return {
+        eyebrow: 'Adherence · % sessions completed',
+        heroStr: pct != null ? `${pct}%` : '—',
+        unitStr: pct != null ? `% · ${rangeLabel(range)}` : '',
+        delta:   null,
+        metaStr: denom > 0
+          ? `Across ${inRange.length} scheduled sessions`
+          : 'No sessions scheduled — add sessions in Planner',
+        tiles: [
+          { label: 'Completed',   val: completed.toString(), unit: '', ctx: 'Sessions finished'       },
+          { label: 'Skipped',     val: skipped.toString(),   unit: '', ctx: 'User-skipped'            },
+          { label: 'Missed',      val: missed.toString(),    unit: '', ctx: 'Past, not actioned'      },
+          { label: 'Best streak', val: bestStreak > 0 ? bestStreak.toString() : '—', unit: '', ctx: 'Consecutive weeks ≥ 75%' },
+        ],
+      }
+    }
+
     if (activeTab === 'squat' || activeTab === 'pullup') {
       const label = activeTab === 'squat' ? 'Back squat' : 'Weighted pull-up'
       if (!liftData?.allTimePB) {
@@ -1059,7 +1118,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
 
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings, liftData])
+  }, [activeTab, runKm, allMetrics, range, settings, liftData, adherenceSessions, rangeDays])
 
   // ── Annotations — merged user annotations + auto-detected PBs ──
   // User annotations: all tabs, date = start_date for marker placement
@@ -1083,8 +1142,13 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return [...userInRange, ...pbs].sort((a, b) => b.date.localeCompare(a.date))
   }, [activeTab, logs, stravaKmMap, rangeDays, userAnnotations])
 
-  const isLift     = activeTab === 'squat' || activeTab === 'pullup'
-  const isCalories = activeTab === 'calories'
+  const isLift       = activeTab === 'squat' || activeTab === 'pullup'
+  const isCalories   = activeTab === 'calories'
+  const isAdherence  = activeTab === 'adherence'
+
+  const adherenceColorFn = isAdherence
+    ? (bar) => (bar.value !== null && bar.value >= 75) ? 'var(--moss)' : 'var(--slate)'
+    : null
 
   const rangeWindowLabel = useMemo(
     () => fmtRangeWindow(range, rangeDays),
@@ -1118,11 +1182,20 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     if (activeTab === 'calories') {
       return buildChartBars(allMetrics.calsIn.vals, days)
     }
+    if (activeTab === 'adherence') {
+      const allWeeks = []
+      const seenWk   = new Set()
+      days.forEach(d => {
+        const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
+        if (!seenWk.has(wk)) { seenWk.add(wk); allWeeks.push(wk) }
+      })
+      return computeAdherenceSeries(adherenceSessions, allWeeks, localIso(new Date()))
+    }
     const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain' }[activeTab]
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
-  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, liftData])
+  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, liftData, adherenceSessions])
 
   const calsBurnedBars = useMemo(() => {
     if (activeTab !== 'calories') return []
@@ -1180,7 +1253,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'squat' || activeTab === 'pullup' || activeTab === 'calories') return []
+    if (activeTab === 'squat' || activeTab === 'pullup' || activeTab === 'calories' || activeTab === 'adherence') return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)
@@ -1286,7 +1359,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-              {!isLift && !isCalories && (
+              {!isLift && !isCalories && !isAdherence && (
                 <div className="control-group">
                   <span className="gl">Compare</span>
                   {[
@@ -1324,6 +1397,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               metricMeta={metricMeta}
               onAnnotationClick={openEdit}
               onPBClick={openPB}
+              colorFn={adherenceColorFn}
               secondBars={isCalories ? calsBurnedBars : []}
               secondColor="var(--slate)"
               weightLineBars={isCalories ? weightLineBars : []}
