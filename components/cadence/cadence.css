@@ -3891,7 +3891,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 /* ─── CadenceDialog ─────────────────────────────────────────────────── */
-[data-cadence] .cadence-dialog-backdrop {
+.cadence-dialog-backdrop[data-cadence] {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
