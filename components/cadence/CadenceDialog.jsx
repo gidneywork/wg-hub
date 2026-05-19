@@ -50,19 +50,23 @@ export default function CadenceDialog({
       >
         <div className="cadence-dialog-title" id="cadence-dialog-title">{title}</div>
         {body && <div className="cadence-dialog-body">{body}</div>}
-        <div className="cadence-dialog-actions">
-          {footerExtra && <div className="cadence-dialog-actions-left">{footerExtra}</div>}
-          <div className="cadence-dialog-actions-right">
-            {cancelLabel && (
-              <button type="button" className="btn btn-ghost" onClick={onCancel}>
-                {cancelLabel}
-              </button>
-            )}
-            <button type="button" className={`btn ${confirmClass}`} onClick={onConfirm} disabled={confirmDisabled}>
-              {confirmLabel}
-            </button>
+        {(footerExtra || cancelLabel || confirmLabel != null) && (
+          <div className="cadence-dialog-actions">
+            {footerExtra && <div className="cadence-dialog-actions-left">{footerExtra}</div>}
+            <div className="cadence-dialog-actions-right">
+              {cancelLabel && (
+                <button type="button" className="btn btn-ghost" onClick={onCancel}>
+                  {cancelLabel}
+                </button>
+              )}
+              {confirmLabel != null && (
+                <button type="button" className={`btn ${confirmClass}`} onClick={onConfirm} disabled={confirmDisabled}>
+                  {confirmLabel}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>,
     document.body
