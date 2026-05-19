@@ -49,7 +49,7 @@ export default function Recent({ activities }) {
   const recent = (activities || []).slice(0, 5)
 
   return (
-    <section className="section r r-9">
+    <section className="section r r-10">
       <div className="section-head">
         <h2>Recent</h2>
         <div className="right">

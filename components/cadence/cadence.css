@@ -3716,6 +3716,68 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 /* -----------------------------------------------------------------
+   THIS WEEK'S LIFTS — dashboard section.
+   Per-day grouped list of lifts logged in the current ISO week.
+   Rest days hidden. Long weeks scroll internally.
+   ----------------------------------------------------------------- */
+[data-cadence] .twl-empty {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  padding: 12px 0;
+}
+[data-cadence] .twl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+[data-cadence] .twl-list.twl-list--scroll {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+[data-cadence] .twl-day-label {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+[data-cadence] .twl-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+[data-cadence] .twl-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 16px;
+  font-size: var(--type-body);
+  color: var(--text);
+}
+[data-cadence] .twl-row + .twl-row { border-top: 1px dashed var(--border); }
+[data-cadence] .twl-exercise {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+[data-cadence] .twl-meta {
+  font-family: var(--mono);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--type-body-sm);
+}
+
+/* -----------------------------------------------------------------
    EMPTY STATE — for sidebar nav targets that don't yet exist.
    Single italic Fraunces line, lowercase, no full stop, centred.
    ----------------------------------------------------------------- */
