@@ -4,14 +4,6 @@ import { useState, useEffect } from 'react'
 import './training.css'
 import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek } from '../../lib/plan'
 
-function isoWeek(d = new Date()) {
-  const date = new Date(d)
-  date.setHours(0, 0, 0, 0)
-  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7)
-  const jan4 = new Date(date.getFullYear(), 0, 4)
-  return 1 + Math.round(((date - jan4) / 86400000 - 3 + (jan4.getDay() + 6) % 7) / 7)
-}
-
 const TYPE_LABEL = {
   run: 'Running', swim: 'Swimming', cycle: 'Cycling', hike: 'Hiking',
   gym: 'Gym', strength: 'Strength', functional: 'Functional',
