@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getCurrentWeek } from '../../lib/plan'
 import {
   localIso,
   daysWindow,
@@ -507,7 +508,7 @@ function AdherenceChart({ plan, activities }) {
   // 6 weeks ending current. For each week: planned = count of non-rest plan days,
   // completed = count of days within that week that have ≥1 activity.
   const stravaActivityDays = new Set((activities || []).map(a => (a.start_date || '').split('T')[0]).filter(Boolean))
-  const plannedPerDow = (plan || []).map(d => (d?.sessions?.[0]?.type === 'rest') ? 0 : 1)
+  const plannedPerDow = (getCurrentWeek(plan, new Date()) || []).map(d => (d?.sessions?.[0]?.type === 'rest') ? 0 : 1)
   const plannedPerWeek = plannedPerDow.reduce((s, v) => s + v, 0) || 7
 
   const now = new Date(); now.setHours(0, 0, 0, 0)
