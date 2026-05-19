@@ -10,6 +10,7 @@ import {
   kmByDateMap,
   getKmForDate,
 } from './helpers'
+import { getCurrentWeek } from '../../lib/plan'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -515,7 +516,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
   const todayName = WEEKDAYS[new Date().getDay()]
   const todayIdx  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
-  const todaySessions = plan?.[todayIdx]?.sessions || []
+  const todaySessions = getCurrentWeek(plan, new Date())?.[todayIdx]?.sessions || []
 
   function sessionPipClass(type) {
     if (type === 'run') return 'run'

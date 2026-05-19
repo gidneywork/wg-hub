@@ -1,5 +1,7 @@
 'use client'
 
+import { getCurrentWeek } from '../../lib/plan'
+
 const localIso = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
@@ -71,10 +73,12 @@ export default function WeekGrid({ plan }) {
   const weekStart = new Date(today)
   weekStart.setDate(today.getDate() - dow)
 
+  const week = getCurrentWeek(plan, today)
+
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart)
     date.setDate(weekStart.getDate() + i)
-    const planDay = plan?.[i]
+    const planDay = week?.[i]
     const session = primarySession(planDay)
     const type = session?.type || 'custom'
     return {
