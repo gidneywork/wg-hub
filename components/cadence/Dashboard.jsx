@@ -4,6 +4,7 @@ import Hero from './Hero'
 import StatRow from './StatRow'
 import WeekGrid from './WeekGrid'
 import TodayCards from './TodayCards'
+import TodosTile from './TodosTile'
 import ThisWeeksLifts from './ThisWeeksLifts'
 import Trends from './Trends'
 import PersonalBests from './PersonalBests'
@@ -45,6 +46,8 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
       <WeekGrid plan={plan} />
 
       <TodayCards plan={plan} logs={logs} activities={activities} setView={setView} />
+
+      <TodosTile setView={setView} />
 
       <ThisWeeksLifts logs={logs} />
 

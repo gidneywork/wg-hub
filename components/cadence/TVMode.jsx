@@ -11,6 +11,8 @@ import {
   getKmForDate,
 } from './helpers'
 import { getCurrentWeek } from '../../lib/plan'
+import { db } from '../../lib/db'
+import { filterTodosForDate } from '../../lib/todos'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -233,6 +235,8 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const [dataChanging, setDataChanging] = useState(false)
   const [clockTime, setClockTime]       = useState('')
   const [clockDate, setClockDate]       = useState('')
+  const [tvTodos,       setTvTodos      ] = useState([])
+  const [tvCompletions, setTvCompletions] = useState([])
 
   // ── Theme inheritance (non-persisting) ──────────────────────────────────────
   // TV inherits the site's current theme on mount. In-TV theme toggle below
@@ -242,6 +246,20 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     const saved = document.documentElement.getAttribute('data-theme')
     return () => document.documentElement.setAttribute('data-theme', saved || 'light')
   }, [])
+
+  // ── Todos — loaded once on mount, not re-fetched on 20s cycle ────────────
+  useEffect(() => {
+    Promise.all([db.listTodos(), db.listTodoCompletions()]).then(([t, c]) => {
+      setTvTodos(t)
+      setTvCompletions(c)
+    })
+  }, [])
+
+  const tvToday = useMemo(() => localIso(), [])
+  const pendingTodos = useMemo(
+    () => filterTodosForDate(tvTodos, tvCompletions, tvToday).pending,
+    [tvTodos, tvCompletions, tvToday]
+  )
 
   // ── Live clock (updates every 30s) ──────────────────────────────────────────
   useEffect(() => {
@@ -705,6 +723,17 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
                 })
               )}
             </div>
+            {pendingTodos.length > 0 && (
+              <div className="tv-todos">
+                <div className="tv-todos-label">To-dos</div>
+                {pendingTodos.map(todo => (
+                  <div key={todo.id} className="tv-todo-row">
+                    <span className="tv-todo-check" aria-hidden="true" />
+                    <span className="tv-todo-title">{todo.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </section>

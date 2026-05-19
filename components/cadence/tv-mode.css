@@ -701,3 +701,40 @@
   .tv-page .km-hero .num       { font-size: 88px; }
   .tv-page .tv-range button    { padding: 8px 12px; font-size: 10px; }
 }
+
+/* ── TV mode — to-dos block ──────────────────────────────────────────────── */
+
+.tv-page .tv-todos {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tv-page .tv-todos-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-bottom: 4px;
+}
+.tv-page .tv-todo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tv-page .tv-todo-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 3px;
+  display: inline-block;
+}
+.tv-page .tv-todo-title {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
