@@ -306,7 +306,8 @@
 [data-cadence] .chart-canvas svg rect,
 [data-cadence] .chart-canvas svg path,
 [data-cadence] .chart-canvas svg line,
-[data-cadence] .chart-canvas svg text {
+[data-cadence] .chart-canvas svg text,
+[data-cadence] .chart-canvas .weight-line {
   transition: fill var(--t-theme) var(--ease), stroke var(--t-theme) var(--ease);
 }
 
@@ -503,6 +504,106 @@
    ----------------------------------------------------------------- */
 @keyframes growBar { to { transform: scaleY(1); } }
 @keyframes fadeIn  { to { opacity: 1; } }
+
+/* -----------------------------------------------------------------
+   SVG CHART — SECONDARY RIGHT Y-AXIS (weight overlay, kg)
+   text-anchor: start mirrors the left axis's text-anchor: end.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .axis-label.yr { text-anchor: start; }
+
+/* -----------------------------------------------------------------
+   SVG CHART — WEIGHT LINE OVERLAY
+   Sand coloured path, no fill. 2px solid line with dot markers via
+   stroke-linecap: round. Animates in with the annotation fade.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-canvas .weight-line {
+  stroke: var(--sand);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0;
+  animation: fadeIn 600ms var(--ease) forwards;
+  animation-delay: 0.6s;
+}
+
+/* -----------------------------------------------------------------
+   CHART LEGEND (calories tab: Intake / Burned / Weight chips)
+   Sits directly below the SVG inside .chart-canvas.
+   Aligned right to avoid clashing with left y-axis labels.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 0 4px 2px;
+  margin-top: -6px;
+}
+[data-cadence] .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+}
+[data-cadence] .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+[data-cadence] .legend-dot--line {
+  border-radius: 2px;
+  height: 3px;
+}
+
+/* -----------------------------------------------------------------
+   TOOLTIP — MULTI-SERIES (calories: Intake / Burned / Weight rows)
+   .tt-multi replaces .tt-value for two-series charts.
+   ----------------------------------------------------------------- */
+[data-cadence] .chart-tooltip .tt-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+[data-cadence] .chart-tooltip .tt-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+[data-cadence] .chart-tooltip .tt-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+[data-cadence] .chart-tooltip .tt-dot--line {
+  border-radius: 1px;
+  height: 2px;
+}
+[data-cadence] .chart-tooltip .tt-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+  min-width: 44px;
+}
+[data-cadence] .chart-tooltip .tt-num {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
 
 /* -----------------------------------------------------------------
    CHART CONTROLS ROW (bottom strip of hero card)

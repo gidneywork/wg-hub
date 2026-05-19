@@ -23,7 +23,7 @@ const TABS = [
   { id: 'sleep',    label: 'Sleep score',      pip: 'sleep' },
   { id: 'recovery', label: 'Recovery',         pip: 'sleep' },
   { id: 'strain',   label: 'Strain',           pip: 'body'  },
-  { id: 'calories', label: 'Calories balance', pip: 'intake'},
+  { id: 'calories', label: 'Calories',          pip: 'intake'},
   { id: 'squat',    label: 'Back squat PB',    pip: 'lift'  },
   { id: 'pullup',   label: 'Pull-up PB',       pip: 'lift'  },
 ]
@@ -337,12 +337,27 @@ const METRIC_META = {
   sleep:    { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   strain:   { unit: '',     lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
-  calories: { unit: 'kcal', lowerIsBetter: false, fmt: v => (v >= 0 ? '+' : '') + Math.round(v).toString() },
+  calories: { unit: 'kcal', lowerIsBetter: false, fmt: v => Math.round(v).toLocaleString() },
 }
 const METRIC_META_FALLBACK = { unit: '', lowerIsBetter: false, fmt: v => Math.round(v).toString() }
 
 // ─── CHART SVG ────────────────────────────────────────────────────────────────
-function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance = false, targetValue = null, prevBars = [], annotations = [], metricMeta = METRIC_META_FALLBACK, onAnnotationClick = null, onPBClick = null }) {
+function ChartSVG({
+  bars          = [],
+  barColor      = 'var(--moss)',
+  animKey       = '',
+  isBalance     = false,
+  targetValue   = null,
+  prevBars      = [],
+  annotations   = [],
+  metricMeta    = METRIC_META_FALLBACK,
+  onAnnotationClick = null,
+  onPBClick         = null,
+  colorFn           = null,
+  secondBars        = [],
+  secondColor       = 'var(--slate)',
+  weightLineBars    = [],
+}) {
   // Hooks first — Rules of Hooks require unconditional ordering
   const [tooltip,     setTooltip    ] = useState(null)
   const [showTooltip, setShowTooltip] = useState(false)
@@ -358,14 +373,53 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
     )
   }
 
+  const hasTwoSeries = secondBars.length > 0
   const n      = bars.length
   const SLOT_W = (CR - CL) / n
-  const BAR_W  = Math.max(2, Math.min(30, SLOT_W * 0.72))
-  const barX   = i => CL + i * SLOT_W + (SLOT_W - BAR_W) / 2
-  const barMid = i => barX(i) + BAR_W / 2
+  const BAR_W  = hasTwoSeries
+    ? Math.max(2, Math.min(20, SLOT_W * 0.34))
+    : Math.max(2, Math.min(30, SLOT_W * 0.72))
+  const GAP2   = hasTwoSeries ? Math.max(1, SLOT_W * 0.04) : 0
+  const barMid = i => CL + i * SLOT_W + SLOT_W / 2
+  const barX   = i => hasTwoSeries
+    ? barMid(i) - BAR_W - GAP2 / 2
+    : CL + i * SLOT_W + (SLOT_W - BAR_W) / 2
+  const bar2X  = i => barMid(i) + GAP2 / 2
   const delay  = Math.min(40, 800 / Math.max(n, 1))
-  const { gridLevels, toY } = computeYScale(bars, isBalance)
+
+  // Y scale — for two series, encompass both so bars share the same axis
+  const allBarVals = hasTwoSeries ? [...bars, ...secondBars] : bars
+  const { gridLevels, toY } = computeYScale(allBarVals, isBalance)
   const baselineY = toY(0)
+
+  // Secondary Y scale for weight overlay
+  const weightVals = weightLineBars.map(b => b.value).filter(v => v !== null && isFinite(v))
+  const hasWeightLine = weightVals.length >= 2
+  let weightToY = null
+  let wtLevels  = []
+  if (hasWeightLine) {
+    const wtMin = Math.min(...weightVals)
+    const wtMax = Math.max(...weightVals)
+    const wtPad = Math.max((wtMax - wtMin) * 0.4, 3)
+    const wtTop = wtMax + wtPad
+    const wtBot = Math.max(0, wtMin - wtPad)
+    weightToY = v => CB - ((v - wtBot) / (wtTop - wtBot)) * (CB - CT)
+    wtLevels  = [wtBot, (wtBot + wtTop) / 2, wtTop]
+  }
+
+  // Weight line path — connect non-null adjacent points, no interpolation
+  let weightPathD = ''
+  if (hasWeightLine) {
+    let inLine = false
+    weightLineBars.forEach((wb, i) => {
+      if (wb.value === null || !isFinite(wb.value)) { inLine = false; return }
+      const x = barMid(i)
+      const y = weightToY(wb.value)
+      weightPathD += inLine ? `L ${x} ${y} ` : `M ${x} ${y} `
+      inLine = true
+    })
+    weightPathD = weightPathD.trim()
+  }
   const gridLineVals = isBalance ? gridLevels : gridLevels.slice(1)
   const yLabelVals = isBalance
     ? [...new Set([...gridLevels, 0])].sort((a, b) => b - a)
@@ -430,7 +484,9 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
     const transformStr = nearTop
       ? `translate(${txPct}, 10px)`
       : `translate(${txPct}, calc(-100% - 10px))`
-    setTooltip({ domX, domY, transformStr, bar, prevBar })
+    const secondBarValue = secondBars[i]?.value ?? null
+    const weightValue    = weightLineBars[i]?.value ?? null
+    setTooltip({ domX, domY, transformStr, bar, prevBar, secondBarValue, weightValue })
     requestAnimationFrame(() => setShowTooltip(true))
   }
 
@@ -481,12 +537,33 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
               className={barClass}
               x={barX(i)} y={py} width={BAR_W} height={ht}
               style={{
-                fill: annotFill ?? barColor,
+                fill: annotFill ?? (colorFn ? colorFn(bar, i) : barColor),
                 animationDelay: `${Math.round(200 + i * delay)}ms`,
                 ...(isBalance && v < 0 ? { transformOrigin: 'top' } : {}),
                 ...(bar.smoothPartial ? { opacity: 0.35 } : {}),
               }}
               onMouseEnter={() => handleBarEnter(bar, bars[i - 1] ?? null, i)}
+              onMouseLeave={handleBarLeave}
+            />
+          )
+        })}
+        {hasTwoSeries && secondBars.map((sbar, i) => {
+          if (sbar.value === null || !isFinite(sbar.value)) return null
+          const v  = sbar.value
+          const py = toY(v)
+          const ht = baselineY - py
+          if (ht <= 0) return null
+          return (
+            <rect
+              key={`${animKey}-b2-${i}`}
+              className={`bar${bars[i]?.isCurrent ? ' current' : ''}`}
+              x={bar2X(i)} y={py} width={BAR_W} height={ht}
+              style={{
+                fill: secondColor,
+                animationDelay: `${Math.round(200 + i * delay)}ms`,
+                ...(sbar.smoothPartial ? { opacity: 0.35 } : {}),
+              }}
+              onMouseEnter={() => handleBarEnter(bars[i] ?? sbar, bars[i - 1] ?? null, i)}
               onMouseLeave={handleBarLeave}
             />
           )
@@ -503,6 +580,12 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
           </>
         )}
         {prevPathD && <path className="prev-line" d={prevPathD} />}
+        {weightPathD && <path className="weight-line" d={weightPathD} />}
+        {hasWeightLine && wtLevels.map((v, idx) => (
+          <text key={`wr${idx}`} className="axis-label yr" x={CR + 12} y={weightToY(v) + 4}>
+            {v.toFixed(1)}
+          </text>
+        ))}
         {weekAnnots.size > 0 && bars.map((bar, i) => {
           if (bar.value === null || !isFinite(bar.value) || !bar.weekKey) return null
           const wkAnnots = weekAnnots.get(bar.weekKey)
@@ -536,12 +619,43 @@ function ChartSVG({ bars = [], barColor = 'var(--moss)', animKey = '', isBalance
             transform: tooltip.transformStr,
           }}
         >
-          <div className="tt-value">
-            {metricMeta.fmt(tooltip.bar.value)}
-            {metricMeta.unit && <span className="tt-unit">{metricMeta.unit}</span>}
-          </div>
+          {hasTwoSeries ? (
+            <div className="tt-multi">
+              <div className="tt-row">
+                <span className="tt-dot" style={{ background: barColor }} />
+                <span className="tt-label">Intake</span>
+                <span className="tt-num">
+                  {tooltip.bar.value != null ? Math.round(tooltip.bar.value).toLocaleString() : '—'}
+                  <span className="tt-unit"> kcal</span>
+                </span>
+              </div>
+              <div className="tt-row">
+                <span className="tt-dot" style={{ background: secondColor }} />
+                <span className="tt-label">Burned</span>
+                <span className="tt-num">
+                  {tooltip.secondBarValue != null ? Math.round(tooltip.secondBarValue).toLocaleString() : '—'}
+                  <span className="tt-unit"> kcal</span>
+                </span>
+              </div>
+              {tooltip.weightValue != null && (
+                <div className="tt-row">
+                  <span className="tt-dot tt-dot--line" style={{ background: 'var(--sand)' }} />
+                  <span className="tt-label">Weight</span>
+                  <span className="tt-num">
+                    {tooltip.weightValue.toFixed(1)}
+                    <span className="tt-unit"> kg</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="tt-value">
+              {metricMeta.fmt(tooltip.bar.value)}
+              {metricMeta.unit && <span className="tt-unit">{metricMeta.unit}</span>}
+            </div>
+          )}
           <div className="tt-week">{tooltip.bar.weekLabel}</div>
-          {ttDeltaInfo && (
+          {!hasTwoSeries && ttDeltaInfo && (
             <div className="tt-delta" style={{ color: ttDeltaInfo.color }}>
               {ttDeltaInfo.arrow} {ttDeltaInfo.fmtDelta}{metricMeta.unit ? ` ${metricMeta.unit}` : ''}
             </div>
@@ -894,27 +1008,24 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
 
     if (activeTab === 'calories') {
-      const mb = allMetrics.calsBalance
       const mi = allMetrics.calsIn
       const mx = allMetrics.calsBurned
-      const d  = mb.avg != null && mb.priorAvg != null
-        ? calcDelta(mb.avg, Math.abs(mb.priorAvg), { mode: 'abs' })
-        : null
-      const surplusDays = mb.vals.filter(x => x.value > 0).length
+      const mb = allMetrics.calsBalance
       const avgBalStr = mb.avg != null
         ? `${mb.avg >= 0 ? '+' : ''}${Math.round(mb.avg)}`
         : '—'
+      const surplusDays = mb.vals.filter(x => x.value > 0).length
       return {
-        eyebrow: 'Calories balance · kcal per day',
+        eyebrow: 'Calories · kcal per day',
         heroStr: avgBalStr,
-        unitStr: `kcal · ${rangeLabel(range)}`,
-        delta:   d,
+        unitStr: `kcal balance · ${rangeLabel(range)}`,
+        delta:   null,
         metaStr: mb.count > 0 ? `Across ${mb.count} logged days` : 'No data — log calories + connect Whoop',
         tiles: [
-          { label: 'Avg balance', val: avgBalStr,               unit: 'kcal', ctx: 'Intake minus burned' },
-          { label: 'Avg intake',  val: fmtInt(mi.avg),          unit: 'kcal', ctx: `${mi.count} logged days` },
-          { label: 'Avg burned',  val: fmtInt(mx.avg),          unit: 'kcal', ctx: 'From Whoop' },
-          { label: 'Surplus days',val: mb.count > 0 ? surplusDays.toString() : '—', unit: '', ctx: 'Days in calorie surplus' },
+          { label: 'Avg balance', val: avgBalStr,      unit: 'kcal', ctx: 'Intake minus burned' },
+          { label: 'Avg intake',  val: fmtInt(mi.avg), unit: 'kcal', ctx: `${mi.count} logged days` },
+          { label: 'Avg burned',  val: fmtInt(mx.avg), unit: 'kcal', ctx: 'From Whoop' },
+          { label: 'Surplus days',val: mb.count > 0 ? surplusDays.toString() : '—', unit: '', ctx: 'Days intake > burned' },
         ],
       }
     }
@@ -972,7 +1083,8 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return [...userInRange, ...pbs].sort((a, b) => b.date.localeCompare(a.date))
   }, [activeTab, logs, stravaKmMap, rangeDays, userAnnotations])
 
-  const isLift = activeTab === 'squat' || activeTab === 'pullup'
+  const isLift     = activeTab === 'squat' || activeTab === 'pullup'
+  const isCalories = activeTab === 'calories'
 
   const rangeWindowLabel = useMemo(
     () => fmtRangeWindow(range, rangeDays),
@@ -980,6 +1092,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   )
 
   const barColor = useMemo(() => {
+    if (activeTab === 'calories') return 'var(--moss)'
     const tab = TABS.find(t => t.id === activeTab)
     if (tab?.pip === 'sleep')  return 'var(--slate)'
     if (tab?.pip === 'intake') return 'var(--sand)'
@@ -1002,11 +1115,28 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         isCurrent: wk === currentWk,
       }))
     }
-    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', calories: 'calsBalance' }[activeTab]
+    if (activeTab === 'calories') {
+      return buildChartBars(allMetrics.calsIn.vals, days)
+    }
+    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain' }[activeTab]
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
   }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, liftData])
+
+  const calsBurnedBars = useMemo(() => {
+    if (activeTab !== 'calories') return []
+    const n    = rangeDays ?? 730
+    const days = daysWindow(n)
+    return buildChartBars(allMetrics.calsBurned.vals, days)
+  }, [activeTab, rangeDays, allMetrics])
+
+  const weightLineBars = useMemo(() => {
+    if (activeTab !== 'calories') return []
+    const n    = rangeDays ?? 730
+    const days = daysWindow(n)
+    return buildChartBars(allMetrics.weight.vals, days)
+  }, [activeTab, rangeDays, allMetrics])
 
   const animKey   = `${activeTab}-${range}`
   const metricMeta = METRIC_META[activeTab] ?? METRIC_META_FALLBACK
@@ -1050,7 +1180,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'squat' || activeTab === 'pullup') return []
+    if (activeTab === 'squat' || activeTab === 'pullup' || activeTab === 'calories') return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)
@@ -1066,21 +1196,14 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }))
     }
     const accMap = {
-      hrv:         (m)       => m?.body?.hrv,
-      rhr:         (m)       => m?.body?.rhr,
-      weight:      (m)       => m?.body?.weight,
-      sleep:       (m)       => m?.sleep?.sleepScore,
-      recovery:    (m)       => m?.sleep?.recoveryScore,
-      strain:      (m, w)    => w?.day_strain,
-      calsBalance: (m, w, d) => {
-        const intake = logs[d]?.nutrition?.calories
-        if (intake === '' || intake == null) return null
-        const burned = w?.energy_burned
-        if (burned == null) return null
-        return parseFloat(intake) - burned
-      },
+      hrv:      (m)    => m?.body?.hrv,
+      rhr:      (m)    => m?.body?.rhr,
+      weight:   (m)    => m?.body?.weight,
+      sleep:    (m)    => m?.sleep?.sleepScore,
+      recovery: (m)    => m?.sleep?.recoveryScore,
+      strain:   (_, w) => w?.day_strain,
     }
-    const metricKeyMap = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', calories: 'calsBalance' }
+    const metricKeyMap = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain' }
     const metricKey = metricKeyMap[activeTab]
     const acc = metricKey ? accMap[metricKey] : null
     if (!acc) return []
@@ -1163,7 +1286,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-              {!isLift && (
+              {!isLift && !isCalories && (
                 <div className="control-group">
                   <span className="gl">Compare</span>
                   {[
@@ -1194,14 +1317,33 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               bars={annotatedBars}
               barColor={barColor}
               animKey={animKey}
-              isBalance={activeTab === 'calories'}
+              isBalance={false}
               targetValue={compare === 'target' ? tabTarget : null}
               prevBars={compare === 'prev' ? prevChartBars : []}
               annotations={annotations}
               metricMeta={metricMeta}
               onAnnotationClick={openEdit}
               onPBClick={openPB}
+              secondBars={isCalories ? calsBurnedBars : []}
+              secondColor="var(--slate)"
+              weightLineBars={isCalories ? weightLineBars : []}
             />
+            {isCalories && (
+              <div className="chart-legend">
+                <span className="legend-item">
+                  <span className="legend-dot" style={{ background: 'var(--moss)' }} />
+                  Intake
+                </span>
+                <span className="legend-item">
+                  <span className="legend-dot" style={{ background: 'var(--slate)' }} />
+                  Burned
+                </span>
+                <span className="legend-item">
+                  <span className="legend-dot legend-dot--line" style={{ background: 'var(--sand)' }} />
+                  Weight
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Bottom controls */}
