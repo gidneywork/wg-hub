@@ -6,6 +6,7 @@ import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import AboutYouSection from './settings/AboutYouSection'
 import StravaCard from './settings/StravaCard'
+import ConnectionsSection from './settings/ConnectionsSection'
 import TargetSection from './settings/TargetSection'
 import WhoopUpload from './settings/WhoopUpload'
 import ActivityLog from './settings/ActivityLog'
@@ -115,6 +116,8 @@ export default function Settings({
         onDisconnect={handleDisconnect}
         onSynced={handleSynced}
       />
+
+      <ConnectionsSection />
 
       {(() => {
         // Thread an absolute row index across sections so the bar
