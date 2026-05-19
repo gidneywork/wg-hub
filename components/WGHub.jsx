@@ -18,6 +18,7 @@ import OnboardingFlow from './cadence/OnboardingFlow'
 import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
 import CadenceTraining from './cadence/Training'
+import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -35,39 +36,7 @@ const SESSION_TYPES = [
 const typeColor = (key) => SESSION_TYPES.find(t=>t.key===key)?.color || '#e8edf5'
 const typeLabel = (key) => SESSION_TYPES.find(t=>t.key===key)?.label || key
 
-// ─── DEFAULT PLAN ─────────────────────────────────────────────────────────────
-const PLAN_DAYS_META = [
-  { day:'Monday',    short:'MON', accent:'#00e676' },
-  { day:'Tuesday',   short:'TUE', accent:'#40a9ff' },
-  { day:'Wednesday', short:'WED', accent:'#ff9f40' },
-  { day:'Thursday',  short:'THU', accent:'#b388ff' },
-  { day:'Friday',    short:'FRI', accent:'#ff6b6b' },
-  { day:'Saturday',  short:'SAT', accent:'#ffd666' },
-  { day:'Sunday',    short:'SUN', accent:'#69f0ae' },
-]
-
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2,7)}` }
-
-function getDefaultPlan() {
-  const raw = [
-    { runs:['1:45–2hrs Easy Run · 150–160bpm · 15–20km'],            func:'100 Pull Ups\n200 Press Ups\n200 Crunches\n200 Shrugs',        gym:'Chest / Triceps',                          yoga:'30 mins' },
-    { runs:['1hr Zone 2 Easy · 10–12km','8× Hill Sprints (Pipers Way – full length)'], func:'100 Pull Ups\n200 Press Ups\n200 Crunches\n200 Shrugs (40kg)', gym:'Bicep / Shoulders',                         yoga:'30 mins' },
-    { runs:['1:45–2hrs Zone 2 Easy · 15–20km'],                       func:'100 Pull Ups\n200 Press Ups\n200 Crunches\n200 Shrugs (40kg)', gym:'Core Training',                             yoga:'30 mins' },
-    { runs:['10km Easy Run'],                                          func:'100 Pull Ups\n200 Press Ups\n200 Crunches\n200 Shrugs (40kg)', gym:'Leg Day – focus on running movements',      yoga:'30 mins' },
-    { rest:true,                                                                                                                            gym:'Chest / Triceps',                          yoga:'30 mins' },
-    { runs:['Long Run · 40km minimum'],                                                                                                     gym:'Bicep / Shoulders',                         yoga:'30 mins' },
-    { runs:['10km Recovery Run'],                                      func:'100 Pull Ups\n200 Press Ups\n200 Crunches\n200 Shrugs (40kg)',                                                  yoga:'30 mins' },
-  ]
-  return PLAN_DAYS_META.map((meta, i) => {
-    const d = raw[i], sessions = []
-    if (d.rest)  sessions.push({ id:uid(), type:'rest',       details:'Running Rest Day' })
-    if (d.runs)  d.runs.forEach(r => sessions.push({ id:uid(), type:'run',        details:r }))
-    if (d.func)  sessions.push({ id:uid(), type:'functional', details:d.func })
-    if (d.gym)   sessions.push({ id:uid(), type:'gym',        details:d.gym })
-    if (d.yoga)  sessions.push({ id:uid(), type:'yoga',       details:`Yoga · ${d.yoga}` })
-    return { ...meta, sessions }
-  })
-}
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const GYM_OPTIONS    = ['Bicep / Shoulders','Chest / Triceps','Core Training','Back','Legs']
@@ -242,7 +211,7 @@ export default function WGHub({ onSignOut }) {
         ])
         setLogs(logsData || {})
         if (settingsData) setSettings(settingsData)
-        setPlan(planData || getDefaultPlan())
+        setPlan(normalisePlan(planData, logsData))
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])
         setWhoopData(whoopD || {})
