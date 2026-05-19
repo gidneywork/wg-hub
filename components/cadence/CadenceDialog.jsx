@@ -26,6 +26,7 @@ export default function CadenceDialog({
   confirmClass    = 'btn-danger',
   confirmDisabled = false,
   footerExtra     = null,
+  dialogClass     = '',
   onConfirm,
   onCancel,
 }) {
@@ -41,7 +42,7 @@ export default function CadenceDialog({
   return createPortal(
     <div className="cadence-dialog-backdrop" data-cadence="" onClick={onCancel}>
       <div
-        className="cadence-dialog"
+        className={`cadence-dialog${dialogClass ? ` ${dialogClass}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cadence-dialog-title"
