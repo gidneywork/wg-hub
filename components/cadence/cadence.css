@@ -5122,3 +5122,126 @@ html::-webkit-scrollbar-track { background: transparent; }
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* ── Journal page ──────────────────────────────────────────────────── */
+[data-cadence] .r-11 { animation-delay: 860ms; }
+
+[data-cadence] .journal-page {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 60px;
+}
+
+[data-cadence] .journal-header {
+  margin-bottom: 32px;
+}
+
+[data-cadence] .journal-title {
+  font-family: var(--display);
+  font-size: var(--type-h2);
+  font-weight: 400;
+  letter-spacing: var(--tracking-h2);
+  color: var(--text);
+  margin: 0;
+}
+
+[data-cadence] .journal-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 48px 0;
+}
+
+[data-cadence] .journal-empty-text {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  margin: 0;
+}
+
+[data-cadence] .journal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+[data-cadence] .journal-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+[data-cadence] .journal-date-label {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+
+[data-cadence] .journal-card {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-cadence] .jc-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+
+[data-cadence] .jc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+[data-cadence] .jc-label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+
+[data-cadence] .jc-text {
+  font-size: var(--type-body);
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+[data-cadence] .jc-mood {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+[data-cadence] .jc-mood-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+[data-cadence] .jc-mood-word {
+  font-size: var(--type-body);
+  color: var(--text-muted);
+}
+
+[data-cadence] .jc-mood-note {
+  font-size: var(--type-body);
+  color: var(--text-soft);
+}

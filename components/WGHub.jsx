@@ -18,6 +18,7 @@ import OnboardingFlow from './cadence/OnboardingFlow'
 import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
 import CadenceTraining from './cadence/Training'
+import CadenceJournal from './cadence/Journal'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -333,6 +334,8 @@ export default function WGHub({ onSignOut }) {
         <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} userProfile={userProfile}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection} logs={logs}/>
+      ) : view === 'journal' ? (
+        <CadenceJournal logs={logs} setView={setView} />
       ) : view === 'log' ? (
         <CadenceDaily
           logs={logs}

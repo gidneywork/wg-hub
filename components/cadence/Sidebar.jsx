@@ -24,6 +24,9 @@ const NAV_ANALYSE = [
   { view: 'history', label: 'History', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-7"/></svg>
   ) },
+  { view: 'journal', label: 'Journal', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h10M4 14h12M4 18h8"/></svg>
+  ) },
   { view: 'tv', label: 'TV mode', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
   ) },
