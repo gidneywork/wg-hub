@@ -1,6 +1,7 @@
 'use client'
 
 import { todayStr, mergeWhoopForDate } from './helpers'
+import { getCurrentWeek } from '../../lib/plan'
 
 // Mirror the WeekGrid parser, kept inline so the two stay independent
 // when their schemas diverge in a later session.
@@ -31,7 +32,7 @@ function shortTitle(details, type) {
 
 function ScheduledCard({ plan }) {
   const dow = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
-  const planDay = plan?.[dow]
+  const planDay = getCurrentWeek(plan, new Date())?.[dow]
   const session = planDay?.sessions?.[0]
   const type = session?.type || 'custom'
   const isRest = type === 'rest'
