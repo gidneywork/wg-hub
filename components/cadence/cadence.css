@@ -805,7 +805,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   background: var(--bg-paper);
   border: 1px solid var(--border);
   border-radius: 5px;
-  padding: 20px 22px;
+  padding: 20px 40px;
 }
 [data-cadence] .chart-head {
   display: flex;
