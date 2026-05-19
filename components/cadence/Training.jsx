@@ -194,7 +194,7 @@ function shortTitle(details, type) {
 
 export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const [editing,   setEditing]   = useState(false)
-  const [expanded,  setExpanded]  = useState(null)
+  const [expanded,  setExpanded]  = useState(() => new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']))
   const [localPlan, setLocalPlan] = useState(plan)
   const [saveFlash, setSaveFlash] = useState(false)
 
@@ -337,7 +337,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         <div className="week-grid">
           {displayPlan.map(day => {
             const isToday  = day.day === todayName
-            const isOpen   = expanded === day.day
+            const isOpen   = expanded.has(day.day)
             const primary  = day.sessions[0]
             const isRest   = primary?.type === 'rest'
 
@@ -345,10 +345,10 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
               <div
                 key={day.day}
                 className={`day${isToday ? ' today' : ''}${isRest ? ' rest' : ''}`}
-                onClick={() => setExpanded(isOpen ? null : day.day)}
+                onClick={() => setExpanded(prev => { const s = new Set(prev); isOpen ? s.delete(day.day) : s.add(day.day); return s })}
                 role="button"
                 tabIndex={0}
-                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpanded(isOpen ? null : day.day)}
+                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpanded(prev => { const s = new Set(prev); isOpen ? s.delete(day.day) : s.add(day.day); return s })}
               >
                 <div className="day-head">
                   <span className="day-name">{day.short}</span>
