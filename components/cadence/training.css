@@ -1,5 +1,41 @@
 /* ── Training page ──────────────────────────────────────────────────── */
 
+/* Programme name group — stacks h1 + subtitle vertically */
+[data-cadence] .training-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+[data-cadence] .training-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+
+/* Pre/post-plan banners */
+[data-cadence] .t-plan-banner {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+[data-cadence] .t-plan-banner-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+[data-cadence] .t-plan-banner-date {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 [data-cadence] .training-header {
   display: flex;
   align-items: flex-end;
@@ -9,7 +45,7 @@
 }
 [data-cadence] .training-title {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   gap: 16px;
 }
 [data-cadence] .training-title h1 {

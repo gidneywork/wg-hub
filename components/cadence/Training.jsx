@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import './training.css'
+import { getCurrentWeek, getPlanPosition } from '../../lib/plan'
 
 function isoWeek(d = new Date()) {
   const date = new Date(d)
@@ -192,6 +193,9 @@ function shortTitle(details, type) {
   return c.length <= 28 ? c : c.slice(0, 26).replace(/\s+\S*$/, '') + '…'
 }
 
+// Stub replaced in next commit with full multi-week edit UI
+function EditProgramme() { return <div className="t-edit-list" /> }
+
 export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const [editing,   setEditing]   = useState(false)
   const [expanded,  setExpanded]  = useState(() => new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']))
@@ -202,33 +206,69 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
 
   if (!plan) return null
 
-  const wk = isoWeek()
-  const todayName   = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-  const displayPlan = editing ? localPlan : plan
+  const today       = new Date()
+  const todayName   = today.toLocaleDateString('en-US', { weekday: 'long' })
+  const currentWeek = getCurrentWeek(plan, today) || []
+  const { idx: weekIdx, total: weekTotal, before: beforePlan, after: afterPlan } = getPlanPosition(plan, today)
+  const planName    = plan?.meta?.name || 'Training plan'
+  const startDateFmt = plan?.meta?.startDate
+    ? new Date(plan.meta.startDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null
+  const endDate = (() => {
+    if (!plan?.meta?.startDate || !plan?.weeks?.length) return null
+    const d = new Date(plan.meta.startDate + 'T00:00:00')
+    d.setDate(d.getDate() + plan.weeks.length * 7 - 1)
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  })()
 
-  const updateSession = (di, id, field, val) =>
-    setLocalPlan(p => p.map((day, i) =>
-      i !== di ? day : { ...day, sessions: day.sessions.map(s => s.id !== id ? s : { ...s, [field]: val }) }
-    ))
-  const deleteSession = (di, id) =>
-    setLocalPlan(p => p.map((day, i) =>
-      i !== di ? day : { ...day, sessions: day.sessions.filter(s => s.id !== id) }
-    ))
-  const addSession = (di, type, details) => {
+  // Edit-mode session mutations — operate on localPlan.weeks[wi][di]
+  const updateSession = (wi, di, id, field, val) =>
+    setLocalPlan(p => ({
+      ...p,
+      weeks: p.weeks.map((week, wIdx) => {
+        if (wIdx !== wi || !Array.isArray(week)) return week
+        return week.map((day, dIdx) =>
+          dIdx !== di ? day : { ...day, sessions: day.sessions.map(s => s.id !== id ? s : { ...s, [field]: val }) }
+        )
+      }),
+    }))
+  const deleteSession = (wi, di, id) =>
+    setLocalPlan(p => ({
+      ...p,
+      weeks: p.weeks.map((week, wIdx) => {
+        if (wIdx !== wi || !Array.isArray(week)) return week
+        return week.map((day, dIdx) =>
+          dIdx !== di ? day : { ...day, sessions: day.sessions.filter(s => s.id !== id) }
+        )
+      }),
+    }))
+  const addSession = (wi, di, type, details) => {
     if (!details.trim()) return
-    setLocalPlan(p => p.map((day, i) =>
-      i !== di ? day : { ...day, sessions: [...day.sessions, { id: uid(), type, details }] }
-    ))
+    setLocalPlan(p => ({
+      ...p,
+      weeks: p.weeks.map((week, wIdx) => {
+        if (wIdx !== wi || !Array.isArray(week)) return week
+        return week.map((day, dIdx) =>
+          dIdx !== di ? day : { ...day, sessions: [...day.sessions, { id: uid(), type, details }] }
+        )
+      }),
+    }))
   }
-  const moveSession = (di, id, dir) =>
-    setLocalPlan(p => p.map((day, i) => {
-      if (i !== di) return day
-      const idx = day.sessions.findIndex(s => s.id === id)
-      const ni  = idx + dir
-      if (ni < 0 || ni >= day.sessions.length) return day
-      const arr = [...day.sessions]
-      ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
-      return { ...day, sessions: arr }
+  const moveSession = (wi, di, id, dir) =>
+    setLocalPlan(p => ({
+      ...p,
+      weeks: p.weeks.map((week, wIdx) => {
+        if (wIdx !== wi || !Array.isArray(week)) return week
+        return week.map((day, dIdx) => {
+          if (dIdx !== di) return day
+          const idx = day.sessions.findIndex(s => s.id === id)
+          const ni  = idx + dir
+          if (ni < 0 || ni >= day.sessions.length) return day
+          const arr = [...day.sessions]
+          ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
+          return { ...day, sessions: arr }
+        })
+      }),
     }))
 
   const handleSave = async () => {
@@ -247,21 +287,26 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   }
 
   const kmTarget     = parseFloat(settings?.weeklyKm?.value) || null
-  const funcCount    = plan.filter(d => d.sessions.some(s => s.type === 'functional')).length
+  const funcCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'functional')).length
   const gymTypes     = [...new Set(
-    plan.flatMap(d => d.sessions.filter(s => s.type === 'gym').map(s =>
+    currentWeek.flatMap(d => d.sessions.filter(s => s.type === 'gym').map(s =>
       s.details.split('–')[0].split('/')[0].trim()
     ))
   )].length
-  const yogaCount    = plan.filter(d => d.sessions.some(s => s.type === 'yoga')).length
-  const sessionTotal = plan.reduce((n, day) => n + day.sessions.length, 0)
+  const yogaCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'yoga')).length
+  const sessionTotal = currentWeek.reduce((n, day) => n + day.sessions.length, 0)
 
   return (
     <>
       <header className="training-header r r-1">
         <div className="training-title">
-          <h1>Training plan</h1>
-          <span className="training-week">WK {wk}</span>
+          <div className="training-name-group">
+            <h1>Training plan</h1>
+            {planName !== 'Training plan' && <span className="training-name">{planName}</span>}
+          </div>
+          {!beforePlan && !afterPlan && currentWeek.length > 0 && (
+            <span className="training-week">WEEK {weekIdx + 1} OF {weekTotal}</span>
+          )}
         </div>
         <div className="training-actions">
           {editing ? (
@@ -311,7 +356,13 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
 
       <section className="section training-plan r r-3">
         <div className="section-head">
-          <h2>{editing ? 'Edit weekly plan' : `Weekly plan · WK ${wk}`}</h2>
+          <h2>
+            {editing
+              ? 'Edit programme'
+              : beforePlan || afterPlan || currentWeek.length === 0
+                ? 'Weekly plan'
+                : `Weekly plan · week ${weekIdx + 1} of ${weekTotal}`}
+          </h2>
           {!editing && (
             <div className="right">
               <button type="button" className="link" onClick={() => setEditing(true)}>Edit plan →</button>
@@ -319,23 +370,39 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
           )}
         </div>
 
-        {editing ? (
-          <div className="t-edit-list">
-            {localPlan.map((day, di) => (
-              <EditDay
-                key={day.day}
-                day={day}
-                di={di}
-                updateSession={updateSession}
-                deleteSession={deleteSession}
-                addSession={addSession}
-                moveSession={moveSession}
-              />
-            ))}
+        {!editing && beforePlan && startDateFmt && (
+          <div className="t-plan-banner">
+            <div className="t-plan-banner-label">Programme starts</div>
+            <div className="t-plan-banner-date">{startDateFmt}</div>
           </div>
+        )}
+        {!editing && afterPlan && (
+          <div className="t-plan-banner">
+            <div className="t-plan-banner-label">Programme complete</div>
+            {endDate && <div className="t-plan-banner-date">Ended {endDate}</div>}
+          </div>
+        )}
+        {!editing && !beforePlan && !afterPlan && currentWeek.length === 0 && (
+          <div className="t-plan-banner">
+            <div className="t-plan-banner-label">No plan scheduled</div>
+            <div className="t-plan-banner-date">
+              <button type="button" className="link" onClick={() => setEditing(true)}>Edit plan →</button>
+            </div>
+          </div>
+        )}
+
+        {editing ? (
+          <EditProgramme
+            localPlan={localPlan}
+            setLocalPlan={setLocalPlan}
+            updateSession={updateSession}
+            deleteSession={deleteSession}
+            addSession={addSession}
+            moveSession={moveSession}
+          />
         ) : (
         <div className="week-grid">
-          {displayPlan.map(day => {
+          {currentWeek.map(day => {
             const isToday  = day.day === todayName
             const isOpen   = expanded.has(day.day)
             const primary  = day.sessions[0]
