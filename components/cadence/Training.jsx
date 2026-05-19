@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import './training.css'
 
 function isoWeek(d = new Date()) {
@@ -34,6 +35,8 @@ function shortTitle(details, type) {
 }
 
 export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
+  const [expanded, setExpanded] = useState(null)
+
   if (!plan) return null
 
   const wk = isoWeek()
@@ -95,14 +98,19 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         </div>
         <div className="week-grid">
           {plan.map(day => {
-            const isToday = day.day === todayName
-            const primary = day.sessions[0]
-            const isRest  = primary?.type === 'rest'
+            const isToday  = day.day === todayName
+            const isOpen   = expanded === day.day
+            const primary  = day.sessions[0]
+            const isRest   = primary?.type === 'rest'
 
             return (
               <div
                 key={day.day}
                 className={`day${isToday ? ' today' : ''}${isRest ? ' rest' : ''}`}
+                onClick={() => setExpanded(isOpen ? null : day.day)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpanded(isOpen ? null : day.day)}
               >
                 <div className="day-head">
                   <span className="day-name">{day.short}</span>
@@ -111,11 +119,26 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
                 <div className="day-session">
                   {primary ? shortTitle(primary.details, primary.type) : 'Free day'}
                 </div>
-                <div className="day-meta">
-                  {day.sessions.map(s => (
-                    <span key={s.id} className={`pip ${pipClass(s.type)}`} />
-                  ))}
-                </div>
+                {isOpen ? (
+                  <div className="t-day-sessions">
+                    {day.sessions.map(s => (
+                      <div key={s.id} className="t-day-session" data-type={s.type}>
+                        <div className="t-day-session-type">{TYPE_LABEL[s.type] || 'Session'}</div>
+                        <div className="t-day-session-body">
+                          {String(s.details || '').split('\n').filter(Boolean).map((line, li) => (
+                            <div key={li}>{line}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="day-meta">
+                    {day.sessions.map(s => (
+                      <span key={s.id} className={`pip ${pipClass(s.type)}`} />
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
