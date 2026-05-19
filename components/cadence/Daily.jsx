@@ -37,6 +37,7 @@ export default function Daily({
   stravaConnection,
   onStravaConnectionChange,
   userProfile,
+  plan,
 }) {
   const [date, setDate] = useState(todayIso())
   const [form, setForm] = useState(() => loadFormFromLog(logs?.[date], whoopData?.[date]))
@@ -107,6 +108,16 @@ export default function Daily({
   const onLiftsChange = (newLifts) => {
     setForm(prev => {
       const next = { ...prev, lifts: newLifts }
+      pendingRef.current = { date: dateRef.current, form: next }
+      return next
+    })
+    scheduleSave()
+  }
+
+  const onSkipLift = (key) => {
+    setForm(prev => {
+      const current = Array.isArray(prev.feelings?.skippedLifts) ? prev.feelings.skippedLifts : []
+      const next = { ...prev, feelings: { ...prev.feelings, skippedLifts: [...current, key] } }
       pendingRef.current = { date: dateRef.current, form: next }
       return next
     })
@@ -206,6 +217,9 @@ export default function Daily({
         allLogs={logs}
         lifts={form.lifts || []}
         onLiftsChange={onLiftsChange}
+        plan={plan}
+        skippedLifts={form.feelings?.skippedLifts || []}
+        onSkipLift={onSkipLift}
       />
 
       <FeelingsSection

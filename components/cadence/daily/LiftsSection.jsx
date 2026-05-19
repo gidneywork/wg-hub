@@ -3,11 +3,25 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { buildLiftHistory, isLiftPB } from './dailyHelpers'
 import { listExercises, getExerciseByName, resolveMuscle } from '../../../lib/exercises'
+import { buildSuggestions } from '../../../lib/lifts'
 
-export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsChange }) {
+export default function LiftsSection({
+  date,
+  allLogs = {},
+  lifts = [],
+  onLiftsChange,
+  plan,
+  skippedLifts = [],
+  onSkipLift,
+}) {
   const [showAddRow,  setShowAddRow ] = useState(false)
   const [addWeight,   setAddWeight  ] = useState('')
   const [addReps,     setAddReps    ] = useState('')
+
+  // ── Suggestion inline-edit state
+  const [editingSug,  setEditingSug ] = useState(null) // { raw, exercise, sets, reps, weight }
+  const [editWeight,  setEditWeight ] = useState('')
+  const [editReps,    setEditReps   ] = useState('')
 
   // ── Combobox state
   const [query,       setQuery      ] = useState('')
@@ -22,6 +36,12 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
 
   // PB history excludes today
   const history = useMemo(() => buildLiftHistory(allLogs, date), [allLogs, date])
+
+  // Suggestions from plan for this date
+  const suggestions = useMemo(
+    () => buildSuggestions(plan, date, skippedLifts),
+    [plan, date, skippedLifts]
+  )
 
   // Custom exercises from prior logs that aren't in the DB
   const customExercises = useMemo(() => {
@@ -80,9 +100,9 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
     item?.scrollIntoView({ block: 'nearest' })
   }, [highlighted])
 
-  function openAdd() {
+  function openAdd(prefillQuery = '') {
     setShowAddRow(true)
-    setQuery('')
+    setQuery(prefillQuery)
     setSelected(null)
     setAddWeight('')
     setAddReps('')
@@ -127,7 +147,6 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
       if (dropOpen && highlighted >= 0 && filteredList[highlighted]) {
         confirmSelection(filteredList[highlighted])
       } else if (query.trim()) {
-        // Custom entry — use exactly as typed
         confirmSelection(query.trim())
       }
     } else if (e.key === 'Escape') {
@@ -162,7 +181,38 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
     onLiftsChange?.(lifts.filter((_, i) => i !== idx))
   }
 
+  // ── Suggestion row actions
+
+  function confirmSuggestion(s) {
+    if (s.isPrompt) {
+      // Open the add-lift form pre-seeded with the category as query
+      openAdd(s.raw)
+      return
+    }
+    const isEditing = editingSug?.raw === s.raw
+    const entry = {
+      exercise: s.exercise,
+      weight:   isEditing ? (parseFloat(editWeight) || 0) : (s.weight || 0),
+      reps:     isEditing ? (parseInt(editReps, 10)  || 0) : (s.reps  || 0),
+    }
+    onLiftsChange?.([...lifts, entry])
+    setEditingSug(null)
+  }
+
+  function skipSuggestion(s) {
+    onSkipLift?.(s.raw)
+    if (editingSug?.raw === s.raw) setEditingSug(null)
+  }
+
+  function startEditSuggestion(s) {
+    setEditingSug(s)
+    setEditWeight(s.weight > 0 ? String(s.weight) : '')
+    setEditReps(s.reps > 0 ? String(s.reps) : '')
+  }
+
   const metaSuffix = lifts.length > 0 ? ` · ${lifts.length} logged today` : ''
+  const hasSuggestions = suggestions.length > 0
+  const hasLogged = lifts.length > 0
 
   return (
     <section className="section r r-8">
@@ -172,6 +222,105 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
       </div>
       <div className="lifts-card">
 
+        {/* ── Suggestion rows */}
+        {hasSuggestions && (
+          <>
+            <div className="lift-suggestion-eyebrow">From your plan</div>
+            {suggestions.map(s => (
+              <div key={s.raw} className="lift-suggestion-row">
+                <div className="lift-suggestion-body">
+                  {s.isPrompt ? (
+                    <span className="lift-suggestion-prompt">{s.raw}</span>
+                  ) : (
+                    <>
+                      <span className="lift-suggestion-name">{s.exercise}</span>
+                      {s.sets != null && (
+                        <span className="lift-sets-chip">{s.sets}×{s.reps}{s.weight > 0 ? ` @ ${s.weight}kg` : ''}</span>
+                      )}
+                    </>
+                  )}
+                  {editingSug?.raw === s.raw && !s.isPrompt && (
+                    <div className="lift-suggestion-inputs">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="kg"
+                        aria-label="Weight"
+                        className="lift-sug-input"
+                        value={editWeight}
+                        onChange={e => setEditWeight(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="reps"
+                        aria-label="Reps"
+                        className="lift-sug-input"
+                        value={editReps}
+                        onChange={e => setEditReps(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && confirmSuggestion(s)}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="lift-suggestion-actions">
+                  <button
+                    type="button"
+                    className="lift-confirm-btn"
+                    aria-label="Confirm lift"
+                    onClick={() => confirmSuggestion(s)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                  </button>
+                  {!s.isPrompt && editingSug?.raw !== s.raw && (
+                    <button
+                      type="button"
+                      className="lift-edit-sug-btn"
+                      aria-label="Edit"
+                      onClick={() => startEditSuggestion(s)}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  )}
+                  {editingSug?.raw === s.raw && (
+                    <button
+                      type="button"
+                      className="lift-edit-sug-btn"
+                      aria-label="Cancel edit"
+                      onClick={() => setEditingSug(null)}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="lift-skip-btn"
+                    aria-label="Skip"
+                    onClick={() => skipSuggestion(s)}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* ── Logged eyebrow — only when both sections are present */}
+        {hasSuggestions && hasLogged && (
+          <div className="lift-logged-eyebrow">Logged</div>
+        )}
+
+        {/* ── Logged lift rows */}
         {lifts.map((lift, idx) => {
           const pb = isLiftPB(lift, history)
           const muscle = resolveMuscle(lift.exercise)
@@ -211,7 +360,7 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
           )
         })}
 
-        {lifts.length === 0 && !showAddRow && (
+        {lifts.length === 0 && !showAddRow && !hasSuggestions && (
           <div className="lift-empty">No lifts logged yet</div>
         )}
 
@@ -290,7 +439,7 @@ export default function LiftsSection({ date, allLogs = {}, lifts = [], onLiftsCh
         )}
 
         {!showAddRow && (
-          <button type="button" className="lift-add-trigger" onClick={openAdd}>
+          <button type="button" className="lift-add-trigger" onClick={() => openAdd()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14"/>
             </svg>

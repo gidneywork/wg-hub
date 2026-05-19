@@ -3467,6 +3467,121 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .daily-page .lift-add-trigger svg { width: 12px; height: 12px; }
 
+/* Lift suggestion rows ------------------------------------------------ */
+[data-cadence] .daily-page .lift-suggestion-eyebrow,
+[data-cadence] .daily-page .lift-logged-eyebrow {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  padding: 10px 16px 6px;
+}
+[data-cadence] .daily-page .lift-suggestion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 8px 6px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+[data-cadence] .daily-page .lift-suggestion-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+[data-cadence] .daily-page .lift-suggestion-name {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: -0.015em;
+}
+[data-cadence] .daily-page .lift-suggestion-prompt {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+[data-cadence] .daily-page .lift-sets-chip {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  color: var(--text-quiet);
+  letter-spacing: 0.06em;
+}
+[data-cadence] .daily-page .lift-suggestion-inputs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+[data-cadence] .daily-page .lift-sug-input {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  color: var(--text);
+  width: 64px;
+  outline: none;
+}
+[data-cadence] .daily-page .lift-sug-input:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-glow);
+}
+[data-cadence] .daily-page .lift-suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+[data-cadence] .daily-page .lift-confirm-btn {
+  background: transparent;
+  border: none;
+  color: var(--moss-deep);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  line-height: 0;
+  transition: background var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .daily-page .lift-confirm-btn:hover {
+  background: var(--moss-glow);
+  color: var(--moss);
+}
+[data-theme="dark"] [data-cadence] .daily-page .lift-confirm-btn { color: var(--moss); }
+[data-cadence] .daily-page .lift-edit-sug-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  line-height: 0;
+  transition: background var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .daily-page .lift-edit-sug-btn:hover {
+  background: var(--bg-paper);
+  color: var(--text-muted);
+}
+[data-cadence] .daily-page .lift-skip-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  line-height: 0;
+  transition: color var(--t-ui);
+}
+[data-cadence] .daily-page .lift-skip-btn:hover { color: var(--text-muted); }
+
 /* Combobox (replaces the old select + new-exercise flow) -------------- */
 [data-cadence] .daily-page .lift-combobox {
   position: relative;
