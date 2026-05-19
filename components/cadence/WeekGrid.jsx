@@ -92,7 +92,7 @@ export default function WeekGrid({ plan }) {
   return (
     <section className="week r r-5">
       <div className="section-head">
-        <h2>This week</h2>
+        <h2>This week’s training</h2>
         <div className="right">
           <button type="button" className="link">Edit plan →</button>
         </div>

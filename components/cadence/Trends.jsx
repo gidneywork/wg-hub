@@ -775,7 +775,7 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
   const prevDays = daysWindow(n, prevEndDate)
 
   return (
-    <section className="section r r-7">
+    <section className="section r r-8">
       <div className="section-head">
         <h2>Trends</h2>
         <div className="right">

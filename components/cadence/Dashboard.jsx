@@ -45,9 +45,9 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <TodayCards plan={plan} logs={logs} activities={activities} setView={setView} />
 
-      <Trends logs={logs} whoopData={whoopData} activities={activities} settings={settings} plan={plan} />
-
       <PersonalBests activities={activities} />
+
+      <Trends logs={logs} whoopData={whoopData} activities={activities} settings={settings} plan={plan} />
 
       <Recent activities={activities} />
     </>

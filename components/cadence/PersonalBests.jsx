@@ -165,7 +165,7 @@ export default function PersonalBests({ activities }) {
   }
 
   return (
-    <section className="section r r-8">
+    <section className="section r r-7">
       <div className="section-head">
         <h2>Personal bests · this block</h2>
         <div className="right">
