@@ -258,7 +258,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
 
   return (
     <>
-      <header className="training-header">
+      <header className="training-header r r-1">
         <div className="training-title">
           <h1>Training plan</h1>
           <span className="training-week">WK {wk}</span>
@@ -278,7 +278,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
 
       {saveFlash && <div className="training-saved">Plan saved</div>}
 
-      <div className="stat-row">
+      <div className="stat-row r r-2">
         <div className="stat">
           <div className="label">Distance</div>
           <div className="value">
@@ -309,7 +309,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         </div>
       </div>
 
-      <section className="section training-plan">
+      <section className="section training-plan r r-3">
         <div className="section-head">
           <h2>{editing ? 'Edit weekly plan' : `Weekly plan · WK ${wk}`}</h2>
           {!editing && (
