@@ -381,3 +381,131 @@
   color: var(--moss-deep);
 }
 [data-theme="dark"] [data-cadence] .t-add-trigger:hover { color: var(--moss); }
+
+/* ── Multi-week edit mode ─────────────────────────────────────────────────── */
+
+[data-cadence] .t-edit-programme {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Programme metadata row */
+[data-cadence] .t-prog-meta {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+[data-cadence] .t-prog-meta-field {
+  display: flex;
+  flex-direction: column;
+}
+[data-cadence] .t-input-date {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+[data-cadence] .t-date-warn {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--sand);
+  margin: 6px 0 0;
+}
+
+/* Week container */
+[data-cadence] .t-edit-week {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+[data-cadence] .t-edit-week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+[data-cadence] .t-edit-week-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--moss-deep);
+  font-weight: 600;
+}
+[data-theme="dark"] [data-cadence] .t-edit-week-label { color: var(--moss); }
+[data-cadence] .t-edit-week-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+[data-cadence] .t-btn-sm {
+  font-size: 9px !important;
+  padding: 5px 10px !important;
+  letter-spacing: 0.1em !important;
+}
+
+/* Inline delete warning */
+[data-cadence] .t-week-delete-warn {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--clay-deep);
+  background: var(--clay-soft);
+  padding: 8px 20px;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+[data-theme="dark"] [data-cadence] .t-week-delete-warn { color: var(--clay); }
+
+/* Repeat week row */
+[data-cadence] .t-repeat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+}
+[data-cadence] .t-repeat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+[data-cadence] .t-select-inline {
+  width: auto !important;
+  min-width: 120px;
+}
+
+/* Add week button */
+[data-cadence] .t-add-week-btn {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 12px 20px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .t-add-week-btn:hover {
+  border-color: var(--moss);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .t-add-week-btn:hover { color: var(--moss); }
+
+/* t-edit-list nested inside week gets no extra top margin */
+[data-cadence] .t-edit-week .t-edit-list {
+  padding: 12px 20px;
+}

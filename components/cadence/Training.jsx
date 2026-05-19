@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import './training.css'
-import { getCurrentWeek, getPlanPosition } from '../../lib/plan'
+import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek } from '../../lib/plan'
 
 function isoWeek(d = new Date()) {
   const date = new Date(d)
@@ -193,8 +193,146 @@ function shortTitle(details, type) {
   return c.length <= 28 ? c : c.slice(0, 26).replace(/\s+\S*$/, '') + '…'
 }
 
-// Stub replaced in next commit with full multi-week edit UI
-function EditProgramme() { return <div className="t-edit-list" /> }
+function EditProgramme({ localPlan, setLocalPlan, updateSession, deleteSession, addSession, moveSession }) {
+  const [startDateWarn, setStartDateWarn] = useState(false)
+
+  const updateMeta = (field, val) =>
+    setLocalPlan(p => ({ ...p, meta: { ...p.meta, [field]: val } }))
+
+  const addWeek = () =>
+    setLocalPlan(p => ({ ...p, weeks: [...p.weeks, buildEmptyWeek()] }))
+
+  const deleteWeek = (wi) =>
+    setLocalPlan(p => {
+      const newWeeks = p.weeks
+        .filter((_, i) => i !== wi)
+        .map(w => {
+          if (!Array.isArray(w) && w.repeatsWeek != null) {
+            if (w.repeatsWeek === wi)  return { repeatsWeek: 0 }
+            if (w.repeatsWeek > wi)    return { repeatsWeek: w.repeatsWeek - 1 }
+          }
+          return w
+        })
+      return { ...p, weeks: newWeeks }
+    })
+
+  const makeIndependent = (wi) =>
+    setLocalPlan(p => {
+      const resolved = resolveWeek(p.weeks, wi) || buildEmptyWeek()
+      const copy = resolved.map(day => ({ ...day, sessions: day.sessions.map(s => ({ ...s, id: uid() })) }))
+      return { ...p, weeks: p.weeks.map((w, i) => i === wi ? copy : w) }
+    })
+
+  const setRepeat = (wi, targetWi) =>
+    setLocalPlan(p => ({ ...p, weeks: p.weeks.map((w, i) => i === wi ? { repeatsWeek: targetWi } : w) }))
+
+  return (
+    <div className="t-edit-programme">
+      <div className="t-prog-meta">
+        <div className="t-prog-meta-field">
+          <div className="t-field-label">Programme name</div>
+          <input
+            type="text"
+            value={localPlan.meta?.name || ''}
+            onChange={e => updateMeta('name', e.target.value)}
+            className="t-input"
+            placeholder="Training plan"
+          />
+        </div>
+        <div className="t-prog-meta-field">
+          <div className="t-field-label">Start date</div>
+          <input
+            type="date"
+            value={localPlan.meta?.startDate || ''}
+            onChange={e => updateMeta('startDate', e.target.value)}
+            onBlur={e => {
+              if (!e.target.value) { setStartDateWarn(false); return }
+              const d = new Date(e.target.value + 'T00:00:00')
+              setStartDateWarn(d.getDay() !== 1)
+            }}
+            className="t-input t-input-date"
+          />
+          {startDateWarn && (
+            <p className="t-date-warn">Start date is not a Monday — the programme will begin mid-week.</p>
+          )}
+        </div>
+      </div>
+
+      {localPlan.weeks?.map((week, wi) => {
+        const isRepeat  = !Array.isArray(week) && week.repeatsWeek != null
+        const refCount  = localPlan.weeks.filter((w, i) => i !== wi && !Array.isArray(w) && w.repeatsWeek === wi).length
+        const hasOtherReal = localPlan.weeks.some((w, i) => i !== wi && Array.isArray(w))
+        return (
+          <div key={wi} className="t-edit-week">
+            <div className="t-edit-week-head">
+              <span className="t-edit-week-label">Week {wi + 1}</span>
+              <div className="t-edit-week-actions">
+                {!isRepeat && hasOtherReal && (
+                  <button
+                    type="button"
+                    className="t-btn-ghost t-btn-sm"
+                    onClick={() => setRepeat(wi, wi === 0 ? 1 : 0)}
+                  >Mark as repeat of…</button>
+                )}
+                {isRepeat && (
+                  <button
+                    type="button"
+                    className="t-btn-ghost t-btn-sm"
+                    onClick={() => makeIndependent(wi)}
+                  >Make independent</button>
+                )}
+                {localPlan.weeks.length > 1 && (
+                  <button
+                    type="button"
+                    className="t-btn-ghost t-btn-sm t-btn-danger"
+                    onClick={() => deleteWeek(wi)}
+                  >Delete week</button>
+                )}
+              </div>
+            </div>
+
+            {refCount > 0 && (
+              <p className="t-week-delete-warn">
+                This week is referenced by {refCount} repeat week{refCount !== 1 ? 's' : ''}. Deleting will retarget them to week 1.
+              </p>
+            )}
+
+            {isRepeat ? (
+              <div className="t-repeat-row">
+                <span className="t-repeat-label">Repeats</span>
+                <select
+                  value={week.repeatsWeek}
+                  onChange={e => setRepeat(wi, parseInt(e.target.value, 10))}
+                  className="t-select t-select-inline"
+                >
+                  {localPlan.weeks.map((_, i) => i !== wi && (
+                    <option key={i} value={i}>Week {i + 1}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="t-edit-list">
+                {week.map((day, di) => (
+                  <EditDay
+                    key={day.day}
+                    day={day}
+                    di={di}
+                    updateSession={(di, id, field, val) => updateSession(wi, di, id, field, val)}
+                    deleteSession={(di, id)            => deleteSession(wi, di, id)}
+                    addSession={(di, type, details)    => addSession(wi, di, type, details)}
+                    moveSession={(di, id, dir)         => moveSession(wi, di, id, dir)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <button type="button" onClick={addWeek} className="t-add-week-btn">+ Add week</button>
+    </div>
+  )
+}
 
 export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const [editing,   setEditing]   = useState(false)
@@ -400,6 +538,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
             addSession={addSession}
             moveSession={moveSession}
           />
+
         ) : (
         <div className="week-grid">
           {currentWeek.map(day => {
