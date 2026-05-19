@@ -9,6 +9,7 @@ import {
   buildVitalsHelper,
   weeklyWeightDelta,
 } from './dailyHelpers'
+import { computeBMR, ageFromBirthday, mostRecentWeightKg } from '../../../lib/bmr'
 
 /**
  * Body section — four manual-entry field cards.
@@ -25,6 +26,7 @@ export default function BodySection({
   form,
   logs,
   settings,
+  userProfile,
   onField,
   recentlySaved,
   saveState,
@@ -50,6 +52,10 @@ export default function BodySection({
   const stepsHasValue = stepsVal != null && stepsVal !== ''
 
   // Calories burnt (data field body.caloriesOut, UI label "Calories burnt")
+  // Display waterfall: user manual entry → Whoop fallback (already merged
+  // into `form` upstream) → BMR estimate (this session, read-time only).
+  // BMR is shown as the placeholder and the "Estimated baseline" pill; it
+  // is NEVER written into form/log state. Typing replaces it.
   const cOutTarget = settings?.dailyCaloriesOut
   const cOutVal = form?.body?.caloriesOut
   const cOutBand = targetBand(cOutVal, cOutTarget)
@@ -57,6 +63,22 @@ export default function BodySection({
   const cOutHasValue = cOutVal != null && cOutVal !== ''
   const rawCOut = logs?.[date]?.body?.caloriesOut
   const cOutFromWhoop = (rawCOut == null || rawCOut === '') && cOutHasValue
+
+  const identity = userProfile?.identity
+  const cOutBmrEstimate = !cOutHasValue
+    ? computeBMR({
+        heightCm:  identity?.heightCm,
+        weightKg:  mostRecentWeightKg(logs, date),
+        ageYears:  ageFromBirthday(identity?.dateOfBirth),
+        sex:       identity?.biologicalSex,
+      })
+    : null
+  const cOutFromBmr = !cOutHasValue && !cOutFromWhoop && cOutBmrEstimate != null
+  const cOutSourcePill = cOutFromWhoop
+    ? 'From Whoop'
+    : cOutFromBmr
+      ? 'Estimated baseline'
+      : null
 
   // Resting HR — lower is better
   const rhrTarget = settings?.rhr
@@ -112,12 +134,13 @@ export default function BodySection({
         <FieldCard
           label="Calories burnt"
           targetRef={cOutTarget?.value ? `Target ${cOutTarget.value} kcal` : null}
-          sourcePill={cOutFromWhoop ? 'From Whoop' : null}
+          sourcePill={cOutSourcePill}
           value={cOutVal}
           onChange={v => onField('body', 'caloriesOut', v)}
           unit="kcal"
           inputMode="numeric"
           placeholder="—"
+          estimate={cOutFromBmr ? cOutBmrEstimate : null}
           progress={{
             pct:     cOutBand?.pct ?? 0,
             variant: fillVariantForBand(cOutBand?.band),

@@ -12,6 +12,7 @@ import {
 } from './helpers'
 import { db } from '../../lib/db'
 import { computeAdherenceSeries } from './scheduledAnalytics'
+import { computeBMR, ageFromBirthday, mostRecentWeightKg } from '../../lib/bmr'
 import CadenceDialog from './CadenceDialog'
 import './charts-page.css'
 
@@ -687,7 +688,7 @@ function StatTile({ label, val, unit, ctx }) {
 // ─── ANNOTATION FORM BLANK STATE ─────────────────────────────────────────────
 const BLANK_FORM = { kind: '', title: '', note: '', start_date: '', end_date: '' }
 
-export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {} }) {
+export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {}, userProfile = null }) {
   const [activeTab, setActiveTab] = useState('running')
   const [range,     setRange    ] = useState('6m')
   const [compare,   setCompare  ] = useState('target')
@@ -795,12 +796,33 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   )
 
   // ── All metric data ──────────────────────────────────────────────
+  // calsBurned waterfall mirrors BodySection: manual log entry first, then
+  // Whoop fallback, then BMR estimate (read-time only; never written). BMR
+  // inputs that don't vary per-day (height, age, sex) are hoisted out of
+  // the per-day loop; weight is fetched per-day via mostRecentWeightKg.
   const allMetrics = useMemo(() => {
     const n    = rangeDays ?? 730
     const days = daysWindow(n)
     const priorEnd = new Date(); priorEnd.setDate(priorEnd.getDate() - n)
     const priorDays = daysWindow(n, priorEnd)
     const bm = (acc) => buildMetric(days, priorDays, acc, logs, whoopData)
+
+    const identity = userProfile?.identity
+    const bmrHeightCm = identity?.heightCm
+    const bmrAgeYears = ageFromBirthday(identity?.dateOfBirth)
+    const bmrSex      = identity?.biologicalSex
+    const burnedForDate = (w, d) => {
+      const manual = parseFloat(logs[d]?.body?.caloriesOut)
+      if (isFinite(manual) && manual > 0) return manual
+      const whoop = w?.energy_burned
+      if (whoop != null && whoop > 0) return whoop
+      return computeBMR({
+        heightCm: bmrHeightCm,
+        weightKg: mostRecentWeightKg(logs, d),
+        ageYears: bmrAgeYears,
+        sex:      bmrSex,
+      })
+    }
 
     return {
       hrv:      bm((m)      => m?.body?.hrv),
@@ -814,16 +836,16 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         const v = logs[d]?.nutrition?.calories
         return v !== '' && v != null ? parseFloat(v) : null
       }),
-      calsBurned: bm((_, w) => w?.energy_burned ?? null),
+      calsBurned: bm((_, w, d) => burnedForDate(w, d) ?? null),
       calsBalance: bm((_, w, d) => {
-        const intake  = logs[d]?.nutrition?.calories
+        const intake = logs[d]?.nutrition?.calories
         if (intake === '' || intake == null) return null
-        const burned  = w?.energy_burned
+        const burned = burnedForDate(w, d)
         if (burned == null) return null
         return parseFloat(intake) - burned
       }),
     }
-  }, [logs, whoopData, rangeDays])
+  }, [logs, whoopData, rangeDays, userProfile])
 
   // ── Lift PB data (squat + pullup tabs) ──────────────────────────
   const liftData = useMemo(() => {

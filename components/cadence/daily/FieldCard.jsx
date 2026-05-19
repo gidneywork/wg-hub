@@ -13,7 +13,10 @@ import { useEffect, useRef, useState } from 'react'
  *   onChange    (newStr) => void
  *   unit        right-side unit, e.g. "kg"
  *   inputMode   default 'decimal' (matches mockup for numeric fields)
- *   placeholder placeholder text
+ *   placeholder placeholder text — overridden by `estimate` when value is empty
+ *   estimate    optional read-only baseline (e.g. computed BMR). When `value`
+ *               is empty, the estimate renders as the placeholder; typing
+ *               replaces it. The estimate is never written into form state.
  *   disabled    if true, the input is read-only and saved/saving classes
  *               don't apply
  *   stub        Phase 2 stub — applies .field-card.stub for the italic
@@ -35,6 +38,7 @@ export default function FieldCard({
   unit,
   inputMode = 'decimal',
   placeholder,
+  estimate = null,
   disabled = false,
   stub = false,
   progress,
@@ -76,7 +80,7 @@ export default function FieldCard({
           inputMode={inputMode}
           value={value ?? ''}
           onChange={e => onChange?.(e.target.value)}
-          placeholder={placeholder}
+          placeholder={(value == null || value === '') && estimate != null ? String(estimate) : placeholder}
           disabled={disabled}
         />
         {unit ? <span className="unit">{unit}</span> : null}

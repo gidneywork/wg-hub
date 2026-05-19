@@ -36,6 +36,7 @@ export default function Daily({
   activities,
   stravaConnection,
   onStravaConnectionChange,
+  userProfile,
 }) {
   const [date, setDate] = useState(todayIso())
   const [form, setForm] = useState(() => loadFormFromLog(logs?.[date], whoopData?.[date]))
@@ -171,6 +172,7 @@ export default function Daily({
         form={form}
         logs={logs}
         settings={settings}
+        userProfile={userProfile}
         onField={onField}
         recentlySaved={recentlySaved}
         saveState={saveState}

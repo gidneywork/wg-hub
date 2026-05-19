@@ -360,7 +360,7 @@ export default function WGHub({ onSignOut }) {
       ) : view === 'dashboard' ? (
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'}/>
       ) : view === 'charts' ? (
-        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData}/>
+        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} userProfile={userProfile}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection} logs={logs}/>
       ) : view === 'log' ? (
@@ -372,6 +372,7 @@ export default function WGHub({ onSignOut }) {
           activities={activities}
           stravaConnection={stravaConnection}
           onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
+          userProfile={userProfile}
         />
       ) : view === 'settings' ? (
         <CadenceSettings
