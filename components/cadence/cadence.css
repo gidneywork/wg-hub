@@ -5215,6 +5215,16 @@ html::-webkit-scrollbar-track { background: transparent; }
   text-transform: uppercase;
   color: var(--text-quiet);
 }
+[data-cadence] .journal-date-link {
+  cursor: pointer;
+  transition: color var(--t-ui) var(--ease);
+}
+[data-cadence] .journal-date-link:hover { color: var(--text-muted); }
+[data-cadence] .journal-date-link:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 
 [data-cadence] .journal-card {
   background: var(--bg-paper);

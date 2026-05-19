@@ -142,7 +142,7 @@ function EntryCard({ feelings, index }) {
   )
 }
 
-export default function Journal({ logs = {}, setView }) {
+export default function Journal({ logs = {}, setView, onOpenDate }) {
   const [range, setRange]         = useState('this-month')
   const [subsection, setSubsection] = useState('all')
 
@@ -220,7 +220,15 @@ export default function Journal({ logs = {}, setView }) {
         <div className="journal-list">
           {displayed.map((entry, index) => (
             <div key={entry.date} className="journal-entry">
-              <div className="journal-date-label">{fmtJournalDate(entry.date)}</div>
+              <div
+                className={`journal-date-label${onOpenDate ? ' journal-date-link' : ''}`}
+                onClick={onOpenDate ? () => onOpenDate(entry.date) : undefined}
+                role={onOpenDate ? 'button' : undefined}
+                tabIndex={onOpenDate ? 0 : undefined}
+                onKeyDown={onOpenDate ? e => (e.key === 'Enter' || e.key === ' ') && onOpenDate(entry.date) : undefined}
+              >
+                {fmtJournalDate(entry.date)}
+              </div>
               <EntryCard feelings={entry.feelings} index={index} />
             </div>
           ))}

@@ -38,8 +38,9 @@ export default function Daily({
   onStravaConnectionChange,
   userProfile,
   plan,
+  initialDate,
 }) {
-  const [date, setDate] = useState(todayIso())
+  const [date, setDate] = useState(() => initialDate ?? todayIso())
   const [form, setForm] = useState(() => loadFormFromLog(logs?.[date], whoopData?.[date]))
 
   // Auto-save state surfaced to the SaveStatus pill.

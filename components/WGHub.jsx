@@ -182,6 +182,7 @@ function calcRecords(logs, activities = []) {
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function WGHub({ onSignOut }) {
   const [view,     setView    ] = useState('dashboard')
+  const [logDate,  setLogDate ] = useState(null)
   const [logs,     setLogs    ] = useState({})
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [plan,     setPlan    ] = useState(null)
@@ -335,7 +336,11 @@ export default function WGHub({ onSignOut }) {
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection} logs={logs}/>
       ) : view === 'journal' ? (
-        <CadenceJournal logs={logs} setView={setView} />
+        <CadenceJournal
+          logs={logs}
+          setView={setView}
+          onOpenDate={d => { setLogDate(d); setView('log') }}
+        />
       ) : view === 'log' ? (
         <CadenceDaily
           logs={logs}
@@ -347,6 +352,7 @@ export default function WGHub({ onSignOut }) {
           onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
           userProfile={userProfile}
           plan={plan}
+          initialDate={logDate}
         />
       ) : view === 'settings' ? (
         <CadenceSettings
