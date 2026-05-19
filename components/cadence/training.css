@@ -1,0 +1,347 @@
+/* ── Training page ──────────────────────────────────────────────────── */
+
+[data-cadence] .training-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+[data-cadence] .training-title {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+[data-cadence] .training-title h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 40px;
+  letter-spacing: var(--tracking-h2);
+  line-height: 1;
+  color: var(--text);
+  margin: 0;
+  font-variation-settings: "opsz" 144, "SOFT" 45;
+}
+[data-cadence] .training-week {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  padding-bottom: 3px;
+}
+[data-cadence] .training-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Buttons */
+[data-cadence] .t-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .t-btn-ghost:hover {
+  border-color: var(--text-quiet);
+  color: var(--text);
+}
+[data-cadence] .t-btn-danger {
+  color: var(--clay-deep);
+  border-color: var(--clay-soft);
+}
+[data-cadence] .t-btn-danger:hover {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+[data-theme="dark"] [data-cadence] .t-btn-danger { color: var(--clay); }
+[data-cadence] .t-btn-primary {
+  background: var(--moss-deep);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--on-moss);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: background var(--t-ui);
+}
+[data-cadence] .t-btn-primary:hover { background: var(--moss); }
+[data-theme="dark"] [data-cadence] .t-btn-primary { background: var(--moss); }
+[data-theme="dark"] [data-cadence] .t-btn-primary:hover { background: var(--moss-deep); }
+[data-cadence] .t-btn-primary:disabled {
+  background: var(--bg-elevated);
+  color: var(--text-faint);
+  cursor: default;
+}
+
+/* Save flash */
+[data-cadence] .training-saved {
+  background: var(--moss-glow);
+  border: 1px solid var(--moss-soft);
+  border-radius: var(--radius-md);
+  color: var(--moss-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+}
+[data-theme="dark"] [data-cadence] .training-saved { color: var(--moss); }
+
+/* Today treatment — left border only on the Training grid */
+[data-cadence] .training-plan .day.today {
+  border-color: var(--border);
+  border-left-color: var(--moss);
+  border-left-width: 2px;
+  box-shadow: none;
+}
+
+/* Clickable day cards */
+[data-cadence] .training-plan .day {
+  cursor: pointer;
+  user-select: none;
+}
+[data-cadence] .training-plan .day:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+/* Training-specific pip colours */
+[data-cadence] .pip.t-run        { background: var(--moss); }
+[data-cadence] .pip.t-gym        { background: var(--slate); }
+[data-cadence] .pip.t-functional { background: var(--sand); }
+[data-cadence] .pip.t-yoga       { background: var(--moss-soft); }
+[data-cadence] .pip.t-rest       { background: var(--text-faint); }
+
+/* Expanded day session list */
+[data-cadence] .t-day-sessions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+[data-cadence] .t-day-session {
+  border-left: 2px solid var(--border);
+  padding: 7px 10px;
+  border-radius: 0 3px 3px 0;
+}
+[data-cadence] .t-day-session[data-type="run"],
+[data-cadence] .t-day-session[data-type="swim"],
+[data-cadence] .t-day-session[data-type="cycle"],
+[data-cadence] .t-day-session[data-type="hike"]       { border-left-color: var(--moss); }
+[data-cadence] .t-day-session[data-type="gym"],
+[data-cadence] .t-day-session[data-type="strength"]   { border-left-color: var(--slate); }
+[data-cadence] .t-day-session[data-type="functional"] { border-left-color: var(--sand); }
+[data-cadence] .t-day-session[data-type="yoga"],
+[data-cadence] .t-day-session[data-type="stretch"]    { border-left-color: var(--moss-soft); }
+[data-cadence] .t-day-session[data-type="rest"],
+[data-cadence] .t-day-session[data-type="custom"]     { border-left-color: var(--text-faint); }
+[data-cadence] .t-day-session-type {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-quiet);
+  margin-bottom: 3px;
+}
+[data-cadence] .t-day-session-body {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+/* ── Edit mode ────────────────────────────────────────────────────────── */
+
+[data-cadence] .t-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-cadence] .t-edit-day {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+[data-cadence] .t-edit-day-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+[data-cadence] .t-edit-day-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--moss-deep);
+  font-weight: 600;
+}
+[data-theme="dark"] [data-cadence] .t-edit-day-name { color: var(--moss); }
+[data-cadence] .t-edit-day-full {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+[data-cadence] .t-edit-day-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+[data-cadence] .t-empty {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 8px 0;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+/* Session row in edit mode */
+[data-cadence] .t-session-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+[data-cadence] .t-field-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-cadence] .t-hint {
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+  font-size: 8px;
+}
+[data-cadence] .t-select,
+[data-cadence] .t-input,
+[data-cadence] .t-textarea {
+  width: 100%;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 7px 10px;
+  box-sizing: border-box;
+  transition: border-color var(--t-ui), box-shadow var(--t-ui);
+}
+[data-cadence] .t-select:focus,
+[data-cadence] .t-input:focus,
+[data-cadence] .t-textarea:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .t-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+[data-cadence] .t-session-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 22px;
+}
+[data-cadence] .t-ctrl {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: border-color var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .t-ctrl:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+[data-cadence] .t-ctrl:disabled { color: var(--text-faint); cursor: default; }
+[data-cadence] .t-ctrl-delete {
+  background: var(--clay-soft);
+  border-color: transparent;
+  color: var(--clay-deep);
+}
+[data-cadence] .t-ctrl-delete:hover { border-color: var(--clay); }
+[data-theme="dark"] [data-cadence] .t-ctrl-delete { color: var(--clay); }
+
+/* Add session */
+[data-cadence] .t-add-form {
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-cadence] .t-add-head {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .t-add-head { color: var(--moss); }
+[data-cadence] .t-add-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+[data-cadence] .t-add-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+[data-cadence] .t-add-trigger {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color var(--t-ui), color var(--t-ui);
+}
+[data-cadence] .t-add-trigger:hover {
+  border-color: var(--moss);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .t-add-trigger:hover { color: var(--moss); }

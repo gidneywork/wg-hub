@@ -17,6 +17,7 @@ import CadenceCharts from './cadence/Charts'
 import OnboardingFlow from './cadence/OnboardingFlow'
 import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
+import CadenceTraining from './cadence/Training'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -330,7 +331,7 @@ export default function WGHub({ onSignOut }) {
     }
   }
 
-  const LEGACY_VIEWS = ['plan','finance']
+  const LEGACY_VIEWS = ['finance']
   const isLegacy = LEGACY_VIEWS.includes(view)
 
   // Show onboarding if user_profile row is absent (first login).
@@ -392,6 +393,8 @@ export default function WGHub({ onSignOut }) {
           assistantConfig={assistantConfig ?? DEFAULT_ASSISTANT_CONFIG}
           saveAssistantConfig={saveAssistantConfigFn}
         />
+      ) : view === 'plan' ? (
+        <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
       ) : view === 'planner' ? (
         <CadencePlanner
           logs={logs}
