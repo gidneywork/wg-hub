@@ -233,12 +233,12 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const [clockTime, setClockTime]       = useState('')
   const [clockDate, setClockDate]       = useState('')
 
-  // ── Dark theme override (non-persisting) ────────────────────────────────────
-  // Saves the current DOM attr, forces dark on mount, restores on unmount.
-  // localStorage is never touched — user's stored preference survives TV mode.
+  // ── Theme inheritance (non-persisting) ──────────────────────────────────────
+  // TV inherits the site's current theme on mount. In-TV theme toggle below
+  // mutates the DOM only — localStorage is never touched. On unmount the
+  // original site theme is restored, so any in-TV toggle doesn't leak out.
   useEffect(() => {
     const saved = document.documentElement.getAttribute('data-theme')
-    document.documentElement.setAttribute('data-theme', 'dark')
     return () => document.documentElement.setAttribute('data-theme', saved || 'light')
   }, [])
 
