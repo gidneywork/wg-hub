@@ -676,11 +676,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   padding-top: 12px;
   margin-top: 12px;
 }
-[data-cadence] .card-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 14px;
-}
 [data-cadence] .btn {
   font-family: var(--sans);
   font-size: 12px;

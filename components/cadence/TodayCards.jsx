@@ -56,12 +56,6 @@ function ScheduledCard({ plan }) {
       {trainingDetail && trainingDetail !== title && (
         <p className="card-note">{trainingDetail}</p>
       )}
-      <div className="card-actions">
-        {!isRest && (
-          <button type="button" className="btn btn-primary">Start session</button>
-        )}
-        <button type="button" className="btn btn-ghost">Move</button>
-      </div>
     </div>
   )
 }
