@@ -1101,7 +1101,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         delta:   null,
         metaStr: denom > 0
           ? `Across ${inRange.length} scheduled sessions`
-          : 'No sessions scheduled — add sessions in Planner',
+          : 'No sessions scheduled yet',
         tiles: [
           { label: 'Completed',   val: completed.toString(), unit: '', ctx: 'Sessions finished'       },
           { label: 'Skipped',     val: skipped.toString(),   unit: '', ctx: 'User-skipped'            },
