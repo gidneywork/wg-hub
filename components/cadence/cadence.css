@@ -3671,21 +3671,72 @@ html::-webkit-scrollbar-track { background: transparent; }
   align-items: center;
 }
 
-/* How it landed — mood + journal -------------------------------------- */
+/* Reflection section (formerly "How it landed") ----------------------- */
 [data-cadence] .daily-page .feelings-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 5px;
-  padding: 24px 28px;
+  padding: 0;
+  overflow: hidden;
+}
+[data-cadence] .daily-page .reflection-subsection {
+  padding: 20px 28px;
+}
+[data-cadence] .daily-page .reflection-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+[data-cadence] .daily-page .reflection-label {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+[data-cadence] .daily-page .reflection-inner-label {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+[data-cadence] .daily-page .reflection-textarea {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 360;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  outline: none;
+  width: 100%;
+  resize: none;
+  field-sizing: content;
+  min-height: 52px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .daily-page .reflection-textarea::placeholder { color: var(--text-faint); }
+[data-cadence] .daily-page .reflection-textarea:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
 }
 [data-cadence] .daily-page .mood-row {
   display: grid;
-  grid-template-columns: 100px 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 24px;
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px dashed var(--border);
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 [data-cadence] .daily-page .mood-row .mood-label {
   font-family: var(--mono);

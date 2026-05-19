@@ -125,7 +125,7 @@ export function mkEmptyForm() {
     sleep:     { sleepScore: '', recoveryScore: '', hoursSlept: '' },
     nutrition: { calories: '', protein: '', carbs: '' },
     lifts:     [],
-    feelings:  { mood: null, journal: '' },
+    feelings:  { mood: null, journal: '', injuries: '', moodNote: '', productivity: '', gratitude: '', skippedLifts: [] },
     schedule:  { bedtime: null, wakeTime: null },
   }
 }

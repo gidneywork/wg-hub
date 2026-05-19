@@ -163,7 +163,7 @@ export default function Daily({
         <div>
           <div className="eyebrow">Entry</div>
           <h1>Daily data<span style={{ color: 'var(--moss)' }}>.</span></h1>
-          <p className="sub">Body, nutrition, lifts, and how it landed.</p>
+          <p className="sub">Body, nutrition, lifts, and reflection.</p>
         </div>
         <SaveStatus state={saveState} savedAt={savedAt} />
       </header>
