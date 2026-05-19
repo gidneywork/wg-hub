@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { localIso, startOfWeek } from './helpers'
 import { listExercises, getExerciseByName } from '../../lib/exercises'
 import { db } from '../../lib/db'
+import { filterTodosForDate } from '../../lib/todos'
 import CadenceDialog from './CadenceDialog'
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
@@ -762,6 +763,296 @@ function SessionExecution({ session, logs, saveLog, onComplete, onCancel }) {
   )
 }
 
+// ── Todos ──────────────────────────────────────────────────────────────────────
+
+const REPEAT_LABELS = { none: 'None', daily: 'Daily', weekday: 'Weekday', weekly: 'Weekly', monthly: 'Monthly' }
+
+function AddTodoForm({ date, onSave, onCancel }) {
+  const [title,  setTitle ] = useState('')
+  const [repeat, setRepeat] = useState('none')
+  const titleRef = useRef(null)
+
+  useEffect(() => { titleRef.current?.focus() }, [])
+
+  function handleSave() {
+    const t = title.trim()
+    if (!t) return
+    const d      = new Date(date + 'T00:00:00')
+    const jsDay  = d.getDay()
+    const isoDay = jsDay === 0 ? 6 : jsDay - 1
+    onSave({
+      title: t,
+      repeat_kind:         repeat,
+      repeat_weekday:      repeat === 'weekly'  ? isoDay        : null,
+      repeat_day_of_month: repeat === 'monthly' ? d.getDate()   : null,
+      start_date:          date,
+    })
+  }
+
+  return (
+    <div className="todo-add-form">
+      <input
+        ref={titleRef}
+        type="text"
+        className="todo-add-input"
+        placeholder="To-do title"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleSave(); else if (e.key === 'Escape') onCancel() }}
+      />
+      <div className="todo-add-repeat-row">
+        <label className="todo-add-repeat-label">Repeat</label>
+        <select
+          className="todo-add-repeat-select"
+          value={repeat}
+          onChange={e => setRepeat(e.target.value)}
+        >
+          <option value="none">None</option>
+          <option value="daily">Daily</option>
+          <option value="weekday">Weekday</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+      <div className="todo-add-actions">
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!title.trim()}>Save</button>
+      </div>
+    </div>
+  )
+}
+
+function TodoEditDialog({ todo, onSave, onDelete, onCancel }) {
+  const [title,      setTitle     ] = useState(todo.title)
+  const [notes,      setNotes     ] = useState(todo.notes || '')
+  const [repeat,     setRepeat    ] = useState(todo.repeat_kind)
+  const [startDate,  setStartDate ] = useState(todo.start_date)
+  const [endDate,    setEndDate   ] = useState(todo.end_date || '')
+  const [confirmDel, setConfirmDel] = useState(false)
+
+  if (confirmDel) {
+    return (
+      <CadenceDialog
+        open
+        title="Delete to-do"
+        body={`Delete "${todo.title}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        confirmClass="btn-danger"
+        cancelLabel="Cancel"
+        onConfirm={() => onDelete(todo.id)}
+        onCancel={() => setConfirmDel(false)}
+      />
+    )
+  }
+
+  const body = (
+    <div className="edit-form">
+      <div>
+        <label className="edit-label">Title</label>
+        <input type="text" className="edit-input" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+      </div>
+      <div>
+        <label className="edit-label">Notes</label>
+        <textarea className="edit-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional note" />
+      </div>
+      <div>
+        <label className="edit-label">Repeat</label>
+        <select className="edit-select" value={repeat} onChange={e => setRepeat(e.target.value)}>
+          <option value="none">None</option>
+          <option value="daily">Daily</option>
+          <option value="weekday">Weekday</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+      <div>
+        <label className="edit-label">Start date</label>
+        <input type="date" className="edit-input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+      </div>
+      <div>
+        <label className="edit-label">End date</label>
+        <input type="date" className="edit-input" value={endDate} onChange={e => setEndDate(e.target.value)} />
+      </div>
+      <div>
+        <button type="button" className="planner-tpl-action danger" onClick={() => setConfirmDel(true)}>Delete</button>
+      </div>
+    </div>
+  )
+
+  return (
+    <CadenceDialog
+      open
+      title="Edit to-do"
+      body={body}
+      confirmLabel="Save"
+      confirmClass="btn-primary"
+      confirmDisabled={!title.trim()}
+      cancelLabel="Cancel"
+      onConfirm={() => onSave(todo.id, {
+        title: title.trim(),
+        notes: notes.trim() || null,
+        repeat_kind: repeat,
+        start_date:  startDate,
+        end_date:    endDate || null,
+      })}
+      onCancel={onCancel}
+    />
+  )
+}
+
+function TodosSection({ weekStart, today }) {
+  const [todos,       setTodos      ] = useState([])
+  const [completions, setCompletions] = useState([])
+  const [addingDate,  setAddingDate ] = useState(null)
+  const [editingTodo, setEditingTodo] = useState(null)
+
+  const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart])
+
+  useEffect(() => {
+    Promise.all([db.listTodos(), db.listTodoCompletions()]).then(([t, c]) => {
+      setTodos(t)
+      setCompletions(c)
+    })
+  }, [])
+
+  // Visible dates: week dates that have todos + always today
+  const visibleDates = useMemo(() => {
+    const allDates = today && !weekDates.includes(today) ? [today, ...weekDates] : weekDates
+    return [...new Set(allDates)].filter(date => {
+      if (date === today) return true
+      const { pending, completed } = filterTodosForDate(todos, completions, date)
+      return pending.length > 0 || completed.length > 0
+    }).sort()
+  }, [weekDates, today, todos, completions])
+
+  async function handleAdd(date, fields) {
+    try {
+      const newTodo = await db.createTodo(fields)
+      setTodos(prev => [...prev, newTodo])
+      setAddingDate(null)
+    } catch (e) {
+      console.error('createTodo failed:', e)
+    }
+  }
+
+  async function handleComplete(todo, isoDate) {
+    setCompletions(prev => [...prev, { todo_id: todo.id, completion_date: isoDate }])
+    try {
+      await db.completeTodo(todo.id, isoDate)
+    } catch (e) {
+      console.error('completeTodo failed:', e)
+      setCompletions(prev => prev.filter(c => !(c.todo_id === todo.id && c.completion_date === isoDate)))
+    }
+  }
+
+  async function handleUncomplete(todo, isoDate) {
+    setCompletions(prev => prev.filter(c => !(c.todo_id === todo.id && c.completion_date === isoDate)))
+    try {
+      await db.uncompleteTodo(todo.id, isoDate)
+    } catch (e) {
+      console.error('uncompleteTodo failed:', e)
+      setCompletions(prev => [...prev, { todo_id: todo.id, completion_date: isoDate }])
+    }
+  }
+
+  async function handleEdit(todoId, fields) {
+    const startD = new Date(fields.start_date + 'T00:00:00')
+    const jsDay  = startD.getDay()
+    const isoDay = jsDay === 0 ? 6 : jsDay - 1
+    const updateFields = {
+      ...fields,
+      repeat_weekday:      fields.repeat_kind === 'weekly'  ? isoDay            : null,
+      repeat_day_of_month: fields.repeat_kind === 'monthly' ? startD.getDate()  : null,
+    }
+    setTodos(prev => prev.map(t => t.id === todoId ? { ...t, ...updateFields } : t))
+    setEditingTodo(null)
+    try {
+      await db.updateTodo(todoId, updateFields)
+    } catch (e) {
+      console.error('updateTodo failed:', e)
+      db.listTodos().then(setTodos)
+    }
+  }
+
+  async function handleDelete(todoId) {
+    setTodos(prev => prev.filter(t => t.id !== todoId))
+    setEditingTodo(null)
+    try {
+      await db.deleteTodo(todoId)
+    } catch (e) {
+      console.error('deleteTodo failed:', e)
+      db.listTodos().then(setTodos)
+    }
+  }
+
+  return (
+    <section className="planner-todos r r-4">
+      <div className="planner-todos-head">
+        <span className="planner-todos-title">To-dos</span>
+      </div>
+
+      {visibleDates.map(date => {
+        const { pending, completed } = filterTodosForDate(todos, completions, date)
+        const d        = new Date(date + 'T00:00:00')
+        const dayLabel = `${DAY_ABBR[d.getDay()]} ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}${date === today ? ' · Today' : ''}`
+
+        return (
+          <div key={date} className="todo-day-group">
+            <div className="todo-day-label">{dayLabel}</div>
+
+            {pending.map(todo => (
+              <div key={todo.id} className="todo-row">
+                <button type="button" className="todo-check" aria-label={`Complete: ${todo.title}`} onClick={() => handleComplete(todo, date)} />
+                <span className="todo-title">{todo.title}</span>
+                {todo.repeat_kind !== 'none' && (
+                  <span className="todo-repeat-chip">{REPEAT_LABELS[todo.repeat_kind]}</span>
+                )}
+                <button type="button" className="todo-action-btn" aria-label="Edit" onClick={() => setEditingTodo(todo)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {completed.map(todo => (
+              <div key={todo.id} className="todo-row done">
+                <button type="button" className="todo-check checked" aria-label={`Undo: ${todo.title}`} onClick={() => handleUncomplete(todo, date)} />
+                <span className="todo-title">{todo.title}</span>
+              </div>
+            ))}
+
+            {addingDate === date ? (
+              <AddTodoForm
+                date={date}
+                onSave={fields => handleAdd(date, fields)}
+                onCancel={() => setAddingDate(null)}
+              />
+            ) : (
+              <button type="button" className="todo-add-trigger" onClick={() => setAddingDate(date)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="12" height="12">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add to-do
+              </button>
+            )}
+          </div>
+        )
+      })}
+
+      {editingTodo && (
+        <TodoEditDialog
+          todo={editingTodo}
+          onSave={handleEdit}
+          onDelete={handleDelete}
+          onCancel={() => setEditingTodo(null)}
+        />
+      )}
+    </section>
+  )
+}
+
 // ── Planner (root) ─────────────────────────────────────────────────────────────
 
 export default function Planner({ logs, saveLog }) {
@@ -879,6 +1170,9 @@ export default function Planner({ logs, saveLog }) {
           onClose={() => setExpandedDate(null)}
         />
       ) : null}
+
+      {/* r-4 — to-dos */}
+      <TodosSection weekStart={weekStart} today={today} />
 
       {/* Schedule modal */}
       {scheduleModalDate && (
