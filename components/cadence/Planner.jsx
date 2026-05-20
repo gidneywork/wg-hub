@@ -822,7 +822,7 @@ function AddTodoForm({ date, onSave, onCancel }) {
   )
 }
 
-function TodoEditDialog({ todo, onSave, onDelete, onCancel }) {
+function TodoExpandedEdit({ todo, onSave, onDelete, onCollapse }) {
   const [title,      setTitle     ] = useState(todo.title)
   const [notes,      setNotes     ] = useState(todo.notes || '')
   const [repeat,     setRepeat    ] = useState(todo.repeat_kind)
@@ -830,82 +830,92 @@ function TodoEditDialog({ todo, onSave, onDelete, onCancel }) {
   const [endDate,    setEndDate   ] = useState(todo.end_date || '')
   const [confirmDel, setConfirmDel] = useState(false)
 
-  if (confirmDel) {
-    return (
-      <CadenceDialog
-        open
-        title="Delete to-do"
-        body={`Delete "${todo.title}"? This cannot be undone.`}
-        confirmLabel="Delete"
-        confirmClass="btn-danger"
-        cancelLabel="Cancel"
-        onConfirm={() => onDelete(todo.id)}
-        onCancel={() => setConfirmDel(false)}
-      />
-    )
-  }
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onCollapse() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onCollapse])
 
-  const body = (
-    <div className="edit-form">
-      <div>
-        <label className="edit-label">Title</label>
-        <input type="text" className="edit-input" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
-      </div>
-      <div>
-        <label className="edit-label">Notes</label>
-        <textarea className="edit-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional note" />
-      </div>
-      <div>
-        <label className="edit-label">Repeat</label>
-        <select className="edit-select" value={repeat} onChange={e => setRepeat(e.target.value)}>
-          <option value="none">None</option>
-          <option value="daily">Daily</option>
-          <option value="weekday">Weekday</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-      </div>
-      <div>
-        <label className="edit-label">Start date</label>
-        <input type="date" className="edit-input" value={startDate} onChange={e => setStartDate(e.target.value)} />
-      </div>
-      <div>
-        <label className="edit-label">End date</label>
-        <input type="date" className="edit-input" value={endDate} onChange={e => setEndDate(e.target.value)} />
-      </div>
-      <div>
-        <button type="button" className="planner-tpl-action danger" onClick={() => setConfirmDel(true)}>Delete</button>
-      </div>
-    </div>
-  )
+  const handleSave = () => onSave(todo.id, {
+    title:       title.trim(),
+    notes:       notes.trim() || null,
+    repeat_kind: repeat,
+    start_date:  startDate,
+    end_date:    endDate || null,
+  })
 
   return (
-    <CadenceDialog
-      open
-      title="Edit to-do"
-      body={body}
-      confirmLabel="Save"
-      confirmClass="btn-primary"
-      confirmDisabled={!title.trim()}
-      cancelLabel="Cancel"
-      onConfirm={() => onSave(todo.id, {
-        title: title.trim(),
-        notes: notes.trim() || null,
-        repeat_kind: repeat,
-        start_date:  startDate,
-        end_date:    endDate || null,
-      })}
-      onCancel={onCancel}
-    />
+    <div className="todo-expand" onClick={e => e.stopPropagation()}>
+      <div className="todo-expand-divider" />
+      {confirmDel ? (
+        <div className="todo-del-confirm">
+          <p className="todo-del-warn">Delete this to-do? This cannot be undone.</p>
+          <div className="todo-del-actions">
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(todo.id)}>Delete</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setConfirmDel(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="todo-edit-form">
+          <div className="todo-edit-field">
+            <label className="todo-edit-label">Title</label>
+            <input
+              type="text"
+              className="todo-add-input"
+              value={title}
+              autoFocus
+              onChange={e => setTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
+            />
+          </div>
+          <div className="todo-edit-field">
+            <label className="todo-edit-label">Notes</label>
+            <textarea
+              className="todo-add-input"
+              rows={2}
+              value={notes}
+              placeholder="Optional note"
+              onChange={e => setNotes(e.target.value)}
+            />
+          </div>
+          <div className="todo-add-repeat-row">
+            <label className="todo-add-repeat-label">Repeat</label>
+            <select className="todo-add-repeat-select" value={repeat} onChange={e => setRepeat(e.target.value)}>
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekday">Weekday</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div className="todo-edit-dates">
+            <div className="todo-edit-date">
+              <label className="todo-edit-label">Start</label>
+              <input type="date" className="todo-add-input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div className="todo-edit-date">
+              <label className="todo-edit-label">End</label>
+              <input type="date" className="todo-add-input" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="todo-edit-actions">
+            <button type="button" className="todo-del-trigger" onClick={() => setConfirmDel(true)}>Delete</button>
+            <div className="todo-edit-save-cancel">
+              <button type="button" className="btn btn-ghost" onClick={onCollapse}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!title.trim()}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 function TodosSection({ weekStart, today }) {
-  const [todos,            setTodos           ] = useState([])
-  const [completions,      setCompletions     ] = useState([])
-  const [addingDate,       setAddingDate      ] = useState(null)
-  const [editingTodo,      setEditingTodo     ] = useState(null)
-  const [confirmDeleteRow, setConfirmDeleteRow] = useState(null)
+  const [todos,          setTodos         ] = useState([])
+  const [completions,    setCompletions   ] = useState([])
+  const [addingDate,     setAddingDate    ] = useState(null)
+  const [expandedTodoId, setExpandedTodoId] = useState(null)
 
   const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart])
 
@@ -966,7 +976,7 @@ function TodosSection({ weekStart, today }) {
       repeat_day_of_month: fields.repeat_kind === 'monthly' ? startD.getDate()  : null,
     }
     setTodos(prev => prev.map(t => t.id === todoId ? { ...t, ...updateFields } : t))
-    setEditingTodo(null)
+    setExpandedTodoId(null)
     try {
       await db.updateTodo(todoId, updateFields)
     } catch (e) {
@@ -977,7 +987,7 @@ function TodosSection({ weekStart, today }) {
 
   async function handleDelete(todoId) {
     setTodos(prev => prev.filter(t => t.id !== todoId))
-    setEditingTodo(null)
+    setExpandedTodoId(null)
     try {
       await db.deleteTodo(todoId)
     } catch (e) {
@@ -1001,31 +1011,60 @@ function TodosSection({ weekStart, today }) {
           <div key={date} className="todo-day-group">
             <div className="todo-day-label">{dayLabel}</div>
 
-            {pending.map(todo => (
-              <div key={todo.id} className="todo-row">
-                <button type="button" className="todo-check" aria-label={`Complete: ${todo.title}`} onClick={() => handleComplete(todo, date)} />
-                <span className="todo-title">{todo.title}</span>
-                {todo.repeat_kind !== 'none' && (
-                  <span className="todo-repeat-chip">{REPEAT_LABELS[todo.repeat_kind]}</span>
-                )}
-                <button type="button" className="todo-action-btn" aria-label="Edit" onClick={() => setEditingTodo(todo)}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-                <button type="button" className="todo-delete-btn" aria-label="Delete" onClick={() => setConfirmDeleteRow(todo)}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-                  </svg>
-                </button>
-              </div>
-            ))}
+            {pending.map(todo => {
+              const isExpanded = expandedTodoId === todo.id
+              return (
+                <div key={todo.id} className={`todo-row${isExpanded ? ' expanded' : ''}`}>
+                  <div
+                    className="todo-row-head"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setExpandedTodoId(isExpanded ? null : todo.id)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setExpandedTodoId(isExpanded ? null : todo.id)
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="todo-check"
+                      aria-label={`Complete: ${todo.title}`}
+                      onClick={e => { e.stopPropagation(); handleComplete(todo, date) }}
+                    />
+                    <span className="todo-title">{todo.title}</span>
+                    {todo.repeat_kind !== 'none' && (
+                      <span className="todo-repeat-chip">{REPEAT_LABELS[todo.repeat_kind]}</span>
+                    )}
+                    <svg
+                      className={`todo-chevron${isExpanded ? ' open' : ''}`}
+                      width="12" height="12" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                  {isExpanded && (
+                    <TodoExpandedEdit
+                      todo={todo}
+                      onSave={handleEdit}
+                      onDelete={handleDelete}
+                      onCollapse={() => setExpandedTodoId(null)}
+                    />
+                  )}
+                </div>
+              )
+            })}
 
             {completed.map(todo => (
               <div key={todo.id} className="todo-row done">
-                <button type="button" className="todo-check checked" aria-label={`Undo: ${todo.title}`} onClick={() => handleUncomplete(todo, date)} />
-                <span className="todo-title">{todo.title}</span>
+                <div className="todo-row-head">
+                  <button type="button" className="todo-check checked" aria-label={`Undo: ${todo.title}`} onClick={() => handleUncomplete(todo, date)} />
+                  <span className="todo-title">{todo.title}</span>
+                </div>
               </div>
             ))}
 
@@ -1047,23 +1086,6 @@ function TodosSection({ weekStart, today }) {
         )
       })}
 
-      {editingTodo && (
-        <TodoEditDialog
-          todo={editingTodo}
-          onSave={handleEdit}
-          onDelete={handleDelete}
-          onCancel={() => setEditingTodo(null)}
-        />
-      )}
-
-      <CadenceDialog
-        open={!!confirmDeleteRow}
-        title="Delete to-do"
-        body={confirmDeleteRow ? `Delete "${confirmDeleteRow.title}"? This cannot be undone.` : ''}
-        confirmLabel="Delete"
-        onConfirm={() => { handleDelete(confirmDeleteRow.id); setConfirmDeleteRow(null) }}
-        onCancel={() => setConfirmDeleteRow(null)}
-      />
     </section>
   )
 }

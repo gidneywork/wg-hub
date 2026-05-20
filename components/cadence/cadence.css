@@ -4982,12 +4982,19 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .todo-row {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
+  flex-direction: column;
   border-bottom: 1px solid var(--border);
 }
 [data-cadence] .todo-row:last-of-type { border-bottom: none; }
+[data-cadence] .todo-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  user-select: none;
+}
+[data-cadence] .todo-row.done .todo-row-head { cursor: default; }
 [data-cadence] .todo-check {
   width: 18px;
   height: 18px;
@@ -5031,34 +5038,93 @@ html::-webkit-scrollbar-track { background: transparent; }
   letter-spacing: 0.06em;
   flex-shrink: 0;
 }
-[data-cadence] .todo-action-btn {
-  background: none;
-  border: none;
-  padding: 4px;
+[data-cadence] .todo-chevron {
+  flex-shrink: 0;
   color: var(--text-faint);
-  cursor: pointer;
+  transition: transform var(--t-ui) var(--ease), color var(--t-ui) var(--ease);
+  margin-left: auto;
+}
+[data-cadence] .todo-chevron.open { transform: rotate(180deg); color: var(--text-muted); }
+[data-cadence] .todo-row-head:hover .todo-chevron { color: var(--text-muted); }
+
+/* Inline expand edit panel */
+[data-cadence] .todo-expand {
+  padding: 0 0 var(--space-3);
+}
+[data-cadence] .todo-expand-divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: var(--space-3);
+}
+[data-cadence] .todo-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+[data-cadence] .todo-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+[data-cadence] .todo-edit-label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-muted);
+}
+[data-cadence] .todo-edit-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+[data-cadence] .todo-edit-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+[data-cadence] .todo-edit-actions {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  transition: color var(--t-ui) var(--ease);
+  justify-content: space-between;
+  margin-top: var(--space-1);
 }
-[data-cadence] .todo-action-btn:hover { color: var(--text-muted); }
-[data-cadence] .todo-delete-btn {
+[data-cadence] .todo-edit-save-cancel {
+  display: flex;
+  gap: var(--space-2);
+}
+[data-cadence] .todo-del-trigger {
   background: none;
   border: none;
-  padding: 4px;
-  color: var(--text-faint);
+  padding: 0;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--clay-deep);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  transition: color var(--t-ui) var(--ease);
-  opacity: 0;
+  transition: opacity var(--t-ui) var(--ease);
 }
-[data-cadence] .todo-row:hover .todo-delete-btn { opacity: 1; }
-[data-cadence] .todo-delete-btn:hover { color: var(--clay); }
+[data-cadence] .todo-del-trigger:hover { opacity: 0.75; }
+
+/* Inline delete confirm */
+[data-cadence] .todo-del-confirm {
+  background: var(--clay-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+[data-cadence] .todo-del-warn {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--clay-deep);
+  margin: 0 0 var(--space-3);
+}
+[data-cadence] .todo-del-actions {
+  display: flex;
+  gap: var(--space-2);
+}
 [data-cadence] .todo-add-trigger {
   display: flex;
   align-items: center;
