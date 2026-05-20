@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -30,6 +30,21 @@ export default function CadenceDialog({
   onConfirm,
   onCancel,
 }) {
+  // Defer portal mount by one tick so the click event that triggered the
+  // open has fully resolved before the backdrop appears in document.body.
+  // Required because the React root IS document.body in Next.js App Router:
+  // React 18 flushes synchronously and would otherwise dispatch the same
+  // click to the newly mounted backdrop, calling onCancel immediately.
+  const [readyToRender, setReadyToRender] = useState(false)
+  useEffect(() => {
+    if (open) {
+      const id = setTimeout(() => setReadyToRender(true), 0)
+      return () => clearTimeout(id)
+    } else {
+      setReadyToRender(false)
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (e.key === 'Escape') onCancel?.() }
@@ -37,7 +52,7 @@ export default function CadenceDialog({
     return () => document.removeEventListener('keydown', handler)
   }, [open, onCancel])
 
-  if (!open || typeof document === 'undefined') return null
+  if (!open || !readyToRender || typeof document === 'undefined') return null
 
   return createPortal(
     <div className="cadence-dialog-backdrop" data-cadence="" onClick={onCancel}>
