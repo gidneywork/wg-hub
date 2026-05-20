@@ -330,7 +330,7 @@ export default function WGHub({ onSignOut }) {
       {!ready ? (
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
-        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'}/>
+        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} onOpenDate={d => { setLogDate(d); setView('log') }} userName={userProfile?.identity?.displayName ?? 'You'}/>
       ) : view === 'charts' ? (
         <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} userProfile={userProfile}/>
       ) : view === 'history' ? (

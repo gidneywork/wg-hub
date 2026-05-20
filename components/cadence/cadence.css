@@ -754,45 +754,44 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .fuel-bars .track .fill.out { background: var(--clay); }
 [data-cadence] .fuel-bars .right { text-align: right; }
 
-/* Journal */
-[data-cadence] .journal-card .mood-row {
+/* Today · journal card (TodayCards dashboard section) */
+[data-cadence] .today-journal-card.clickable { cursor: pointer; }
+[data-cadence] .today-journal-card.clickable:hover { border-color: var(--moss); }
+[data-cadence] .today-journal-card .tj-mood-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 14px;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
 }
-[data-cadence] .journal-card .mood { flex: 1; }
-[data-cadence] .journal-card .mood .label {
+[data-cadence] .today-journal-card .tj-label {
   font-family: var(--mono);
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-quiet);
-  margin-bottom: 6px;
 }
-[data-cadence] .journal-card .mood .scale { display: flex; gap: 3px; }
-[data-cadence] .journal-card .mood .pip {
-  flex: 1;
-  height: 6px;
-  background: var(--bg-elevated);
-  border-radius: 2px;
+[data-cadence] .today-journal-card .tj-value {
+  font-family: var(--display);
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 380;
+  color: var(--text);
 }
-[data-cadence] .journal-card .mood .pip.on { background: var(--moss); }
-[data-cadence] .journal-card .mood .pip.on.clay { background: var(--clay); }
-[data-cadence] .journal-card .entry-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-quiet);
-  margin-bottom: 6px;
-}
-[data-cadence] .journal-card .entry {
+[data-cadence] .today-journal-card .tj-note {
   font-family: var(--display);
   font-style: italic;
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-soft);
   font-weight: 380;
+  margin: 0;
+}
+[data-cadence] .today-journal-card .tj-empty {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-faint);
+  margin: 0;
 }
 
 /* Charts grid */
