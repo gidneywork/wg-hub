@@ -393,7 +393,7 @@
 /* Programme metadata row */
 [data-cadence] .t-prog-meta {
   display: grid;
-  grid-template-columns: 1fr 220px;
+  grid-template-columns: 1fr 200px auto;
   gap: 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -414,6 +414,14 @@
   letter-spacing: 0.08em;
   color: var(--sand);
   margin: 6px 0 0;
+}
+[data-cadence] .t-repeat-confirm {
+  margin-top: 8px;
+}
+[data-cadence] .t-repeat-confirm-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 /* Week container */

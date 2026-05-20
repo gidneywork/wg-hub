@@ -186,10 +186,30 @@ function shortTitle(details, type) {
 }
 
 function EditProgramme({ localPlan, setLocalPlan, updateSession, deleteSession, addSession, moveSession }) {
-  const [startDateWarn, setStartDateWarn] = useState(false)
+  const [startDateWarn,    setStartDateWarn   ] = useState(false)
+  const [showRepeatConfirm, setShowRepeatConfirm] = useState(false)
+
+  const isSingleWeek = (localPlan.weeks?.length ?? 0) === 1
 
   const updateMeta = (field, val) =>
     setLocalPlan(p => ({ ...p, meta: { ...p.meta, [field]: val } }))
+
+  const handleRepeatOff = () => {
+    const source = resolveWeek(localPlan.weeks, 0) || buildEmptyWeek()
+    const dup = source.map(day => ({ ...day, sessions: day.sessions.map(s => ({ ...s, id: uid() })) }))
+    setLocalPlan(p => ({ ...p, weeks: [...p.weeks, dup] }))
+  }
+
+  const handleRepeatOnConfirm = () => {
+    const source = resolveWeek(localPlan.weeks, 0) || localPlan.weeks[0]
+    setLocalPlan(p => ({ ...p, weeks: [source] }))
+    setShowRepeatConfirm(false)
+  }
+
+  const handleRepeatToggle = (checked) => {
+    if (checked && !isSingleWeek) { setShowRepeatConfirm(true); return }
+    if (!checked && isSingleWeek)  { handleRepeatOff(); return }
+  }
 
   const addWeek = () =>
     setLocalPlan(p => ({ ...p, weeks: [...p.weeks, buildEmptyWeek()] }))
@@ -246,6 +266,28 @@ function EditProgramme({ localPlan, setLocalPlan, updateSession, deleteSession, 
           />
           {startDateWarn && (
             <p className="t-date-warn">Start date is not a Monday — the programme will begin mid-week.</p>
+          )}
+        </div>
+        <div className="t-prog-meta-field">
+          <div className="t-field-label">Repeats weekly</div>
+          <label className="ac-toggle-label">
+            <input
+              type="checkbox"
+              className="ac-toggle-input"
+              checked={isSingleWeek}
+              onChange={e => handleRepeatToggle(e.target.checked)}
+            />
+            <span className="ac-toggle-track"><span className="ac-toggle-thumb" /></span>
+            <span className="ac-toggle-text">{isSingleWeek ? 'On' : 'Off'}</span>
+          </label>
+          {showRepeatConfirm && (
+            <div className="t-repeat-confirm">
+              <p className="t-date-warn" style={{ marginTop: 0 }}>This will remove weeks 2 onwards and keep only week 1.</p>
+              <div className="t-repeat-confirm-actions">
+                <button type="button" className="t-btn-primary t-btn-sm" onClick={handleRepeatOnConfirm}>Confirm</button>
+                <button type="button" className="t-btn-ghost t-btn-sm" onClick={() => setShowRepeatConfirm(false)}>Cancel</button>
+              </div>
+            </div>
           )}
         </div>
       </div>
