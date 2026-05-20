@@ -40,7 +40,7 @@ export default function CadenceDialog({
   if (!open || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="cadence-dialog-backdrop" data-cadence="" onClick={e => { if (e.target === e.currentTarget) onCancel?.() }}>
+    <div className="cadence-dialog-backdrop" data-cadence="" onClick={onCancel}>
       <div
         className={`cadence-dialog${dialogClass ? ` ${dialogClass}` : ''}`}
         role="dialog"
