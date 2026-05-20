@@ -5044,6 +5044,21 @@ html::-webkit-scrollbar-track { background: transparent; }
   transition: color var(--t-ui) var(--ease);
 }
 [data-cadence] .todo-action-btn:hover { color: var(--text-muted); }
+[data-cadence] .todo-delete-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: color var(--t-ui) var(--ease);
+  opacity: 0;
+}
+[data-cadence] .todo-row:hover .todo-delete-btn { opacity: 1; }
+[data-cadence] .todo-delete-btn:hover { color: var(--clay); }
 [data-cadence] .todo-add-trigger {
   display: flex;
   align-items: center;

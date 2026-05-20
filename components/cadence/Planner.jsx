@@ -901,10 +901,11 @@ function TodoEditDialog({ todo, onSave, onDelete, onCancel }) {
 }
 
 function TodosSection({ weekStart, today }) {
-  const [todos,       setTodos      ] = useState([])
-  const [completions, setCompletions] = useState([])
-  const [addingDate,  setAddingDate ] = useState(null)
-  const [editingTodo, setEditingTodo] = useState(null)
+  const [todos,            setTodos           ] = useState([])
+  const [completions,      setCompletions     ] = useState([])
+  const [addingDate,       setAddingDate      ] = useState(null)
+  const [editingTodo,      setEditingTodo     ] = useState(null)
+  const [confirmDeleteRow, setConfirmDeleteRow] = useState(null)
 
   const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart])
 
@@ -1007,10 +1008,15 @@ function TodosSection({ weekStart, today }) {
                 {todo.repeat_kind !== 'none' && (
                   <span className="todo-repeat-chip">{REPEAT_LABELS[todo.repeat_kind]}</span>
                 )}
-                <button type="button" className="todo-action-btn" aria-label="Edit" onClick={() => setEditingTodo(todo)}>
+                <button type="button" className="todo-action-btn" aria-label="Edit" onClick={e => { e.stopPropagation(); setEditingTodo(todo) }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button type="button" className="todo-delete-btn" aria-label="Delete" onClick={e => { e.stopPropagation(); setConfirmDeleteRow(todo) }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
                   </svg>
                 </button>
               </div>
@@ -1049,6 +1055,15 @@ function TodosSection({ weekStart, today }) {
           onCancel={() => setEditingTodo(null)}
         />
       )}
+
+      <CadenceDialog
+        open={!!confirmDeleteRow}
+        title="Delete to-do"
+        body={confirmDeleteRow ? `Delete "${confirmDeleteRow.title}"? This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        onConfirm={() => { handleDelete(confirmDeleteRow.id); setConfirmDeleteRow(null) }}
+        onCancel={() => setConfirmDeleteRow(null)}
+      />
     </section>
   )
 }
