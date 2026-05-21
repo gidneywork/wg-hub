@@ -192,9 +192,6 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-theme="dark"] [data-cadence] .nav-list button.active {
   color: var(--moss);
 }
-/* Active-path — pillar header colour when a sub-item is the active view */
-[data-cadence] .nav-list button.active-path { color: var(--moss-deep); }
-[data-theme="dark"] [data-cadence] .nav-list button.active-path { color: var(--moss); }
 [data-cadence] .nav-list a svg,
 [data-cadence] .nav-list button svg {
   width: 14px;
@@ -241,41 +238,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   min-height: 0;
 }
 [data-cadence] .nav-collapse-body.open { grid-template-rows: 1fr; }
-
-/* Sub-list — indented items under a pillar header */
-[data-cadence] .nav-sub-list {
-  list-style: none;
-  padding: 2px 0 2px 22px;
-  margin: 0;
-}
-[data-cadence] .nav-sub-list li { margin-bottom: 1px; }
-[data-cadence] .nav-sub-list button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 8px;
-  border-radius: 3px;
-  color: var(--text-muted);
-  font-size: 13px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-}
-[data-cadence] .nav-sub-list button:hover { color: var(--text); }
-[data-cadence] .nav-sub-list button.active {
-  background: var(--moss-soft);
-  color: var(--moss-deep);
-}
-[data-theme="dark"] [data-cadence] .nav-sub-list button.active { color: var(--moss); }
-[data-cadence] .nav-sub-list button svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  stroke-width: 1.5;
-}
 
 [data-cadence] .sidebar-footer {
   margin-top: auto;

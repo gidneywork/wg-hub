@@ -131,7 +131,7 @@ function NavGroup({ eyebrow, items, children, view, setView, collapsible = false
       )}
       {collapsible ? (
         <div className={`nav-collapse-body${isOpen ? ' open' : ''}`}>
-          {content}
+          <div>{content}</div>
         </div>
       ) : content}
     </div>
@@ -147,10 +147,10 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
 
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
       <NavGroup eyebrow="Today"        items={NAV_TODAY}        view={view} setView={setView} />
-      <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness" defaultOpen={true} />
-      <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health" defaultOpen={true} />
-      <NavGroup eyebrow="Finance"      items={NAV_FINANCE}      view={view} setView={setView} collapsible storageKey="cadence-nav-finance" defaultOpen={true} />
-      <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" defaultOpen={true} />
+      <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness" />
+      <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health" />
+      <NavGroup eyebrow="Finance"      items={NAV_FINANCE}      view={view} setView={setView} collapsible storageKey="cadence-nav-finance" />
+      <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" />
       <NavGroup eyebrow="Analyse"      items={NAV_ANALYSE}      view={view} setView={setView} collapsible storageKey="cadence-nav-analyse" />
       <NavGroup eyebrow="Assistant"    items={NAV_ASSISTANT}    view={view} setView={setView} collapsible storageKey="cadence-nav-assistant" />
 
