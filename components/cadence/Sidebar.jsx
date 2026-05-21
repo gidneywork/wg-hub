@@ -14,7 +14,7 @@ const NAV_PILLARS = [
   { view: 'health', label: 'Health', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
   ) },
-  { view: 'wealth', label: 'Wealth', icon: (
+  { view: 'wealth', label: 'Finance', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
   ) },
   { view: 'productivity', label: 'Productivity', icon: (
@@ -88,8 +88,8 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
       <div className="wordmark">cadence<span className="dot" /></div>
 
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
+      <NavGroup eyebrow="Today"     items={NAV_TODAY}     view={view} setView={setView} />
       <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} />
-      <NavGroup eyebrow="Today"     items={NAV_TODAY}      view={view} setView={setView} />
       <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} />
       <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} />
 

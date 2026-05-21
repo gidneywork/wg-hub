@@ -6,7 +6,7 @@ export default function WealthLanding() {
       <header className="header r r-1">
         <div>
           <p className="stamp">Pillar</p>
-          <h1 className="greeting">Wealth</h1>
+          <h1 className="greeting">Finance</h1>
           <p className="pillar-tag">Money, business, planning. Manual-first; deepens in Phase 7.</p>
         </div>
       </header>
