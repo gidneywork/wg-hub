@@ -1,5 +1,7 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { db } from '../../../lib/db'
 import {
   fmtWeekTitle,
   weekTotals,
@@ -37,7 +39,11 @@ function Chevron() {
   )
 }
 
-function ActivityRow({ activity, isPB, onEditActivity }) {
+function ActivityRow({ activity, isPB }) {
+  const [expanded, setExpanded] = useState(false)
+  const [draft, setDraft] = useState({ customName: '', customType: '', notes: '' })
+  const [saving, setSaving] = useState(false)
+
   const bucket = typeBucket(activity)
   const canonical = canonicalType(activity)
   const source = activitySource(activity)
@@ -67,8 +73,54 @@ function ActivityRow({ activity, isPB, onEditActivity }) {
 
   const { num, dow, mon } = fmtRowDate(activity.start_date)
 
+  function expand() {
+    setDraft({
+      customName: activity.custom_name || '',
+      customType: activity.custom_type || '',
+      notes:      activity.notes       || '',
+    })
+    setExpanded(true)
+  }
+
+  function collapse() { setExpanded(false) }
+
+  useEffect(() => {
+    if (!expanded) return
+    const handler = (e) => { if (e.key === 'Escape') collapse() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [expanded])
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await db.updateActivity(activity.id, {
+        custom_name: draft.customName.trim() || null,
+        custom_type: draft.customType       || null,
+        notes:       draft.notes.trim()     || null,
+      })
+      collapse()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleReset() {
+    await db.updateActivity(activity.id, { custom_name: null, custom_type: null, notes: null })
+    collapse()
+  }
+
+  const isDraftUnchanged = (
+    (draft.customName.trim() || null) === (activity.custom_name || null) &&
+    (draft.customType       || null) === (activity.custom_type  || null) &&
+    (draft.notes.trim()     || null) === (activity.notes        || null)
+  )
+
+  const hasCustomizations = !!(activity.custom_name || activity.custom_type || activity.notes)
+
   return (
-    <div className="activity-row" data-type={bucket} data-source={source} onClick={() => onEditActivity?.(activity)}>
+    <div className="activity-row" data-type={bucket} data-source={source}
+      onClick={() => { if (!expanded) expand() }}>
       <div className="date">
         <span className="num">{num}</span>{dow} {mon}
       </div>
@@ -88,11 +140,76 @@ function ActivityRow({ activity, isPB, onEditActivity }) {
       <div className={`metric pace${paceNode ? '' : ' muted'}`}>{paceNode || '—'}</div>
       <div className={`source-pill ${source}`}>{SOURCE_LABEL[source] || source}</div>
       <Chevron />
+      {expanded && (
+        <div className="todo-expand" onClick={e => e.stopPropagation()}>
+          <div className="todo-expand-divider" />
+          <div className="todo-edit-form">
+            <div className="todo-edit-field">
+              <label className="todo-edit-label">Display name</label>
+              <input
+                type="text"
+                className="todo-add-input"
+                value={draft.customName}
+                autoFocus
+                placeholder={activity.data?.name || 'Activity'}
+                onChange={e => setDraft(d => ({ ...d, customName: e.target.value }))}
+              />
+            </div>
+            <div className="todo-edit-field">
+              <label className="todo-edit-label">Workout type</label>
+              <select
+                className="todo-add-input"
+                value={draft.customType}
+                onChange={e => setDraft(d => ({ ...d, customType: e.target.value }))}
+              >
+                <option value="">Default (from Strava)</option>
+                <option value="run">Running</option>
+                <option value="strength">Strength</option>
+                <option value="functional">Functional</option>
+                <option value="yoga">Yoga</option>
+                <option value="bike">Cycling</option>
+                <option value="swim">Swimming</option>
+              </select>
+            </div>
+            <div className="todo-edit-field">
+              <label className="todo-edit-label">Notes</label>
+              <textarea
+                className="todo-add-input"
+                value={draft.notes}
+                placeholder="Anything worth noting."
+                rows={3}
+                onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}
+              />
+            </div>
+            <div className="todo-edit-actions">
+              <button
+                type="button"
+                className="todo-del-trigger"
+                disabled={!hasCustomizations || saving}
+                onClick={handleReset}
+              >
+                Reset to defaults
+              </button>
+              <div className="todo-edit-save-cancel">
+                <button type="button" className="btn btn-ghost" onClick={collapse}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={isDraftUnchanged || saving}
+                  onClick={handleSave}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function WeekSection({ weekGroup, pbIds, onEditActivity }) {
+function WeekSection({ weekGroup, pbIds }) {
   const t = weekTotals(weekGroup.activities)
   return (
     <section className="week">
@@ -108,7 +225,7 @@ function WeekSection({ weekGroup, pbIds, onEditActivity }) {
       </div>
       <div className="activity-list">
         {weekGroup.activities.map(a => (
-          <ActivityRow key={a.id} activity={a} isPB={pbIds.has(a.id)} onEditActivity={onEditActivity} />
+          <ActivityRow key={a.id} activity={a} isPB={pbIds.has(a.id)} />
         ))}
       </div>
     </section>
@@ -162,7 +279,7 @@ function ArchiveStub({ archiveCount, archiveYear, archiveFromLabel }) {
   )
 }
 
-export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable, onLoadMore, onEditActivity }) {
+export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable, onLoadMore }) {
   // Flat children so the mockup's :first-of-type margin reset on
   // year-banner / month-divider behaves as expected. Wrapping each
   // group in a div would make every banner :first-of-type within its
@@ -173,7 +290,7 @@ export default function ActivityList({ years, pbIds, archive, moreWeeksAvailable
     yg.months.forEach(mg => {
       nodes.push(<MonthDivider key={`m-${mg.key}`} monthGroup={mg} pbIds={pbIds} />)
       mg.weeks.forEach(wg => {
-        nodes.push(<WeekSection key={`w-${wg.key}`} weekGroup={wg} pbIds={pbIds} onEditActivity={onEditActivity} />)
+        nodes.push(<WeekSection key={`w-${wg.key}`} weekGroup={wg} pbIds={pbIds} />)
       })
     })
   })
