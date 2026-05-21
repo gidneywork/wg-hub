@@ -17,7 +17,6 @@ import CadenceCharts from './cadence/Charts'
 import OnboardingFlow from './cadence/OnboardingFlow'
 import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
-import CadenceTraining from './cadence/Training'
 import CadenceJournal from './cadence/Journal'
 import FitnessLanding from './cadence/FitnessLanding'
 import HealthLanding from './cadence/HealthLanding'
@@ -376,8 +375,6 @@ export default function WGHub({ onSignOut }) {
           assistantConfig={assistantConfig ?? DEFAULT_ASSISTANT_CONFIG}
           saveAssistantConfig={saveAssistantConfigFn}
         />
-      ) : view === 'plan' ? (
-        <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
       ) : view === 'planner' ? (
         <CadencePlanner
           logs={logs}
