@@ -320,6 +320,26 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Pillar landing pages */
+[data-cadence] .pillar-tag {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 360;
+  font-size: 15px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  margin: 4px 0 0;
+  max-width: 44ch;
+}
+[data-cadence] .pillar-placeholder {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
 /* Hero */
 [data-cadence] .hero {
   display: grid;
