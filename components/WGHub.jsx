@@ -18,10 +18,7 @@ import OnboardingFlow from './cadence/OnboardingFlow'
 import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
 import CadenceJournal from './cadence/Journal'
-import FitnessLanding from './cadence/FitnessLanding'
-import HealthLanding from './cadence/HealthLanding'
-import WealthLanding from './cadence/WealthLanding'
-import ProductivityLanding from './cadence/ProductivityLanding'
+import CadenceTraining from './cadence/Training'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -380,14 +377,8 @@ export default function WGHub({ onSignOut }) {
           logs={logs}
           saveLog={saveLog}
         />
-      ) : view === 'fitness' ? (
-        <FitnessLanding plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} logs={logs} />
-      ) : view === 'health' ? (
-        <HealthLanding setView={setView} />
-      ) : view === 'wealth' ? (
-        <WealthLanding />
-      ) : view === 'productivity' ? (
-        <ProductivityLanding />
+      ) : view === 'training' ? (
+        <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
