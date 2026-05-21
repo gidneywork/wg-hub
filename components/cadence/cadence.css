@@ -2047,6 +2047,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 /* Filtered-out rows / empty week groups */
 [data-cadence] .history .activity-row.hidden { display: none; }
+[data-cadence] .history .activity-row .todo-expand { grid-column: 1 / -1; }
 [data-cadence] .history .week.empty { display: none; }
 
 /* Load more, empty state, footer count -------------------------------- */
@@ -3782,6 +3783,49 @@ html::-webkit-scrollbar-track { background: transparent; }
   align-items: center;
 }
 
+[data-cadence] .daily-page .lift-muscle-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 10px;
+  border-top: 1px dashed var(--border);
+}
+[data-cadence] .daily-page .lift-muscle-chips-label {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-right: 4px;
+}
+[data-cadence] .daily-page .lift-muscle-chip-btn {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color var(--t-ui) var(--ease), color var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+[data-cadence] .daily-page .lift-muscle-chip-btn.selected {
+  color: var(--moss-deep);
+  background: var(--moss-soft);
+  border-color: var(--moss-soft);
+}
+[data-theme="dark"] [data-cadence] .daily-page .lift-muscle-chip-btn.selected {
+  color: var(--moss);
+  background: var(--moss-glow);
+  border-color: var(--moss);
+}
+[data-cadence] .daily-page .lift-muscle-chip-btn:hover:not(.selected) {
+  border-color: var(--border-strong);
+}
+
 /* Reflection section (formerly "How it landed") ----------------------- */
 [data-cadence] .daily-page .feelings-card {
   background: var(--bg-card);
@@ -4315,6 +4359,51 @@ html::-webkit-scrollbar-track { background: transparent; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+
+[data-cadence] .ac-page .ac-field input,
+[data-cadence] .ac-page .ac-field select,
+[data-cadence] .ac-page .ac-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--sans);
+  font-size: var(--type-13);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow  var(--t-ui) var(--ease);
+}
+[data-cadence] .ac-page .ac-field input:focus,
+[data-cadence] .ac-page .ac-field select:focus,
+[data-cadence] .ac-page .ac-field textarea:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+[data-cadence] .ac-page .ac-field input::placeholder,
+[data-cadence] .ac-page .ac-field textarea::placeholder {
+  color: var(--text-faint);
+}
+[data-cadence] .ac-page .ac-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A867D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 30px;
+  cursor: pointer;
+}
+[data-theme="dark"] [data-cadence] .ac-page .ac-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236F6B62' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+}
+[data-cadence] .ac-page .ac-field textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
 }
 
 /* Toggle — shared across .ac-page and .settings-page */

@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { buildLiftHistory, isLiftPB } from './dailyHelpers'
-import { listExercises, getExerciseByName, resolveMuscle } from '../../../lib/exercises'
+import { listExercises, getExerciseByName, getMuscleGroups, resolveMuscle } from '../../../lib/exercises'
 import { buildSuggestions } from '../../../lib/lifts'
+import { db } from '../../../lib/db'
 
 export default function LiftsSection({
   date,
@@ -29,10 +30,20 @@ export default function LiftsSection({
   const [highlighted, setHighlighted] = useState(-1)
   const [selected,    setSelected   ] = useState(null)
 
+  // ── User exercises from DB (persisted custom exercises)
+  const [userExercises, setUserExercises] = useState([])
+  // ── Muscle-group selection for new custom exercises
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState(new Set())
+
   const comboRef   = useRef(null)
   const inputRef   = useRef(null)
   const weightRef  = useRef(null)
   const listRef    = useRef(null)
+
+  // Load persisted custom exercises on mount
+  useEffect(() => {
+    db.loadUserExercises().then(setUserExercises).catch(() => {})
+  }, [])
 
   // PB history excludes today
   const history = useMemo(() => buildLiftHistory(allLogs, date), [allLogs, date])
@@ -67,14 +78,18 @@ export default function LiftsSection({
   const filteredList = useMemo(() => {
     const q = query.trim().toLowerCase()
     const dbMatches = dbExercises.filter(e => e.name.toLowerCase().includes(q))
+    const userNames = new Set(userExercises.map(e => e.name.toLowerCase()))
+    const userMatches = userExercises.filter(e => e.name.toLowerCase().includes(q))
+    // Legacy custom from logs not already captured in userExercises or built-in library
     const customMatches = customExercises.filter(
-      e => !getExerciseByName(e) && e.toLowerCase().includes(q)
+      e => !getExerciseByName(e) && !userNames.has(e.toLowerCase()) && e.toLowerCase().includes(q)
     )
     return [
       ...dbMatches.map(e => e.name),
+      ...userMatches.map(e => e.name),
       ...customMatches,
     ]
-  }, [query, dbExercises, customExercises])
+  }, [query, dbExercises, userExercises, customExercises])
 
   // Auto-highlight first match whenever the filtered list changes
   useEffect(() => {
@@ -116,6 +131,7 @@ export default function LiftsSection({
     setSelected(null)
     setAddWeight('')
     setAddReps('')
+    setSelectedMuscleGroups(new Set())
   }
 
   function confirmSelection(name) {
@@ -159,6 +175,14 @@ export default function LiftsSection({
     setDropOpen(true)
   }
 
+  function toggleMuscleGroup(group) {
+    setSelectedMuscleGroups(prev => {
+      const next = new Set(prev)
+      next.has(group) ? next.delete(group) : next.add(group)
+      return next
+    })
+  }
+
   function saveLift() {
     const name = selected || query.trim()
     if (!name) { inputRef.current?.focus(); return }
@@ -168,6 +192,15 @@ export default function LiftsSection({
       weight:   parseFloat(addWeight) || 0,
       reps:     parseInt(addReps, 10) || 0,
     }
+    // Persist new custom exercise (fire-and-forget)
+    const isBuiltIn = !!getExerciseByName(name)
+    const isKnownUser = userExercises.some(e => e.name.toLowerCase() === name.toLowerCase())
+    if (!isBuiltIn && !isKnownUser) {
+      const groups = [...selectedMuscleGroups]
+      db.saveUserExercise({ name, muscle_groups: groups }).then(() => {
+        setUserExercises(prev => [...prev, { id: String(Date.now()), name, muscle_groups: groups }])
+      }).catch(() => {})
+    }
     onLiftsChange?.([...lifts, entry])
     setShowAddRow(false)
     setDropOpen(false)
@@ -175,6 +208,7 @@ export default function LiftsSection({
     setSelected(null)
     setAddWeight('')
     setAddReps('')
+    setSelectedMuscleGroups(new Set())
   }
 
   function deleteLift(idx) {
@@ -213,6 +247,9 @@ export default function LiftsSection({
   const metaSuffix = lifts.length > 0 ? ` · ${lifts.length} logged today` : ''
   const hasSuggestions = suggestions.length > 0
   const hasLogged = lifts.length > 0
+  const isNewCustomExercise = selected != null &&
+    !getExerciseByName(selected) &&
+    !userExercises.some(e => e.name.toLowerCase() === selected.toLowerCase())
 
   return (
     <section className="section r r-8">
@@ -362,6 +399,22 @@ export default function LiftsSection({
 
         {lifts.length === 0 && !showAddRow && !hasSuggestions && (
           <div className="lift-empty">No lifts logged yet</div>
+        )}
+
+        {showAddRow && isNewCustomExercise && (
+          <div className="lift-muscle-chips-row">
+            <span className="lift-muscle-chips-label">Tag muscle groups</span>
+            {getMuscleGroups().map(group => (
+              <button
+                key={group}
+                type="button"
+                className={`lift-muscle-chip-btn${selectedMuscleGroups.has(group) ? ' selected' : ''}`}
+                onClick={() => toggleMuscleGroup(group)}
+              >
+                {group}
+              </button>
+            ))}
+          </div>
         )}
 
         {showAddRow && (
