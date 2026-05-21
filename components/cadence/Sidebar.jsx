@@ -57,7 +57,7 @@ const NAV_ASSISTANT = [
   ) },
 ]
 
-function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageKey }) {
+function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageKey, defaultOpen = false }) {
   // Render-time: if this section contains the active view, always show open.
   // This is not written back to localStorage — stored state is unchanged.
   const containsActive = collapsible && items.some(item => item.view === view)
@@ -66,9 +66,9 @@ function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageK
     if (!collapsible) return true
     if (typeof window !== 'undefined' && storageKey) {
       const stored = localStorage.getItem(storageKey)
-      return stored === null ? false : stored === 'true'
+      return stored === null ? defaultOpen : stored === 'true'
     }
-    return false
+    return defaultOpen
   })
 
   function toggle() {
@@ -142,7 +142,7 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
 
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
       <NavGroup eyebrow="Today"     items={NAV_TODAY}     view={view} setView={setView} />
-      <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} />
+      <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} collapsible storageKey="cadence-nav-pillars" defaultOpen />
       <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} collapsible storageKey="cadence-nav-analyse" />
       <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} collapsible storageKey="cadence-nav-assistant" />
 
