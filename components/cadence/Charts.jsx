@@ -27,8 +27,6 @@ const TABS = [
   { id: 'strain',   label: 'Strain',           pip: 'body'  },
   { id: 'calories',   label: 'Calories',        pip: 'intake'},
   { id: 'adherence', label: 'Adherence',       pip: 'body'  },
-  { id: 'squat',     label: 'Back squat PB',   pip: 'lift'  },
-  { id: 'pullup',    label: 'Pull-up PB',      pip: 'lift'  },
 ]
 
 // ─── RANGE DAYS ───────────────────────────────────────────────────────────────
@@ -199,19 +197,6 @@ const fmtInt = v => v != null ? Math.round(v).toString() : '—'
 const fmtDp1 = v => v != null ? v.toFixed(1) : '—'
 const hasVal = v => v !== '—'
 
-// "today" / "yesterday" / "N days ago" / "N weeks ago" — for lift tile
-function fmtLastLogged(isoDate) {
-  if (!isoDate) return '—'
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const d = new Date(isoDate + 'T00:00:00')
-  const diffDays = Math.round((today - d) / 86400000)
-  if (diffDays === 0) return 'today'
-  if (diffDays === 1) return 'yesterday'
-  if (diffDays < 14)  return `${diffDays} days ago`
-  const weeks = Math.round(diffDays / 7)
-  return `${weeks} week${weeks !== 1 ? 's' : ''} ago`
-}
-
 // ─── ANNOTATION DATE FORMAT ("08 MAY 2026") ───────────────────────────────────
 function formatAnnotDate(d) {
   return new Date(d + 'T00:00:00')
@@ -334,8 +319,6 @@ const METRIC_META = {
   running:  { unit: 'km',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   hrv:      { unit: 'ms',   lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   rhr:      { unit: 'bpm',  lowerIsBetter: true,  fmt: v => Math.round(v).toString()                        },
-  squat:    { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
-  pullup:   { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   weight:   { unit: 'kg',   lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   sleep:    { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
@@ -847,66 +830,6 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
   }, [logs, whoopData, rangeDays, userProfile])
 
-  // ── Lift PB data (squat + pullup tabs) ──────────────────────────
-  const liftData = useMemo(() => {
-    if (activeTab !== 'squat' && activeTab !== 'pullup') return null
-
-    const matchFn = activeTab === 'squat'
-      ? l => l.exercise === 'Back squat'
-      : l => typeof l.exercise === 'string' && l.exercise.startsWith('Pull-up') && parseFloat(l.weight) > 0
-
-    // All-time PB — no range filter, scan all log dates
-    let allTimePB = null
-    let bestSet   = null
-    let lastDate  = null
-
-    Object.entries(logs).forEach(([date, log]) => {
-      ;(Array.isArray(log?.lifts) ? log.lifts : []).filter(matchFn).forEach(lift => {
-        const w   = parseFloat(lift.weight)
-        const r   = parseInt(lift.reps, 10)
-        if (!isFinite(w) || !isFinite(r) || r < 1 || w <= 0) return
-        const orm = w * (1 + r / 30)
-        if (allTimePB == null || orm > allTimePB) { allTimePB = orm; bestSet = { weight: w, reps: r } }
-        if (!lastDate || date > lastDate) lastDate = date
-      })
-    })
-
-    // Range-filtered week buckets: max 1RM per week
-    const n      = rangeDays ?? 730
-    const days   = daysWindow(n)
-    const daySet = new Set(days)
-    const byWeek = {}
-    const weekOrder = []
-
-    days.forEach(d => {
-      const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
-      if (!byWeek[wk]) { byWeek[wk] = null; weekOrder.push(wk) }
-    })
-
-    Object.entries(logs).forEach(([date, log]) => {
-      if (!daySet.has(date)) return
-      const wk = localIso(startOfWeek(new Date(date + 'T00:00:00')))
-      if (!(wk in byWeek)) return
-      ;(Array.isArray(log?.lifts) ? log.lifts : []).filter(matchFn).forEach(lift => {
-        const w   = parseFloat(lift.weight)
-        const r   = parseInt(lift.reps, 10)
-        if (!isFinite(w) || !isFinite(r) || r < 1 || w <= 0) return
-        const orm = w * (1 + r / 30)
-        if (byWeek[wk] == null || orm > byWeek[wk]) byWeek[wk] = orm
-      })
-    })
-
-    const currentWk = localIso(startOfWeek(new Date()))
-    const bars = weekOrder.map(wk => ({
-      weekKey:   wk,
-      weekLabel: 'WEEK OF ' + new Date(wk + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase(),
-      value:     byWeek[wk],
-      isCurrent: wk === currentWk,
-    }))
-
-    return { allTimePB, bestSet, lastDate, bars }
-  }, [activeTab, logs, rangeDays])
-
   // ── Hero config driven by activeTab ─────────────────────────────
   const heroConfig = useMemo(() => {
     const wtTarget = settings?.weightTarget?.value
@@ -1111,36 +1034,8 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }
     }
 
-    if (activeTab === 'squat' || activeTab === 'pullup') {
-      const label = activeTab === 'squat' ? 'Back squat' : 'Weighted pull-up'
-      if (!liftData?.allTimePB) {
-        return {
-          eyebrow: `${label} · est. 1RM`,
-          heroStr: '—',
-          unitStr: '',
-          delta:   null,
-          metaStr: 'No lifts logged yet',
-          tiles:   [],
-        }
-      }
-      const { allTimePB, bestSet, lastDate } = liftData
-      const bestSetStr = bestSet ? `${bestSet.weight}kg × ${bestSet.reps}` : '—'
-      return {
-        eyebrow: `${label} · est. 1RM`,
-        heroStr: allTimePB.toFixed(1),
-        unitStr: 'kg est. 1RM · all time',
-        delta:   null,
-        metaStr: lastDate ? `Last logged · ${fmtTileDate(lastDate)}` : '',
-        tiles: [
-          { label: 'All-time PB', val: allTimePB.toFixed(1), unit: 'kg est. 1RM', ctx: 'Epley formula'                              },
-          { label: 'Best set',    val: bestSetStr,            unit: '',            ctx: 'Weight × reps'                              },
-          { label: 'Last logged', val: fmtLastLogged(lastDate), unit: '',          ctx: lastDate ? fmtTileDate(lastDate) : 'No data' },
-        ],
-      }
-    }
-
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings, liftData, adherenceSessions, rangeDays])
+  }, [activeTab, runKm, allMetrics, range, settings, adherenceSessions, rangeDays])
 
   // ── Annotations — merged user annotations + auto-detected PBs ──
   // User annotations: all tabs, date = start_date for marker placement
@@ -1164,7 +1059,6 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return [...userInRange, ...pbs].sort((a, b) => b.date.localeCompare(a.date))
   }, [activeTab, logs, stravaKmMap, rangeDays, userAnnotations])
 
-  const isLift       = activeTab === 'squat' || activeTab === 'pullup'
   const isCalories   = activeTab === 'calories'
   const isAdherence  = activeTab === 'adherence'
 
@@ -1182,12 +1076,10 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const tab = TABS.find(t => t.id === activeTab)
     if (tab?.pip === 'sleep')  return 'var(--slate)'
     if (tab?.pip === 'intake') return 'var(--sand)'
-    if (tab?.pip === 'lift')   return 'var(--clay)'
     return 'var(--moss)'
   }, [activeTab])
 
   const chartBars = useMemo(() => {
-    if (activeTab === 'squat' || activeTab === 'pullup') return liftData?.bars ?? []
     const n    = rangeDays ?? 730
     const days = daysWindow(n)
     if (activeTab === 'running') {
@@ -1217,7 +1109,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
-  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, liftData, adherenceSessions])
+  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, adherenceSessions])
 
   const calsBurnedBars = useMemo(() => {
     if (activeTab !== 'calories') return []
@@ -1275,7 +1167,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'squat' || activeTab === 'pullup' || activeTab === 'calories' || activeTab === 'adherence') return []
+    if (activeTab === 'calories' || activeTab === 'adherence') return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)
@@ -1360,7 +1252,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                     <span>{heroConfig.metaStr}</span>
                   </>
                 ) : (
-                  <span className="awaiting">{isLift && heroConfig.metaStr ? heroConfig.metaStr : 'Awaiting data'}</span>
+                  <span className="awaiting">Awaiting data</span>
                 )}
               </div>
             </div>
@@ -1381,7 +1273,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                   </button>
                 ))}
               </div>
-              {!isLift && !isCalories && !isAdherence && (
+              {!isCalories && !isAdherence && (
                 <div className="control-group">
                   <span className="gl">Compare</span>
                   {[
