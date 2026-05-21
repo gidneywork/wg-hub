@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  todayStr,
   daysWindow,
   mergeWhoopForDate,
   formatHoursColon,
@@ -56,73 +55,98 @@ function parseBedtimeMins(str) {
   return raw < BEDTIME_PIVOT ? raw + 1440 : raw
 }
 
+// Formats pivot-adjusted minutes back to HH:MM. Values >= 1440 wrap to the next day.
+function bedtimeMinsToStr(mins) {
+  const wrapped = Math.round(mins) % 1440
+  const h = Math.floor(wrapped / 60)
+  const m = wrapped % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+// Returns the mean of non-null values if there are at least minPoints of them; else null.
+function rollingAvg(values, minPoints = 4) {
+  const clean = values.filter(v => v !== null)
+  if (clean.length < minPoints) return null
+  return clean.reduce((a, b) => a + b, 0) / clean.length
+}
+
 export default function StatRow({ logs, whoopData, settings }) {
-  const today = todayStr()
-  const todayMerged = mergeWhoopForDate(today, logs?.[today], whoopData)
+  // 30-day window kept for RHR sparkline (shows longer trajectory).
+  const last30 = daysWindow(30)
+  // 14-day window: last14.slice(7) = current week, last14.slice(0,7) = prior week.
+  const last14     = daysWindow(14)
+  const win7       = last14.slice(7)
+  const win7prior  = last14.slice(0, 7)
 
   // ── Resting HR ──────────────────────────────────────────────
-  const rhr = parseFloat(todayMerged?.body?.rhr)
-  const rhrNum = isFinite(rhr) ? Math.round(rhr) : null
-  const last30 = daysWindow(30)
   const last30Rhr = last30.map(d => {
     const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.rhr)
     return isFinite(v) ? v : null
   })
-  const prior30Rhr = last30Rhr.slice(0, -1).filter(v => v !== null)
-  const avgPrior30Rhr = prior30Rhr.length ? prior30Rhr.reduce((a, b) => a + b, 0) / prior30Rhr.length : null
-  const rhrDelta = (rhrNum != null && avgPrior30Rhr != null) ? Math.round(rhrNum - avgPrior30Rhr) : null
+  const win7Rhr = win7.map(d => {
+    const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.rhr)
+    return isFinite(v) ? v : null
+  })
+  const win7PriorRhr = win7prior.map(d => {
+    const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.rhr)
+    return isFinite(v) ? v : null
+  })
+  const avg7Rhr      = rollingAvg(win7Rhr)
+  const avg7PriorRhr = rollingAvg(win7PriorRhr)
+  const rhrDisplay   = avg7Rhr != null ? Math.round(avg7Rhr) : null
+  const rhrDelta     = avg7Rhr != null && avg7PriorRhr != null ? Math.round(avg7Rhr - avg7PriorRhr) : null
 
   // ── Sleep ───────────────────────────────────────────────────
-  const hours = parseFloat(todayMerged?.sleep?.hoursSlept)
-  const hoursValid = isFinite(hours)
-  const sleepValue = hoursValid ? formatHoursColon(hours) : null
-  const last7 = daysWindow(7)
-  const last7Hours = last7.map(d => {
+  const win7Hours = win7.map(d => {
     const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.sleep?.hoursSlept)
     return isFinite(v) ? v : null
   })
-  const sleepTarget = parseFloat(settings?.hoursSlept?.value)
-  const sleepAtTarget = hoursValid && isFinite(sleepTarget) && hours >= sleepTarget
+  const avg7Hours    = rollingAvg(win7Hours)
+  const sleepDisplay = avg7Hours != null ? formatHoursColon(avg7Hours) : null
+  const sleepTarget  = parseFloat(settings?.hoursSlept?.value)
+  const sleepAtTarget = avg7Hours != null && isFinite(sleepTarget) && avg7Hours >= sleepTarget
 
   // ── Bedtime ──────────────────────────────────────────────────
   // Reads schedule.bedtime directly from logs — manually entered, no Whoop source.
-  const todayBedtimeStr   = logs?.[today]?.schedule?.bedtime ?? null
-  const todayBedtimeMins  = parseBedtimeMins(todayBedtimeStr)
-  const last7BedtimeMins  = last7.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
-  const prior7BedtimeMins = last7BedtimeMins.slice(0, -1).filter(v => v !== null)
-  const avgPrior7BedtimeMins = prior7BedtimeMins.length
-    ? prior7BedtimeMins.reduce((a, b) => a + b, 0) / prior7BedtimeMins.length
-    : null
-  const bedtimeDeltaMins = todayBedtimeMins != null && avgPrior7BedtimeMins != null
-    ? Math.round(todayBedtimeMins - avgPrior7BedtimeMins)
+  const win7BedtimeMins      = win7.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
+  const win7PriorBedtimeMins = win7prior.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
+  const avg7BedtimeMins      = rollingAvg(win7BedtimeMins)
+  const avg7PriorBedtimeMins = rollingAvg(win7PriorBedtimeMins)
+  const bedtimeDisplay       = avg7BedtimeMins != null ? bedtimeMinsToStr(avg7BedtimeMins) : null
+  const bedtimeDeltaMins     = avg7BedtimeMins != null && avg7PriorBedtimeMins != null
+    ? Math.round(avg7BedtimeMins - avg7PriorBedtimeMins)
     : null
 
   // ── HRV ─────────────────────────────────────────────────────
-  const hrv = parseFloat(todayMerged?.body?.hrv)
-  const hrvNum = isFinite(hrv) ? Math.round(hrv) : null
-  const last7Hrv = last7.map(d => {
+  const win7Hrv = win7.map(d => {
     const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.hrv)
     return isFinite(v) ? v : null
   })
-  const prior7Hrv = last7Hrv.slice(0, -1).filter(v => v !== null)
-  const avgPrior7Hrv = prior7Hrv.length ? prior7Hrv.reduce((a, b) => a + b, 0) / prior7Hrv.length : null
-  const hrvDelta = (hrvNum != null && avgPrior7Hrv != null) ? Math.round(hrvNum - avgPrior7Hrv) : null
+  const win7PriorHrv = win7prior.map(d => {
+    const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.body?.hrv)
+    return isFinite(v) ? v : null
+  })
+  const avg7Hrv      = rollingAvg(win7Hrv)
+  const avg7PriorHrv = rollingAvg(win7PriorHrv)
+  const hrvDisplay   = avg7Hrv != null ? Math.round(avg7Hrv) : null
+  const hrvDelta     = avg7Hrv != null && avg7PriorHrv != null ? Math.round(avg7Hrv - avg7PriorHrv) : null
 
   // ── Steps ───────────────────────────────────────────────────
   // Manual-entry field on Daily Data; no Whoop sync yet so this reads
   // logs only (no mergeWhoopForDate fallback).
-  const stepsToday = parseFloat(todayMerged?.body?.steps)
-  const stepsNum = isFinite(stepsToday) ? Math.round(stepsToday) : null
-  const last7Steps = last7.map(d => {
+  const win7Steps = win7.map(d => {
     const v = parseFloat(logs?.[d]?.body?.steps)
     return isFinite(v) ? v : null
   })
-  const prior7Steps = last7Steps.slice(0, -1).filter(v => v !== null)
-  const avgPrior7Steps = prior7Steps.length
-    ? prior7Steps.reduce((a, b) => a + b, 0) / prior7Steps.length
-    : null
-  const stepsDelta = (stepsNum != null && avgPrior7Steps != null)
-    ? Math.round(stepsNum - avgPrior7Steps)
+  const win7PriorSteps = win7prior.map(d => {
+    const v = parseFloat(logs?.[d]?.body?.steps)
+    return isFinite(v) ? v : null
+  })
+  const avg7Steps      = rollingAvg(win7Steps)
+  const avg7PriorSteps = rollingAvg(win7PriorSteps)
+  const stepsDisplay   = avg7Steps != null ? Math.round(avg7Steps) : null
+  const stepsDelta     = avg7Steps != null && avg7PriorSteps != null
+    ? Math.round(avg7Steps - avg7PriorSteps)
     : null
 
   return (
@@ -131,13 +155,13 @@ export default function StatRow({ logs, whoopData, settings }) {
       <div className="stat">
         <div className="label">Resting HR</div>
         <div className="value">
-          {rhrNum != null ? rhrNum : '—'}
+          {rhrDisplay != null ? rhrDisplay : '—'}
           <span className="unit">bpm</span>
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(rhrDelta, 'lower')}`}>
             {rhrDelta != null
-              ? <>{arrow(rhrDelta)} {Math.abs(rhrDelta)} · 30d</>
+              ? <>{arrow(rhrDelta)} {Math.abs(rhrDelta)} · 7d avg</>
               : 'no baseline'}
           </span>
           <MiniSpark values={last30Rhr} />
@@ -147,24 +171,24 @@ export default function StatRow({ logs, whoopData, settings }) {
       <div className="stat">
         <div className="label">Sleep</div>
         <div className="value">
-          {sleepValue || '—'}
-          {sleepValue && <span className="unit">h</span>}
+          {sleepDisplay || '—'}
+          {sleepDisplay && <span className="unit">h</span>}
         </div>
         <div className="row">
-          <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(hoursValid && isFinite(sleepTarget) ? hours - sleepTarget : null, 'higher')}`}>
+          <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(avg7Hours != null && isFinite(sleepTarget) ? avg7Hours - sleepTarget : null, 'higher')}`}>
             {sleepAtTarget
               ? <>● target</>
-              : hoursValid && isFinite(sleepTarget)
-                ? <>{arrow(hours - sleepTarget)} {Math.abs(hours - sleepTarget).toFixed(1)}h · target</>
+              : avg7Hours != null && isFinite(sleepTarget)
+                ? <>{arrow(avg7Hours - sleepTarget)} {Math.abs(avg7Hours - sleepTarget).toFixed(1)}h · target</>
                 : '—'}
           </span>
-          <MiniSpark values={last7Hours} />
+          <MiniSpark values={win7Hours} />
         </div>
       </div>
 
       <div className="stat">
         <div className="label">Bedtime</div>
-        <div className="value">{todayBedtimeStr ?? '—'}</div>
+        <div className="value">{bedtimeDisplay ?? '—'}</div>
         <div className="row">
           <span className="delta flat">
             {bedtimeDeltaMins != null
@@ -177,32 +201,32 @@ export default function StatRow({ logs, whoopData, settings }) {
       <div className="stat">
         <div className="label">HRV</div>
         <div className="value">
-          {hrvNum != null ? hrvNum : '—'}
+          {hrvDisplay != null ? hrvDisplay : '—'}
           <span className="unit">ms</span>
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(hrvDelta, 'higher')}`}>
             {hrvDelta != null
-              ? <>{arrow(hrvDelta)} {Math.abs(hrvDelta)} · 7d</>
+              ? <>{arrow(hrvDelta)} {Math.abs(hrvDelta)} · 7d avg</>
               : 'no baseline'}
           </span>
-          <MiniSpark values={last7Hrv} />
+          <MiniSpark values={win7Hrv} />
         </div>
       </div>
 
       <div className="stat">
         <div className="label">Steps</div>
         <div className="value">
-          {stepsNum != null ? stepsNum : '—'}
-          {stepsNum != null && <span className="unit">steps</span>}
+          {stepsDisplay != null ? stepsDisplay : '—'}
+          {stepsDisplay != null && <span className="unit">steps</span>}
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(stepsDelta, 'higher')}`}>
             {stepsDelta != null
-              ? <>{arrow(stepsDelta)} {Math.abs(stepsDelta)} · 7d</>
+              ? <>{arrow(stepsDelta)} {Math.abs(stepsDelta)} · 7d avg</>
               : null}
           </span>
-          <MiniSpark values={last7Steps} />
+          <MiniSpark values={win7Steps} />
         </div>
       </div>
 
