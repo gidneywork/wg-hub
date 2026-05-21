@@ -40,6 +40,55 @@ function buildLine(values, yMin, yMax) {
   return { linePath, fillPath, points }
 }
 
+// Variant of buildLine that preserves gaps: null values break the line into
+// separate subpaths rather than connecting across missing data.
+function buildLineWithGaps(values, yMin, yMax) {
+  const arr = clean(values)
+  const span = arr.length - 1 || 1
+  const segments = []
+  let seg = null
+  arr.forEach((v, i) => {
+    if (v === null) {
+      if (seg) { segments.push(seg); seg = null }
+      return
+    }
+    const x = (i / span) * W
+    const y = BOT - ((Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin)) * H
+    if (!seg) seg = []
+    seg.push([x, y])
+  })
+  if (seg) segments.push(seg)
+  const renderable = segments.filter(s => s.length >= 2)
+  if (!renderable.length) return { linePath: null, fillPaths: [], points: segments.flat() }
+  const linePath = renderable
+    .map(s => s.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' '))
+    .join(' ')
+  const fillPaths = renderable.map(s => {
+    const lp = s.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
+    return `${lp} L ${s[s.length - 1][0].toFixed(1)} ${BOT} L ${s[0][0].toFixed(1)} ${BOT} Z`
+  })
+  return { linePath, fillPaths, points: segments.flat() }
+}
+
+// Computes a padded integer axis range from actual data.
+// Falls back to fallback=[min,max] when no data; enforces a minimum span.
+function computeLineAxis(values, fallback, minSpan) {
+  const valid = clean(values).filter(v => v !== null)
+  if (!valid.length) return { axisMin: fallback[0], axisMax: fallback[1] }
+  const lo = Math.min(...valid)
+  const hi = Math.max(...valid)
+  const rawSpan = hi - lo || 1
+  const pad = Math.max(2, Math.round(rawSpan * 0.15))
+  let axisMin = Math.floor(lo) - pad
+  let axisMax = Math.ceil(hi) + pad
+  if (axisMax - axisMin < minSpan) {
+    const centre = Math.round((lo + hi) / 2)
+    axisMin = centre - Math.ceil(minSpan / 2)
+    axisMax = centre + Math.ceil(minSpan / 2)
+  }
+  return { axisMin, axisMax }
+}
+
 function formatXLabel(d) {
   if (!d) return ''
   const date = new Date(d + 'T00:00:00')
@@ -148,9 +197,15 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
   const hrvAvg = mean(hrvValues)
   const rhrAvg = mean(rhrValues)
 
-  const hrvLine = buildLine(hrvValues, 30, 70)
-  const rhrLine = buildLine(rhrValues, 52, 65)
+  const { axisMin: hrvMin, axisMax: hrvMax } = computeLineAxis(hrvValues, [30, 80], 20)
+  const { axisMin: rhrMin, axisMax: rhrMax } = computeLineAxis(rhrValues, [44, 68], 8)
+
+  const hrvLine = buildLineWithGaps(hrvValues, hrvMin, hrvMax)
+  const rhrLine = buildLineWithGaps(rhrValues, rhrMin, rhrMax)
   const ticks = xAxisTicks(days)
+
+  const hrvLabels = [String(hrvMax), String(Math.round((hrvMin + hrvMax) / 2)), String(hrvMin)]
+  const rhrLabels = [String(rhrMax), String(Math.round((rhrMin + rhrMax) / 2)), String(rhrMin)]
 
   const hrvDelta = hrvAvg != null && hrvPrev != null ? deltaStr(hrvAvg, hrvPrev, { suffix: ' ms' }) : null
   const rhrDelta = rhrAvg != null && rhrPrev != null ? deltaStr(rhrAvg, rhrPrev, { suffix: ' bpm' }) : null
@@ -179,9 +234,11 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
           </linearGradient>
         </defs>
         <GridLines />
-        <YAxisLeft labels={['70','50','30']} />
-        <YAxisRight labels={['65','58','52']} />
-        {hrvLine.fillPath && <path className="draw-fill trend" d={hrvLine.fillPath} fill="url(#cadHrvFade)" />}
+        <YAxisLeft labels={hrvLabels} />
+        <YAxisRight labels={rhrLabels} />
+        {hrvLine.fillPaths.map((fp, i) => (
+          <path key={`hrv-fill-${i}`} className="draw-fill trend" d={fp} fill="url(#cadHrvFade)" />
+        ))}
         {hrvLine.linePath && <path className="draw-line trend" pathLength="1" d={hrvLine.linePath} style={{ stroke: 'var(--moss)', fill: 'none' }} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
         {rhrLine.linePath && <path className="draw-line trend" pathLength="1" d={rhrLine.linePath} style={{ stroke: 'var(--slate)', fill: 'none' }} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 3" />}
         <XAxisLabels ticks={ticks} />
