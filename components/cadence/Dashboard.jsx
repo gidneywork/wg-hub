@@ -49,11 +49,11 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <TodosTile setView={setView} />
 
-      <ThisWeeksLifts logs={logs} />
-
       <PersonalBests activities={activities} />
 
       <Trends logs={logs} whoopData={whoopData} activities={activities} settings={settings} plan={plan} />
+
+      <ThisWeeksLifts logs={logs} />
 
       <Recent activities={activities} />
     </>
