@@ -229,8 +229,8 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
       <svg viewBox="0 0 560 170" preserveAspectRatio="none" style={{ overflow: 'visible', width: '100%', height: 'auto' }}>
         <defs>
           <linearGradient id="cadHrvFade" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" style={{ stopColor: 'var(--moss)', stopOpacity: 0.18 }} />
-            <stop offset="100%" style={{ stopColor: 'var(--moss)', stopOpacity: 0 }} />
+            <stop offset="0%" style={{ stopColor: 'var(--clay)', stopOpacity: 0.18 }} />
+            <stop offset="100%" style={{ stopColor: 'var(--clay)', stopOpacity: 0 }} />
           </linearGradient>
         </defs>
         <GridLines />
@@ -239,12 +239,12 @@ function HrvRhrChart({ logs, whoopData, days, prevDays }) {
         {hrvLine.fillPaths.map((fp, i) => (
           <path key={`hrv-fill-${i}`} className="draw-fill trend" d={fp} fill="url(#cadHrvFade)" />
         ))}
-        {hrvLine.linePath && <path className="draw-line trend" pathLength="1" d={hrvLine.linePath} style={{ stroke: 'var(--moss)', fill: 'none' }} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
+        {hrvLine.linePath && <path className="draw-line trend" pathLength="1" d={hrvLine.linePath} style={{ stroke: 'var(--clay)', fill: 'none' }} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
         {rhrLine.linePath && <path className="draw-line trend" pathLength="1" d={rhrLine.linePath} style={{ stroke: 'var(--slate)', fill: 'none' }} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 3" />}
         <XAxisLabels ticks={ticks} />
       </svg>
       <div className="legend">
-        <span className="item"><span className="swatch moss" />HRV · ms</span>
+        <span className="item"><span className="swatch clay" />HRV · ms</span>
         <span className="item"><span className="swatch slate" />Resting HR · bpm</span>
       </div>
     </div>
