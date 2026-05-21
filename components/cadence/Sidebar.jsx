@@ -1,7 +1,6 @@
 'use client'
 
-// Map between the Cadence sidebar's visual labels and the existing
-// view keys used by WGHub. Keep these in source order from the mockup.
+import { useState } from 'react'
 
 const TV_ITEM = { view: 'tv', label: 'TV mode', icon: (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -58,24 +57,78 @@ const NAV_ASSISTANT = [
   ) },
 ]
 
-function NavGroup({ eyebrow, items, view, setView }) {
+function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageKey }) {
+  // Render-time: if this section contains the active view, always show open.
+  // This is not written back to localStorage — stored state is unchanged.
+  const containsActive = collapsible && items.some(item => item.view === view)
+
+  const [open, setOpen] = useState(() => {
+    if (!collapsible) return true
+    if (typeof window !== 'undefined' && storageKey) {
+      const stored = localStorage.getItem(storageKey)
+      return stored === null ? false : stored === 'true'
+    }
+    return false
+  })
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (storageKey) localStorage.setItem(storageKey, String(next))
+  }
+
+  const isOpen = containsActive || open
+
+  const list = (
+    <ul className="nav-list">
+      {items.map(item => (
+        <li key={item.view}>
+          <button
+            type="button"
+            className={view === item.view ? 'active' : ''}
+            onClick={() => setView(item.view)}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+
   return (
     <div className="nav-section">
-      {eyebrow && <div className="nav-eyebrow">{eyebrow}</div>}
-      <ul className="nav-list">
-        {items.map(item => (
-          <li key={item.view}>
-            <button
-              type="button"
-              className={view === item.view ? 'active' : ''}
-              onClick={() => setView(item.view)}
+      {eyebrow && (
+        collapsible ? (
+          <button
+            type="button"
+            className="nav-collapse-toggle"
+            onClick={toggle}
+            aria-expanded={isOpen}
+          >
+            {eyebrow}
+            <svg
+              className={`nav-chevron${isOpen ? ' open' : ''}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              {item.icon}
-              {item.label}
-            </button>
-          </li>
-        ))}
-      </ul>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        ) : (
+          <div className="nav-eyebrow">{eyebrow}</div>
+        )
+      )}
+      {collapsible ? (
+        <div className={`nav-collapse-body${isOpen ? ' open' : ''}`}>
+          {list}
+        </div>
+      ) : list}
     </div>
   )
 }
@@ -90,8 +143,8 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
       <NavGroup eyebrow="Today"     items={NAV_TODAY}     view={view} setView={setView} />
       <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} />
-      <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} />
-      <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} />
+      <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} collapsible storageKey="cadence-nav-analyse" />
+      <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} collapsible storageKey="cadence-nav-assistant" />
 
       <div className="sidebar-footer">
         <button

@@ -200,6 +200,45 @@ html::-webkit-scrollbar-track { background: transparent; }
   stroke-width: 1.5;
 }
 
+/* Collapsible nav section toggle (replaces .nav-eyebrow <div> for Analyse/Assistant) */
+[data-cadence] .nav-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-bottom: 8px;
+}
+[data-cadence] .nav-collapse-toggle:hover { color: var(--text-soft); }
+
+[data-cadence] .nav-chevron {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  transition: transform var(--t-ui) var(--ease);
+}
+[data-cadence] .nav-chevron.open { transform: rotate(180deg); }
+
+/* Grid-template-rows collapse trick — no max-height ceiling needed */
+[data-cadence] .nav-collapse-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-ui) var(--ease);
+}
+[data-cadence] .nav-collapse-body > * {
+  overflow: hidden;
+  min-height: 0;
+}
+[data-cadence] .nav-collapse-body.open { grid-template-rows: 1fr; }
+
 [data-cadence] .sidebar-footer {
   margin-top: auto;
   padding-top: 16px;
