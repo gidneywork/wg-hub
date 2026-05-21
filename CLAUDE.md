@@ -129,39 +129,35 @@ Most of these I cannot verify without reading the codebase. Treat as **expected 
 
 ### Stack
 
-- Next.js (app router based on existing route patterns)
+- Next.js (SPA pattern — single root page, view-key state routing via `WGHub.jsx`)
 - Supabase (Postgres + RLS + migrations in `supabase/migrations/`)
-- Tailwind + design tokens (`cadence-tokens.css`)
+- Design tokens (`cadence-tokens.css`) + component styles in `components/cadence/cadence.css`
 - Branch: `cadence-rebrand`. Never push to `main`.
 - Deploy: Vercel preview per push.
 
 ### File organisation
 
-Expected pattern based on the build log:
+Actual layout — no `src/` prefix:
 
 ```
-src/
-├── app/                    ← Next.js app router routes
-│   ├── (dashboard)/        ← grouped routes for authenticated views
-│   ├── api/                ← API routes
-│   └── ...
-├── components/             ← React components
-│   ├── ui/                 ← primitives (button, dialog, etc.)
-│   ├── charts/             ← chart components
-│   ├── dashboard/          ← dashboard-specific
-│   ├── training/           ← training surfaces
-│   └── ...
-├── lib/                    ← utilities, hooks, queries
-│   ├── supabase/           ← client + types
-│   ├── plan/               ← plan-shape utilities (getCurrentWeek etc.)
-│   └── ...
-├── styles/                 ← global styles + cadence-tokens.css
-└── ...
+app/                        ← Next.js app — single root page + API routes
+│   page.js                 ← renders <WGHub> (SPA entry point)
+│   layout.js               ← loads cadence-tokens.css globally
+│   api/                    ← Next.js API routes (assistant, strava, whoop)
+components/
+│   WGHub.jsx               ← root component; owns view state + all data loading
+│   cadence/                ← all Cadence UI components and CSS
+│       Sidebar.jsx         ← nav groups + view-key buttons
+│       DashboardShell.jsx  ← sidebar + main slot
+│       cadence.css         ← all component styles (scoped to [data-cadence])
+│       ...
+design/
+│   cadence-tokens.css      ← design tokens (:root CSS custom properties)
+│   cadence-tokens.json     ← token source of truth
+lib/                        ← utilities (db, plan, bmr, etc.)
 supabase/
 └── migrations/             ← SQL migrations, timestamp-prefixed
 ```
-
-If the actual structure differs, the audit step will surface this and the file gets corrected.
 
 ### Naming
 
@@ -173,6 +169,7 @@ If the actual structure differs, the audit step will surface this and the file g
 
 ### Component patterns
 
+- **View routing is via view-key state, not file-system routes.** New "pages" are components rendered conditionally inside `WGHub.jsx`. There is no URL change on navigation. Adding a new view = new component + new `view === 'x'` case in the render switch + new nav item in `Sidebar.jsx`.
 - **Editing is inline.** New editing surfaces use the expand-in-place pattern from Hotfix-3e. `CadenceDialog` is for confirmations.
 - **Shape-changing audits must include a global consumer grep in pre-work.** If a data shape is changing, find every consumer first.
 - **Three-list self-check** before push, every time. Spec gaps / out-of-spec / unratified style.
