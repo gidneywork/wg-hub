@@ -131,6 +131,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   background: var(--bg);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 [data-cadence] .wordmark {
   font-family: var(--display);

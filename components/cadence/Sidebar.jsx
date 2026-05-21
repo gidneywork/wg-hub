@@ -2,15 +2,32 @@
 
 // Map between the Cadence sidebar's visual labels and the existing
 // view keys used by WGHub. Keep these in source order from the mockup.
+
+const TV_ITEM = { view: 'tv', label: 'TV mode', icon: (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+) }
+
+const NAV_PILLARS = [
+  { view: 'fitness', label: 'Fitness', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  ) },
+  { view: 'health', label: 'Health', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  ) },
+  { view: 'wealth', label: 'Wealth', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+  ) },
+  { view: 'productivity', label: 'Productivity', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  ) },
+]
+
 const NAV_TODAY = [
   { view: 'dashboard', label: 'Dashboard', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
   ) },
   { view: 'planner', label: 'Planner', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-  ) },
-  { view: 'plan', label: 'Training', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
   ) },
   { view: 'log', label: 'Daily data', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
@@ -26,9 +43,6 @@ const NAV_ANALYSE = [
   ) },
   { view: 'journal', label: 'Journal', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h10M4 14h12M4 18h8"/></svg>
-  ) },
-  { view: 'tv', label: 'TV mode', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
   ) },
 ]
 
@@ -47,7 +61,7 @@ const NAV_ASSISTANT = [
 function NavGroup({ eyebrow, items, view, setView }) {
   return (
     <div className="nav-section">
-      <div className="nav-eyebrow">{eyebrow}</div>
+      {eyebrow && <div className="nav-eyebrow">{eyebrow}</div>}
       <ul className="nav-list">
         {items.map(item => (
           <li key={item.view}>
@@ -73,7 +87,9 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
     <aside className="sidebar">
       <div className="wordmark">cadence<span className="dot" /></div>
 
-      <NavGroup eyebrow="Today"     items={NAV_TODAY}     view={view} setView={setView} />
+      <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
+      <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} />
+      <NavGroup eyebrow="Today"     items={NAV_TODAY}      view={view} setView={setView} />
       <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} />
       <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} />
 
