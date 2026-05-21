@@ -9,16 +9,24 @@ const TV_ITEM = { view: 'tv', label: 'TV mode', icon: (
 const NAV_PILLARS = [
   { view: 'fitness', label: 'Fitness', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-  ) },
+  ), subItems: [
+    { view: 'history', label: 'History', icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-7"/></svg>
+    ) },
+  ] },
   { view: 'health', label: 'Health', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-  ) },
+  ), subItems: [] },
   { view: 'wealth', label: 'Finance', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-  ) },
+  ), subItems: [] },
   { view: 'productivity', label: 'Productivity', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-  ) },
+  ), subItems: [
+    { view: 'journal', label: 'Journal', icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h10M4 14h12M4 18h8"/></svg>
+    ) },
+  ] },
 ]
 
 const NAV_TODAY = [
@@ -37,12 +45,6 @@ const NAV_ANALYSE = [
   { view: 'charts', label: 'Charts', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18l4-8 4 4 4-12 4 16h2"/></svg>
   ) },
-  { view: 'history', label: 'History', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-7"/></svg>
-  ) },
-  { view: 'journal', label: 'Journal', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h10M4 14h12M4 18h8"/></svg>
-  ) },
 ]
 
 const NAV_ASSISTANT = [
@@ -57,10 +59,91 @@ const NAV_ASSISTANT = [
   ) },
 ]
 
-function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageKey, defaultOpen = false }) {
-  // Render-time: if this section contains the active view, always show open.
-  // This is not written back to localStorage — stored state is unchanged.
-  const containsActive = collapsible && items.some(item => item.view === view)
+// ─── PillarItem ────────────────────────────────────────────────────────────────
+// Renders one pillar row: header (navigate + toggle sub-list) + optional
+// collapsible sub-list. Pillars with no subItems render as a plain nav button
+// with no chevron (E3). Per-pillar sub-list state persists to localStorage (F1).
+function PillarItem({ pillar, view, setView }) {
+  const hasSubItems = pillar.subItems?.length > 0
+  const storageKey  = hasSubItems ? `cadence-nav-pillar-${pillar.view}` : null
+  const isLandingActive = view === pillar.view
+  const subIsActive     = hasSubItems && pillar.subItems.some(s => s.view === view)
+
+  const [subOpen, setSubOpen] = useState(() => {
+    if (!hasSubItems) return false
+    if (typeof window !== 'undefined' && storageKey) {
+      const stored = localStorage.getItem(storageKey)
+      return stored === null ? (subIsActive || isLandingActive) : stored === 'true'
+    }
+    return subIsActive || isLandingActive
+  })
+
+  const subListOpen = subIsActive || subOpen
+
+  function handleHeaderClick() {
+    setView(pillar.view)
+    if (hasSubItems) {
+      const next = !subOpen
+      setSubOpen(next)
+      if (storageKey) localStorage.setItem(storageKey, String(next))
+    }
+  }
+
+  const headerClass = isLandingActive ? 'active' : subIsActive ? 'active-path' : ''
+
+  return (
+    <li>
+      <button type="button" className={headerClass} onClick={handleHeaderClick}>
+        {pillar.icon}
+        {pillar.label}
+        {hasSubItems && (
+          <svg
+            className={`nav-chevron${subListOpen ? ' open' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        )}
+      </button>
+      {hasSubItems && (
+        <div className={`nav-collapse-body${subListOpen ? ' open' : ''}`}>
+          <ul className="nav-sub-list">
+            {pillar.subItems.map(sub => (
+              <li key={sub.view}>
+                <button
+                  type="button"
+                  className={view === sub.view ? 'active' : ''}
+                  onClick={() => setView(sub.view)}
+                >
+                  {sub.icon}
+                  {sub.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </li>
+  )
+}
+
+// ─── NavGroup ──────────────────────────────────────────────────────────────────
+// Renders a sidebar section with an optional collapsible eyebrow.
+// Accepts either `items` (flat list) or `children` (custom content).
+// `containsActive` prop overrides the default items-based active check —
+// needed for the Pillars section where active views may be sub-items.
+function NavGroup({ eyebrow, items, children, view, setView, collapsible = false, storageKey, defaultOpen = false, containsActive: containsActiveProp }) {
+  const containsActive = collapsible && (
+    containsActiveProp !== undefined
+      ? containsActiveProp
+      : items ? items.some(item => item.view === view) : false
+  )
 
   const [open, setOpen] = useState(() => {
     if (!collapsible) return true
@@ -79,7 +162,7 @@ function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageK
 
   const isOpen = containsActive || open
 
-  const list = (
+  const content = items ? (
     <ul className="nav-list">
       {items.map(item => (
         <li key={item.view}>
@@ -94,7 +177,7 @@ function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageK
         </li>
       ))}
     </ul>
-  )
+  ) : children
 
   return (
     <div className="nav-section">
@@ -126,9 +209,9 @@ function NavGroup({ eyebrow, items, view, setView, collapsible = false, storageK
       )}
       {collapsible ? (
         <div className={`nav-collapse-body${isOpen ? ' open' : ''}`}>
-          {list}
+          {content}
         </div>
-      ) : list}
+      ) : content}
     </div>
   )
 }
@@ -142,7 +225,21 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
 
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
       <NavGroup eyebrow="Today"     items={NAV_TODAY}     view={view} setView={setView} />
-      <NavGroup eyebrow="Pillars"   items={NAV_PILLARS}   view={view} setView={setView} collapsible storageKey="cadence-nav-pillars" defaultOpen />
+      <NavGroup
+        eyebrow="Pillars"
+        view={view}
+        setView={setView}
+        collapsible
+        storageKey="cadence-nav-pillars"
+        defaultOpen
+        containsActive={NAV_PILLARS.some(p => p.view === view || (p.subItems || []).some(s => s.view === view))}
+      >
+        <ul className="nav-list">
+          {NAV_PILLARS.map(pillar => (
+            <PillarItem key={pillar.view} pillar={pillar} view={view} setView={setView} />
+          ))}
+        </ul>
+      </NavGroup>
       <NavGroup eyebrow="Analyse"   items={NAV_ANALYSE}   view={view} setView={setView} collapsible storageKey="cadence-nav-analyse" />
       <NavGroup eyebrow="Assistant" items={NAV_ASSISTANT} view={view} setView={setView} collapsible storageKey="cadence-nav-assistant" />
 
