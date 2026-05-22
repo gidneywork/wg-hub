@@ -5714,3 +5714,36 @@ html::-webkit-scrollbar-track { background: transparent; }
   [data-cadence] .bm-row-meta { gap: 6px; }
   [data-cadence] .bm-due { display: none; }
 }
+
+/* ── Calorie target mode pill ──────────────────────────────────────── */
+[data-cadence] .cal-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  display: inline-block;
+  margin-top: 6px;
+}
+[data-theme="dark"] [data-cadence] .cal-pill { color: var(--moss); }
+[data-cadence] .cal-pill.off {
+  background: var(--clay-soft);
+  color: var(--clay-deep);
+}
+[data-theme="dark"] [data-cadence] .cal-pill.off { color: var(--clay); }
+
+/* ── Calorie mode section (Settings) ──────────────────────────────── */
+[data-cadence] .cal-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+[data-cadence] .cal-mode-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}

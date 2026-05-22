@@ -102,7 +102,6 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
   return {
     weeklyKm:          weeklyKm > 0 ? weeklyKm : null,
     dailySteps:        meanFromLogs('body', 'steps'),
-    dailyCaloriesOut:  meanFromLogs('body', 'caloriesOut'),
     weightTarget:      weight,
     hrv:               meanFromMerged('body',  'hrv'),
     rhr:               meanFromMerged('body',  'rhr'),
@@ -140,14 +139,6 @@ export const TARGET_SPECS = {
     step: 100,
     prefix: t => `Target: ${numFmt(t)} steps/day`,
     actual: v => `avg ${numFmt(v)} steps`,
-  },
-  dailyCaloriesOut: {
-    label: 'Daily calories burnt',
-    pill: null,
-    unit: 'kcal',
-    step: 50,
-    prefix: t => `Target: ${numFmt(t)} kcal/day`,
-    actual: v => `avg ${numFmt(v)} kcal`,
   },
   weightTarget: {
     label: 'Weight target',
@@ -229,7 +220,7 @@ export const TARGET_SPECS = {
 
 export const SECTION_LAYOUT = [
   { label: 'Running',          rN: 'r-4', keys: ['weeklyKm'] },
-  { label: 'Activity',         rN: 'r-5', keys: ['dailySteps', 'dailyCaloriesOut'] },
+  { label: 'Activity',         rN: 'r-5', keys: ['dailySteps'] },
   { label: 'Body metrics',     rN: 'r-6', keys: ['weightTarget', 'hrv', 'rhr'] },
   { label: 'Sleep & recovery', rN: 'r-7', keys: ['sleepScore', 'recoveryScore', 'hoursSlept'] },
   { label: 'Nutrition',        rN: 'r-8', keys: ['dailyCalories', 'dailyProtein', 'dailyCarbs'] },

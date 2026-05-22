@@ -44,19 +44,19 @@ function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2,7)}`
 const GYM_OPTIONS    = ['Bicep / Shoulders','Chest / Triceps','Core Training','Back','Legs']
 const DEFAULT_FUNC   = () => [{exercise:'Pull Ups',reps:''},{exercise:'Press Ups',reps:''},{exercise:'Crunches',reps:''},{exercise:'Shrugs',reps:''}]
 const DEFAULT_SETTINGS = {
-  weeklyKm:         {value:100,   label:'Weekly Running Target',     unit:'km',    lowerIsBetter:false},
-  dailySteps:       {value:10000, label:'Daily Steps Target',        unit:'steps', lowerIsBetter:false},
-  dailyCaloriesOut: {value:3000,  label:'Daily Calories Burnt',      unit:'kcal',  lowerIsBetter:false},
-  dailyCalories:    {value:2800,  label:'Daily Calories',            unit:'kcal',  lowerIsBetter:false},
-  dailyProtein:     {value:180,   label:'Daily Protein',             unit:'g',     lowerIsBetter:false},
-  dailyCarbs:       {value:320,   label:'Daily Carbs',               unit:'g',     lowerIsBetter:false},
-  weightTarget:     {value:75,    label:'Weight Target',             unit:'kg',    lowerIsBetter:false, isWeight:true},
-  sleepScore:       {value:85,    label:'Sleep Score Target',        unit:'/100',  lowerIsBetter:false},
-  recoveryScore:    {value:80,    label:'Recovery Score Target',     unit:'/100',  lowerIsBetter:false},
-  hoursSlept:       {value:8,     label:'Hours Slept Target',        unit:'hrs',   lowerIsBetter:false},
-  hrv:              {value:70,    label:'HRV Target',                unit:'',      lowerIsBetter:false},
-  rhr:              {value:52,    label:'Resting HR Target',         unit:'bpm',   lowerIsBetter:true},
-  autoTheme:        false,
+  weeklyKm:          {value:100,   label:'Weekly Running Target',     unit:'km',    lowerIsBetter:false},
+  dailySteps:        {value:10000, label:'Daily Steps Target',        unit:'steps', lowerIsBetter:false},
+  dailyCalories:     {value:2800,  label:'Daily Calories',            unit:'kcal',  lowerIsBetter:false},
+  dailyProtein:      {value:180,   label:'Daily Protein',             unit:'g',     lowerIsBetter:false},
+  dailyCarbs:        {value:320,   label:'Daily Carbs',               unit:'g',     lowerIsBetter:false},
+  weightTarget:      {value:75,    label:'Weight Target',             unit:'kg',    lowerIsBetter:false, isWeight:true},
+  sleepScore:        {value:85,    label:'Sleep Score Target',        unit:'/100',  lowerIsBetter:false},
+  recoveryScore:     {value:80,    label:'Recovery Score Target',     unit:'/100',  lowerIsBetter:false},
+  hoursSlept:        {value:8,     label:'Hours Slept Target',        unit:'hrs',   lowerIsBetter:false},
+  hrv:               {value:70,    label:'HRV Target',                unit:'',      lowerIsBetter:false},
+  rhr:               {value:52,    label:'Resting HR Target',         unit:'bpm',   lowerIsBetter:true},
+  autoTheme:         false,
+  calorieTargetMode: null,
 }
 
 const DEFAULT_ASSISTANT_CONFIG = {

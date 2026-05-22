@@ -56,10 +56,7 @@ export default function BodySection({
   // into `form` upstream) → BMR estimate (this session, read-time only).
   // BMR is shown as the placeholder and the "Estimated baseline" pill; it
   // is NEVER written into form/log state. Typing replaces it.
-  const cOutTarget = settings?.dailyCaloriesOut
   const cOutVal = form?.body?.caloriesOut
-  const cOutBand = targetBand(cOutVal, cOutTarget)
-  const cOutHelper = buildMacroHelper(cOutVal, cOutTarget, 'kcal')
   const cOutHasValue = cOutVal != null && cOutVal !== ''
   const rawCOut = logs?.[date]?.body?.caloriesOut
   const cOutFromWhoop = (rawCOut == null || rawCOut === '') && cOutHasValue
@@ -133,7 +130,6 @@ export default function BodySection({
 
         <FieldCard
           label="Calories burnt"
-          targetRef={cOutTarget?.value ? `Target ${cOutTarget.value} kcal` : null}
           sourcePill={cOutSourcePill}
           value={cOutVal}
           onChange={v => onField('body', 'caloriesOut', v)}
@@ -141,11 +137,6 @@ export default function BodySection({
           inputMode="numeric"
           placeholder="—"
           estimate={cOutFromBmr ? cOutBmrEstimate : null}
-          progress={{
-            pct:     cOutBand?.pct ?? 0,
-            variant: fillVariantForBand(cOutBand?.band),
-          }}
-          helper={cOutHelper}
           rowIndex={2}
           saved={recentlySaved && cOutHasValue && !saving}
           saving={saving && cOutHasValue}

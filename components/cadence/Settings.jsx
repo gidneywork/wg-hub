@@ -8,6 +8,7 @@ import AboutYouSection from './settings/AboutYouSection'
 import StravaCard from './settings/StravaCard'
 import ConnectionsSection from './settings/ConnectionsSection'
 import TargetSection from './settings/TargetSection'
+import CalorieModeSection from './settings/CalorieModeSection'
 import WhoopUpload from './settings/WhoopUpload'
 import ActivityLog from './settings/ActivityLog'
 import {
@@ -123,8 +124,9 @@ export default function Settings({
         // Thread an absolute row index across sections so the bar
         // animation stagger reads as one cascade, not four restarts.
         let runningIndex = 0
-        return SECTION_LAYOUT.map(section => {
-          const node = (
+        const nodes = []
+        for (const section of SECTION_LAYOUT) {
+          nodes.push(
             <TargetSection
               key={section.label}
               label={section.label}
@@ -137,8 +139,19 @@ export default function Settings({
             />
           )
           runningIndex += section.keys.length
-          return node
-        })
+          if (section.label === 'Activity') {
+            nodes.push(
+              <CalorieModeSection
+                key="calorie-mode"
+                mode={local.calorieTargetMode ?? null}
+                onChange={m => setLocal(prev => ({ ...prev, calorieTargetMode: m }))}
+                logs={logs}
+                activities={activities}
+              />
+            )
+          }
+        }
+        return nodes
       })()}
 
       <div className="save-row r r-8">

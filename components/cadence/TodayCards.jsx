@@ -2,6 +2,7 @@
 
 import { todayStr } from './helpers'
 import { getCurrentWeek } from '../../lib/plan'
+import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
 
@@ -69,7 +70,7 @@ function ScheduledCard({ plan }) {
   )
 }
 
-function FuelCard({ logs, activities }) {
+function FuelCard({ logs, activities, settings }) {
   const today = todayStr()
   const yst = yesterdayStr()
 
@@ -91,6 +92,9 @@ function FuelCard({ logs, activities }) {
   const outValid = calsOutSum > 0
 
   const balance = inValid || outValid ? Math.round((inValid ? calsIn : 0) - (outValid ? calsOutSum : 0)) : null
+  const calMode = getCalorieTargetMode(settings)
+  const calResult = calMode ? evaluateCalorieDelta(inValid ? calsIn : null, outValid ? calsOutSum : null, calMode) : null
+  const showCalPill = calResult && calResult.status !== 'no_data' && calResult.status !== 'no_mode'
   const balanceLabel = balance == null
     ? '— kcal'
     : (balance < 0 ? '−' : '+') + Math.abs(balance).toLocaleString() + ' kcal'
@@ -111,6 +115,11 @@ function FuelCard({ logs, activities }) {
         <span className="num">{balanceLabel.split(' ')[0]}</span>
         <span className="label">kcal{isLive ? ` · ${nowHHMM}` : ''}</span>
       </div>
+      {showCalPill && (
+        <span className={`cal-pill${calResult.status === 'off_target' ? ' off' : ''}`}>
+          {calResult.status === 'on_target' ? 'on target' : 'off target'}
+        </span>
+      )}
       <div className="fuel-bars">
         <span>IN</span>
         <div className="track"><div className="fill in" style={{ width: `${inPct}%` }} /></div>
@@ -165,7 +174,7 @@ function JournalCard({ logs, onOpenDate }) {
   )
 }
 
-export default function TodayCards({ plan, logs, activities, setView, onOpenDate }) {
+export default function TodayCards({ plan, logs, activities, settings, setView, onOpenDate }) {
   return (
     <section className="section r r-6">
       <div className="section-head">
@@ -176,7 +185,7 @@ export default function TodayCards({ plan, logs, activities, setView, onOpenDate
       </div>
       <div className="today-grid">
         <ScheduledCard plan={plan} />
-        <FuelCard logs={logs} activities={activities} />
+        <FuelCard logs={logs} activities={activities} settings={settings} />
         <JournalCard logs={logs} onOpenDate={onOpenDate} />
       </div>
     </section>

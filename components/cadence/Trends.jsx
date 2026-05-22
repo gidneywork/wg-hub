@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { getCurrentWeek } from '../../lib/plan'
+import { evaluateDelta, getCalorieTargetMode } from '../../lib/calories'
 import {
   localIso,
   daysWindow,
@@ -467,7 +468,7 @@ function SleepRecoveryChart({ logs, whoopData, days, prevDays }) {
 }
 
 // ─── Chart: Calories · daily balance + weight ───────────────────────
-function CaloriesWeightChart({ logs, activities, days, prevDays }) {
+function CaloriesWeightChart({ logs, activities, days, prevDays, settings }) {
   const calsIn = days.map(d => parseFloat(logs?.[d]?.nutrition?.calories))
   const calsOut = days.map(d => {
     const acts = (activities || []).filter(a => (a.start_date || '').split('T')[0] === d)
@@ -513,6 +514,9 @@ function CaloriesWeightChart({ logs, activities, days, prevDays }) {
     : null
 
   const ticks = xAxisTicks(days)
+  const calMode = getCalorieTargetMode(settings)
+  const calResult = calMode ? evaluateDelta(avgDeficit, calMode) : null
+  const showCalPill = calResult && calResult.status !== 'no_data' && calResult.status !== 'no_mode'
 
   return (
     <div className="chart-card">
@@ -525,6 +529,11 @@ function CaloriesWeightChart({ logs, activities, days, prevDays }) {
               : '—'}
             <span className="unit">avg deficit</span>
           </div>
+          {showCalPill && (
+            <span className={`cal-pill${calResult.status === 'off_target' ? ' off' : ''}`}>
+              {calResult.status === 'on_target' ? 'on target' : 'off target'}
+            </span>
+          )}
         </div>
         <div className="meta-right">
           {wDelta != null && (
@@ -857,7 +866,7 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
         <HrvRhrChart            logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
         <WeeklyKmChart          logs={logs} activities={activities} settings={settings} />
         <SleepRecoveryChart     logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
-        <CaloriesWeightChart    logs={logs} activities={activities} days={days} prevDays={prevDays} />
+        <CaloriesWeightChart    logs={logs} activities={activities} days={days} prevDays={prevDays} settings={settings} />
         <AdherenceChart         plan={plan} activities={activities} />
         <NutritionChart         logs={logs} days={days} />
         <StepsCaloriesOutChart  logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />

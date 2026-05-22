@@ -45,7 +45,7 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <WeekGrid plan={plan} />
 
-      <TodayCards plan={plan} logs={logs} activities={activities} setView={setView} onOpenDate={onOpenDate} />
+      <TodayCards plan={plan} logs={logs} activities={activities} settings={settings} setView={setView} onOpenDate={onOpenDate} />
 
       <TodosTile setView={setView} />
 
