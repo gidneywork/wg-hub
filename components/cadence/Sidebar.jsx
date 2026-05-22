@@ -154,12 +154,12 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
 
       <NavGroup eyebrow=""          items={[TV_ITEM]}     view={view} setView={setView} />
       <NavGroup eyebrow="Today"        items={NAV_TODAY}        view={view} setView={setView} />
-      <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness" />
-      <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health" />
-      <NavGroup eyebrow="Finance"      items={NAV_FINANCE}      view={view} setView={setView} collapsible storageKey="cadence-nav-finance" />
-      <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" />
-      <NavGroup eyebrow="Analyse"      items={NAV_ANALYSE}      view={view} setView={setView} collapsible storageKey="cadence-nav-analyse" />
-      <NavGroup eyebrow="Assistant"    items={NAV_ASSISTANT}    view={view} setView={setView} collapsible storageKey="cadence-nav-assistant" />
+      <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness"      defaultOpen />
+      <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health"       defaultOpen />
+      <NavGroup eyebrow="Finance"      items={NAV_FINANCE}      view={view} setView={setView} collapsible storageKey="cadence-nav-finance"      defaultOpen />
+      <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" defaultOpen />
+      <NavGroup eyebrow="Analyse"      items={NAV_ANALYSE}      view={view} setView={setView} collapsible storageKey="cadence-nav-analyse"      defaultOpen />
+      <NavGroup eyebrow="Assistant"    items={NAV_ASSISTANT}    view={view} setView={setView} collapsible storageKey="cadence-nav-assistant"    defaultOpen />
 
       <div className="sidebar-footer">
         <button
