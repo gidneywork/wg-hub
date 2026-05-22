@@ -15,7 +15,14 @@ const NAV_FITNESS = [
   ) },
 ]
 
-const NAV_HEALTH = []
+const NAV_HEALTH = [
+  { view: 'biomarkers', label: 'Biomarkers', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3h6M10 3v6l-4.5 8A2 2 0 0 0 7.3 19h9.4a2 2 0 0 0 1.8-2.5L14 9V3"/>
+      <line x1="7.5" y1="14" x2="16.5" y2="14"/>
+    </svg>
+  ) },
+]
 
 const NAV_FINANCE = []
 

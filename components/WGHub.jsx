@@ -19,6 +19,7 @@ import AssistantConfig from './cadence/AssistantConfig'
 import CadencePlanner from './cadence/Planner'
 import CadenceJournal from './cadence/Journal'
 import CadenceTraining from './cadence/Training'
+import CadenceBiomarkers from './cadence/Biomarkers'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -379,6 +380,8 @@ export default function WGHub({ onSignOut }) {
         />
       ) : view === 'training' ? (
         <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
+      ) : view === 'biomarkers' ? (
+        <CadenceBiomarkers />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>

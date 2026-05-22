@@ -5519,3 +5519,198 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-size: var(--type-body);
   color: var(--text-soft);
 }
+
+/* -----------------------------------------------------------------
+   BIOMARKERS PAGE (FC-036)
+   ----------------------------------------------------------------- */
+[data-cadence] .bm-loading {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  padding: 40px 0;
+}
+
+[data-cadence] .bm-section { margin-bottom: 40px; }
+
+[data-cadence] .bm-section-eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+
+[data-cadence] .bm-list {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+[data-cadence] .bm-row { border-bottom: 1px solid var(--border); }
+[data-cadence] .bm-row:last-child { border-bottom: none; }
+
+[data-cadence] .bm-row-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background-color var(--t-ui) var(--ease);
+}
+[data-cadence] .bm-row-header:hover { background: var(--bg-paper); }
+[data-cadence] .bm-row--open .bm-row-header { background: var(--bg-paper); }
+
+[data-cadence] .bm-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+[data-cadence] .bm-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+[data-cadence] .bm-latest-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .bm-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+[data-cadence] .bm-pill--in_range {
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .bm-pill--in_range { color: var(--moss); }
+[data-cadence] .bm-pill--out_of_range {
+  background: var(--clay-soft);
+  color: var(--clay-deep);
+}
+[data-cadence] .bm-pill--due {
+  background: none;
+  color: var(--sand);
+  padding-left: 0;
+  padding-right: 0;
+}
+[data-cadence] .bm-pill--no_data {
+  background: none;
+  color: var(--text-faint);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+[data-cadence] .bm-due {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+[data-cadence] .bm-due--overdue { color: var(--sand); }
+
+[data-cadence] .bm-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-quiet);
+  transition: transform var(--t-ui) var(--ease);
+}
+[data-cadence] .bm-chevron--open { transform: rotate(180deg); }
+
+[data-cadence] .bm-row-body {
+  padding: 0 20px 20px;
+  border-top: 1px dashed var(--border);
+}
+
+[data-cadence] .bm-explanation {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.55;
+  margin: 16px 0 0;
+}
+
+[data-cadence] .bm-logged-note {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+  margin: 10px 0 0;
+}
+
+[data-cadence] .bm-protocol {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--bg-paper);
+  border-radius: 4px;
+  border-left: 2px solid var(--moss);
+}
+[data-cadence] .bm-protocol-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--moss-deep);
+  margin-bottom: 4px;
+}
+[data-theme="dark"] [data-cadence] .bm-protocol-label { color: var(--moss); }
+
+[data-cadence] .bm-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .bm-results-table th {
+  font-family: var(--mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+  text-align: left;
+  padding: 0 16px 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+[data-cadence] .bm-results-table th:last-child { padding-right: 0; }
+[data-cadence] .bm-results-table td {
+  padding: 8px 16px 0 0;
+  color: var(--text-muted);
+  vertical-align: top;
+}
+[data-cadence] .bm-results-table td:last-child { padding-right: 0; }
+[data-cadence] .bm-results-table tr + tr td {
+  border-top: 1px dashed var(--border);
+}
+
+@media (max-width: 680px) {
+  [data-cadence] .bm-row-meta { gap: 6px; }
+  [data-cadence] .bm-due { display: none; }
+}
