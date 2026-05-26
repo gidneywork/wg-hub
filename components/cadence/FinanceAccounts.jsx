@@ -7,6 +7,7 @@ import {
   loadStatementDocuments,
   loadTransactions,
   insertAccount,
+  insertStatementDocument,
 } from '../../lib/finance/db'
 import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
 import { formatPence } from '../../lib/finance/transactions'
@@ -27,7 +28,11 @@ function fmtUploadDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const ADD_BLANK = { name: '', bank: '', account_type: '', bank_other_text: '', notes: '' }
+const ADD_BLANK    = { name: '', bank: '', account_type: '', bank_other_text: '', notes: '' }
+
+const ALLOWED_FINANCE_MIME = ['text/csv', 'application/vnd.ms-excel', 'text/plain']
+const MAX_STATEMENT_BYTES  = 20 * 1024 * 1024
+const UPLOAD_BLANK         = { accountId: '', file: null, periodFrom: '', periodTo: '', notes: '' }
 
 export default function FinanceAccounts() {
   const [accounts,      setAccounts     ] = useState([])
@@ -43,6 +48,11 @@ export default function FinanceAccounts() {
   const [addForm,   setAddForm  ] = useState(ADD_BLANK)
   const [addSaving, setAddSaving] = useState(false)
   const [addError,  setAddError ] = useState(null)
+
+  const [showUpload,   setShowUpload  ] = useState(false)
+  const [uploadForm,   setUploadForm  ] = useState(UPLOAD_BLANK)
+  const [uploadSaving, setUploadSaving] = useState(false)
+  const [uploadError,  setUploadError ] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -115,6 +125,57 @@ export default function FinanceAccounts() {
     }
   }
 
+  const uploadDisabled =
+    uploadSaving
+    || !uploadForm.accountId
+    || !uploadForm.file
+
+  function handleStatementFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ALLOWED_FINANCE_MIME.includes(file.type)) {
+      setUploadError('Unsupported file type. Use CSV or plain text.')
+      setUploadForm(p => ({ ...p, file: null }))
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_STATEMENT_BYTES) {
+      setUploadError('File too large. Maximum 20 MB.')
+      setUploadForm(p => ({ ...p, file: null }))
+      e.target.value = ''
+      return
+    }
+    setUploadError(null)
+    setUploadForm(p => ({ ...p, file }))
+  }
+
+  async function handleUploadStatement() {
+    if (uploadForm.periodFrom && uploadForm.periodTo
+        && uploadForm.periodFrom > uploadForm.periodTo) {
+      setUploadError('Period from must be before period to.')
+      return
+    }
+    setUploadSaving(true)
+    setUploadError(null)
+    try {
+      await insertStatementDocument({
+        account_id:  uploadForm.accountId,
+        file:        uploadForm.file,
+        period_from: uploadForm.periodFrom || null,
+        period_to:   uploadForm.periodTo   || null,
+        notes:       uploadForm.notes.trim() || null,
+      })
+      const docs = await loadStatementDocuments()
+      setStatementDocs(docs)
+      setShowUpload(false)
+      setUploadForm(UPLOAD_BLANK)
+    } catch (e) {
+      setUploadError(e?.message || 'Upload failed. Please try again.')
+    } finally {
+      setUploadSaving(false)
+    }
+  }
+
   if (loading) return <div className="fa-loading">Loading…</div>
 
   const addAccountBody = (
@@ -176,6 +237,62 @@ export default function FinanceAccounts() {
           rows={2}
           value={addForm.notes}
           onChange={e => setAddForm(p => ({ ...p, notes: e.target.value }))}
+        />
+      </div>
+    </div>
+  )
+
+  const uploadFormBody = (
+    <div className="bm-add-form">
+      {uploadError && <p className="fa-upload-error">{uploadError}</p>}
+      {accounts.length === 0 && (
+        <p className="fa-upload-no-accounts">Add an account before uploading a statement.</p>
+      )}
+      <div className="form-row">
+        <label>Account</label>
+        <select
+          value={uploadForm.accountId}
+          disabled={accounts.length === 0}
+          onChange={e => setUploadForm(p => ({ ...p, accountId: e.target.value }))}
+        >
+          <option value="">— select —</option>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </div>
+      <div className="form-row">
+        <label>File <span className="form-optional">(CSV · max 20 MB)</span></label>
+        <label className="fa-file-picker">
+          <span>{uploadForm.file ? uploadForm.file.name : 'Choose file'}</span>
+          <input
+            type="file"
+            accept=".csv,text/csv,application/vnd.ms-excel,text/plain"
+            hidden
+            onChange={handleStatementFileChange}
+          />
+        </label>
+      </div>
+      <div className="form-row">
+        <label>Period from <span className="form-optional">(optional)</span></label>
+        <input
+          type="date"
+          value={uploadForm.periodFrom}
+          onChange={e => setUploadForm(p => ({ ...p, periodFrom: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Period to <span className="form-optional">(optional)</span></label>
+        <input
+          type="date"
+          value={uploadForm.periodTo}
+          onChange={e => setUploadForm(p => ({ ...p, periodTo: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea
+          rows={2}
+          value={uploadForm.notes}
+          onChange={e => setUploadForm(p => ({ ...p, notes: e.target.value }))}
         />
       </div>
     </div>
@@ -281,7 +398,29 @@ export default function FinanceAccounts() {
       )}
 
       <section className="fa-docs-section">
-        <h3 className="fa-docs-title">Statements</h3>
+        <div className="fa-docs-header">
+          <h3 className="fa-docs-title">Statements</h3>
+          <button
+            type="button"
+            className={`fa-upload-btn${showUpload ? ' fa-upload-btn--active' : ''}`}
+            onClick={() => { if (!showUpload) setShowUpload(true) }}
+            disabled={showUpload}
+          >
+            Upload statement
+          </button>
+        </div>
+
+        <CadencePanel
+          open={showUpload}
+          title="Upload statement"
+          body={uploadFormBody}
+          confirmLabel={uploadSaving ? 'Uploading…' : 'Upload'}
+          confirmClass="btn-primary"
+          confirmDisabled={uploadDisabled}
+          onConfirm={handleUploadStatement}
+          onCancel={() => { setShowUpload(false); setUploadForm(UPLOAD_BLANK); setUploadError(null) }}
+        />
+
         {statementDocs.length === 0 ? (
           <p className="fa-docs-empty">No statements uploaded yet.</p>
         ) : (

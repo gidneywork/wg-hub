@@ -6278,3 +6278,57 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 [data-theme="dark"] [data-cadence] .fa-add-error { color: var(--clay); }
+
+/* ── Finance Accounts: upload statement ─────────────────────────────── */
+[data-cadence] .fa-docs-header {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 20px;
+}
+[data-cadence] .fa-docs-header .fa-docs-title { margin-bottom: 0; }
+
+[data-cadence] .fa-upload-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: var(--type-caption);
+  font-family: var(--sans);
+  color: var(--text-quiet);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .fa-upload-btn:hover { color: var(--text); }
+[data-cadence] .fa-upload-btn--active { opacity: 0.4; cursor: default; pointer-events: none; }
+
+[data-cadence] .fa-upload-error {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--clay-deep);
+  margin: 0 0 var(--space-3);
+}
+[data-theme="dark"] [data-cadence] .fa-upload-error { color: var(--clay); }
+
+[data-cadence] .fa-upload-no-accounts {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-quiet);
+  margin: 0 0 var(--space-3);
+}
+
+[data-cadence] .fa-file-picker {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-paper);
+  color: var(--text-muted);
+  font-family: var(--sans);
+  font-size: var(--type-caption);
+  cursor: pointer;
+  transition: border-color 0.15s ease-out;
+  box-sizing: border-box;
+}
+[data-cadence] .fa-file-picker:hover { border-color: var(--border-strong); }
