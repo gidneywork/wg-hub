@@ -21,6 +21,7 @@ import CadenceJournal from './cadence/Journal'
 import CadenceTraining from './cadence/Training'
 import CadenceBiomarkers from './cadence/Biomarkers'
 import CadenceFinanceAccounts from './cadence/FinanceAccounts'
+import CadenceFinanceBills from './cadence/FinanceBills'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -385,6 +386,8 @@ export default function WGHub({ onSignOut }) {
         <CadenceBiomarkers />
       ) : view === 'finance-accounts' ? (
         <CadenceFinanceAccounts />
+      ) : view === 'finance-bills' ? (
+        <CadenceFinanceBills />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>

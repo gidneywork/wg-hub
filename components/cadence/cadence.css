@@ -6529,3 +6529,30 @@ html::-webkit-scrollbar-track { background: transparent; }
   transition: color 0.15s ease-out;
 }
 [data-cadence] .fa-rule-skip-btn:hover { color: var(--text); }
+
+/* ── Finance Bills: page shell ───────────────────────────────────── */
+[data-cadence] .fb-page { max-width: 800px; }
+
+[data-cadence] .fb-header {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+
+[data-cadence] .fb-title {
+  font-family: var(--display);
+  font-size: var(--type-h4);
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: var(--tracking-h3);
+}
+
+[data-cadence] .fb-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  text-align: center;
+  padding: 40px 0;
+  margin: 0;
+}
