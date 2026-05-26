@@ -6,9 +6,11 @@ import {
   loadCategoryRules,
   loadStatementDocuments,
   loadTransactions,
+  insertAccount,
 } from '../../lib/finance/db'
 import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
 import { formatPence } from '../../lib/finance/transactions'
+import FinanceFormOverlay from './finance/FinanceFormOverlay'
 
 const STATUS_LABELS = {
   pending:    'Pending',
@@ -25,6 +27,8 @@ function fmtUploadDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+const ADD_BLANK = { name: '', bank: '', account_type: '', bank_other_text: '', notes: '' }
+
 export default function FinanceAccounts() {
   const [accounts,      setAccounts     ] = useState([])
   const [categories,    setCategories   ] = useState([])
@@ -34,6 +38,11 @@ export default function FinanceAccounts() {
   const [expanded,      setExpanded     ] = useState(null)
   const [txLoadingFor,  setTxLoadingFor ] = useState(null)
   const [loading,       setLoading      ] = useState(true)
+
+  const [showAdd,   setShowAdd  ] = useState(false)
+  const [addForm,   setAddForm  ] = useState(ADD_BLANK)
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError,  setAddError ] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -73,12 +82,112 @@ export default function FinanceAccounts() {
     return categories.find(c => c.id === categoryId)?.name ?? null
   }
 
+  const addDisabled =
+    addSaving
+    || !addForm.name.trim()
+    || !addForm.bank
+    || !addForm.account_type
+    || (addForm.bank === 'other' && !addForm.bank_other_text.trim())
+
+  async function handleAddAccount() {
+    setAddSaving(true)
+    setAddError(null)
+    try {
+      const nextOrder = accounts.length === 0
+        ? 10
+        : Math.max(...accounts.map(a => a.display_order)) + 10
+      await insertAccount({
+        name:            addForm.name.trim(),
+        bank:            addForm.bank,
+        account_type:    addForm.account_type,
+        bank_other_text: addForm.bank === 'other' ? addForm.bank_other_text.trim() : null,
+        notes:           addForm.notes.trim() || null,
+        display_order:   nextOrder,
+      })
+      const accs = await loadAccounts()
+      setAccounts(accs)
+      setShowAdd(false)
+      setAddForm(ADD_BLANK)
+    } catch (e) {
+      setAddError(e?.message || 'Failed to save. Please try again.')
+    } finally {
+      setAddSaving(false)
+    }
+  }
+
   if (loading) return <div className="fa-loading">Loading…</div>
+
+  const addAccountBody = (
+    <div className="bm-add-form">
+      {addError && <p className="fa-add-error">{addError}</p>}
+      <div className="form-row">
+        <label>Account name</label>
+        <input
+          type="text"
+          value={addForm.name}
+          onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Bank</label>
+        <select
+          value={addForm.bank}
+          onChange={e => setAddForm(p => ({ ...p, bank: e.target.value, bank_other_text: '' }))}
+        >
+          <option value="">— select —</option>
+          <option value="lloyds">Lloyds</option>
+          <option value="barclays">Barclays</option>
+          <option value="first_direct">First Direct</option>
+          <option value="hsbc">HSBC</option>
+          <option value="monzo">Monzo</option>
+          <option value="nationwide">Nationwide</option>
+          <option value="natwest">NatWest</option>
+          <option value="santander">Santander</option>
+          <option value="starling">Starling</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      {addForm.bank === 'other' && (
+        <div className="form-row">
+          <label>Bank name</label>
+          <input
+            type="text"
+            value={addForm.bank_other_text}
+            onChange={e => setAddForm(p => ({ ...p, bank_other_text: e.target.value }))}
+          />
+        </div>
+      )}
+      <div className="form-row">
+        <label>Account type</label>
+        <select
+          value={addForm.account_type}
+          onChange={e => setAddForm(p => ({ ...p, account_type: e.target.value }))}
+        >
+          <option value="">— select —</option>
+          <option value="current">Current</option>
+          <option value="credit_card">Credit card</option>
+          <option value="savings">Savings</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea
+          rows={2}
+          value={addForm.notes}
+          onChange={e => setAddForm(p => ({ ...p, notes: e.target.value }))}
+        />
+      </div>
+    </div>
+  )
 
   return (
     <div className="fa-page">
       <div className="fa-header">
         <h2 className="fa-title">Accounts</h2>
+        <button type="button" className="fa-add-btn" onClick={() => setShowAdd(true)}>
+          Add account
+        </button>
       </div>
 
       {accounts.length === 0 ? (
@@ -177,6 +286,17 @@ export default function FinanceAccounts() {
           </ul>
         )}
       </section>
+
+      <FinanceFormOverlay
+        open={showAdd}
+        title="Add account"
+        body={addAccountBody}
+        confirmLabel={addSaving ? 'Saving…' : 'Add account'}
+        confirmDisabled={addDisabled}
+        dialogClass="dialog-wide"
+        onConfirm={handleAddAccount}
+        onCancel={() => { setShowAdd(false); setAddForm(ADD_BLANK); setAddError(null) }}
+      />
     </div>
   )
 }

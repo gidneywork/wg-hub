@@ -6222,3 +6222,26 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 [data-theme="dark"] [data-cadence] .fa-doc-status--imported { color: var(--moss); }
 [data-theme="dark"] [data-cadence] .fa-doc-status--failed   { color: var(--clay); }
+
+[data-cadence] .fa-add-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: var(--type-caption);
+  font-family: var(--sans);
+  color: var(--text-quiet);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+}
+
+[data-cadence] .fa-add-btn:hover { color: var(--text); }
+
+[data-cadence] .fa-add-error {
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-caption);
+  color: var(--clay-deep);
+}
+
+[data-theme="dark"] [data-cadence] .fa-add-error { color: var(--clay); }
