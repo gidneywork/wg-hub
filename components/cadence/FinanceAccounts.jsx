@@ -30,7 +30,7 @@ function fmtUploadDate(iso) {
 
 const ADD_BLANK    = { name: '', bank: '', account_type: '', bank_other_text: '', notes: '' }
 
-const ALLOWED_FINANCE_MIME = ['text/csv', 'application/vnd.ms-excel', 'text/plain']
+const ALLOWED_FINANCE_MIME = ['text/csv', 'application/vnd.ms-excel', 'text/plain', 'application/pdf']
 const MAX_STATEMENT_BYTES  = 20 * 1024 * 1024
 const UPLOAD_BLANK         = { accountId: '', file: null, periodFrom: '', periodTo: '', notes: '' }
 
@@ -260,12 +260,12 @@ export default function FinanceAccounts() {
         </select>
       </div>
       <div className="form-row">
-        <label>File <span className="form-optional">(CSV · max 20 MB)</span></label>
+        <label>File <span className="form-optional">(PDF or CSV · max 20 MB)</span></label>
         <label className="fa-file-picker">
           <span>{uploadForm.file ? uploadForm.file.name : 'Choose file'}</span>
           <input
             type="file"
-            accept=".csv,text/csv,application/vnd.ms-excel,text/plain"
+            accept=".csv,text/csv,application/vnd.ms-excel,text/plain,application/pdf,.pdf"
             hidden
             onChange={handleStatementFileChange}
           />
