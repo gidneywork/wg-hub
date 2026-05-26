@@ -8,9 +8,14 @@ import {
   loadTransactions,
   insertAccount,
   insertStatementDocument,
+  addTransaction,
+  updateTransaction,
+  insertCategoryRule,
+  applyRuleToExistingTransactions,
+  getStatementSignedUrl,
 } from '../../lib/finance/db'
 import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
-import { formatPence } from '../../lib/finance/transactions'
+import { formatPence, dedupeHash } from '../../lib/finance/transactions'
 import CadencePanel from './CadencePanel'
 
 const STATUS_LABELS = {
@@ -29,6 +34,7 @@ function fmtUploadDate(iso) {
 }
 
 const ADD_BLANK    = { name: '', bank: '', account_type: '', bank_other_text: '', notes: '' }
+const TX_BLANK     = { tx_date: '', description: '', merchant_clean: '', amount_str: '', direction: 'out', tx_type: '', category_id: '', notes: '' }
 
 const ALLOWED_FINANCE_MIME = ['text/csv', 'application/vnd.ms-excel', 'text/plain', 'application/pdf']
 const MAX_STATEMENT_BYTES  = 20 * 1024 * 1024
@@ -39,7 +45,7 @@ export default function FinanceAccounts() {
   const [categories,    setCategories   ] = useState([])
   const [rules,         setRules        ] = useState([])
   const [statementDocs, setStatementDocs] = useState([])
-  const [txCache,       setTxCache      ] = useState({})  // { [accountId]: { txs, balance } }
+  const [txCache,       setTxCache      ] = useState({})
   const [expanded,      setExpanded     ] = useState(null)
   const [txLoadingFor,  setTxLoadingFor ] = useState(null)
   const [loading,       setLoading      ] = useState(true)
@@ -56,6 +62,15 @@ export default function FinanceAccounts() {
 
   const [parsingDocId,   setParsingDocId  ] = useState(null)
   const [docParseErrors, setDocParseErrors] = useState({})
+
+  const [txPanelMode,      setTxPanelMode     ] = useState('closed')  // 'closed'|'add'|'edit'|'rule-confirm'
+  const [txPanelAccountId, setTxPanelAccountId] = useState(null)
+  const [txPanelRecord,    setTxPanelRecord   ] = useState(null)
+  const [txPanelForm,      setTxPanelForm     ] = useState(TX_BLANK)
+  const [txPanelSaving,    setTxPanelSaving   ] = useState(false)
+  const [txPanelError,     setTxPanelError    ] = useState(null)
+  const [createRuleChecked, setCreateRuleChecked] = useState(false)
+  const [ruleConfirmForm,   setRuleConfirmForm  ] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -95,6 +110,12 @@ export default function FinanceAccounts() {
     return categories.find(c => c.id === categoryId)?.name ?? null
   }
 
+  function bustTxCache(accountId) {
+    setTxCache(prev => { const n = { ...prev }; delete n[accountId]; return n })
+  }
+
+  // ── Account add ────────────────────────────────────────────────────────────
+
   const addDisabled =
     addSaving
     || !addForm.name.trim()
@@ -127,6 +148,8 @@ export default function FinanceAccounts() {
       setAddSaving(false)
     }
   }
+
+  // ── Statement upload ───────────────────────────────────────────────────────
 
   const uploadDisabled =
     uploadSaving
@@ -168,7 +191,7 @@ export default function FinanceAccounts() {
       const docs = await loadStatementDocuments()
       setStatementDocs(docs)
       const doc = docs.find(d => d.id === docId)
-      if (doc) setTxCache(prev => { const n = { ...prev }; delete n[doc.account_id]; return n })
+      if (doc) bustTxCache(doc.account_id)
     } catch (e) {
       setDocParseErrors(prev => ({ ...prev, [docId]: e.message || 'Parse failed.' }))
     } finally {
@@ -203,7 +226,156 @@ export default function FinanceAccounts() {
     }
   }
 
+  async function handleOpenStatement(doc) {
+    try {
+      const url = await getStatementSignedUrl(doc.file_url)
+      window.open(url, '_blank', 'noopener')
+    } catch (e) {
+      console.error('getStatementSignedUrl:', e)
+    }
+  }
+
+  // ── Transaction panel ──────────────────────────────────────────────────────
+
+  function handleOpenAddTx(accountId) {
+    setTxPanelMode('add')
+    setTxPanelAccountId(accountId)
+    setTxPanelRecord(null)
+    setTxPanelForm(TX_BLANK)
+    setCreateRuleChecked(false)
+    setRuleConfirmForm(null)
+    setTxPanelError(null)
+  }
+
+  function handleOpenEditTx(tx, accountId) {
+    setTxPanelMode('edit')
+    setTxPanelAccountId(accountId)
+    setTxPanelRecord(tx)
+    setTxPanelForm({
+      tx_date:        tx.tx_date,
+      description:    tx.description,
+      merchant_clean: tx.merchant_clean ?? '',
+      amount_str:     (Math.abs(Number(tx.amount_pence)) / 100).toFixed(2),
+      direction:      Number(tx.amount_pence) >= 0 ? 'in' : 'out',
+      tx_type:        tx.tx_type ?? '',
+      category_id:    tx.category_id ?? '',
+      notes:          tx.notes ?? '',
+    })
+    setCreateRuleChecked(false)
+    setRuleConfirmForm(null)
+    setTxPanelError(null)
+  }
+
+  function handleTxCancel() {
+    setTxPanelMode('closed')
+    setTxPanelAccountId(null)
+    setTxPanelRecord(null)
+    setTxPanelForm(TX_BLANK)
+    setTxPanelError(null)
+    setCreateRuleChecked(false)
+    setRuleConfirmForm(null)
+  }
+
+  async function handleTxSave() {
+    setTxPanelSaving(true)
+    setTxPanelError(null)
+    try {
+      const rawAmount  = parseFloat(txPanelForm.amount_str)
+      const amount_pence = Math.round(rawAmount * 100) * (txPanelForm.direction === 'out' ? -1 : 1)
+
+      if (txPanelMode === 'add') {
+        const hash = await dedupeHash(txPanelAccountId, txPanelForm.tx_date, amount_pence, txPanelForm.description)
+        await addTransaction({
+          account_id:     txPanelAccountId,
+          tx_date:        txPanelForm.tx_date,
+          description:    txPanelForm.description.trim(),
+          merchant_clean: txPanelForm.merchant_clean.trim() || null,
+          amount_pence,
+          tx_type:        txPanelForm.tx_type.trim() || null,
+          category_id:    txPanelForm.category_id || null,
+          notes:          txPanelForm.notes.trim() || null,
+          is_transfer:    false,
+          dedupe_hash:    hash,
+        })
+        bustTxCache(txPanelAccountId)
+        handleTxCancel()
+      } else {
+        const changes = {
+          tx_date:        txPanelForm.tx_date,
+          description:    txPanelForm.description.trim(),
+          merchant_clean: txPanelForm.merchant_clean.trim() || null,
+          amount_pence,
+          tx_type:        txPanelForm.tx_type.trim() || null,
+          category_id:    txPanelForm.category_id || null,
+          notes:          txPanelForm.notes.trim() || null,
+        }
+        // Recompute dedupe_hash if any of the three keyed fields changed
+        if (
+          changes.tx_date !== txPanelRecord.tx_date ||
+          amount_pence !== Number(txPanelRecord.amount_pence) ||
+          changes.description !== txPanelRecord.description
+        ) {
+          changes.dedupe_hash = await dedupeHash(txPanelAccountId, changes.tx_date, amount_pence, changes.description)
+        }
+        await updateTransaction(txPanelRecord.id, changes)
+        bustTxCache(txPanelAccountId)
+
+        if (createRuleChecked && txPanelForm.category_id) {
+          const matchField = txPanelForm.merchant_clean.trim() ? 'merchant_clean' : 'description'
+          const matchValue = matchField === 'merchant_clean'
+            ? txPanelForm.merchant_clean.trim()
+            : txPanelForm.description.trim()
+          setRuleConfirmForm({
+            category_id: txPanelForm.category_id,
+            match_type:  'contains',
+            match_field: matchField,
+            match_value: matchValue,
+            priority:    100,
+          })
+          setTxPanelMode('rule-confirm')
+        } else {
+          handleTxCancel()
+        }
+      }
+    } catch (e) {
+      setTxPanelError(e.message || 'Failed to save.')
+    } finally {
+      setTxPanelSaving(false)
+    }
+  }
+
+  async function handleRuleSave() {
+    setTxPanelSaving(true)
+    setTxPanelError(null)
+    try {
+      await insertCategoryRule(ruleConfirmForm)
+      await applyRuleToExistingTransactions(ruleConfirmForm, txPanelAccountId)
+      bustTxCache(txPanelAccountId)
+      handleTxCancel()
+    } catch (e) {
+      setTxPanelError(e.message || 'Failed to create rule.')
+    } finally {
+      setTxPanelSaving(false)
+    }
+  }
+
+  function handleRuleSkip() {
+    handleTxCancel()
+  }
+
+  // ── Disabled guards ────────────────────────────────────────────────────────
+
+  const txFormDisabled =
+    txPanelSaving
+    || !txPanelForm.tx_date
+    || !txPanelForm.description.trim()
+    || !txPanelForm.amount_str.trim()
+    || isNaN(parseFloat(txPanelForm.amount_str))
+    || parseFloat(txPanelForm.amount_str) <= 0
+
   if (loading) return <div className="fa-loading">Loading…</div>
+
+  // ── Panel bodies ───────────────────────────────────────────────────────────
 
   const addAccountBody = (
     <div className="bm-add-form">
@@ -325,6 +497,124 @@ export default function FinanceAccounts() {
     </div>
   )
 
+  const txFormAccountName = accounts.find(a => a.id === txPanelAccountId)?.name ?? ''
+
+  const txFormBody = (
+    <div className="bm-add-form fa-tx-form">
+      {txPanelError && <p className="fa-add-error">{txPanelError}</p>}
+      {txFormAccountName && (
+        <p className="fa-tx-form-account">{txFormAccountName}</p>
+      )}
+      <div className="form-row">
+        <label>Date</label>
+        <input
+          type="date"
+          value={txPanelForm.tx_date}
+          onChange={e => setTxPanelForm(p => ({ ...p, tx_date: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Description</label>
+        <input
+          type="text"
+          value={txPanelForm.description}
+          onChange={e => setTxPanelForm(p => ({ ...p, description: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Merchant <span className="form-optional">(optional)</span></label>
+        <input
+          type="text"
+          value={txPanelForm.merchant_clean}
+          onChange={e => setTxPanelForm(p => ({ ...p, merchant_clean: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Amount</label>
+        <div className="fa-amount-row">
+          <div className="fa-direction-toggle">
+            <button
+              type="button"
+              className={`fa-direction-btn${txPanelForm.direction === 'out' ? ' fa-direction-btn--active' : ''}`}
+              onClick={() => setTxPanelForm(p => ({ ...p, direction: 'out' }))}
+            >
+              Out
+            </button>
+            <button
+              type="button"
+              className={`fa-direction-btn${txPanelForm.direction === 'in' ? ' fa-direction-btn--active' : ''}`}
+              onClick={() => setTxPanelForm(p => ({ ...p, direction: 'in' }))}
+            >
+              In
+            </button>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={txPanelForm.amount_str}
+            placeholder="0.00"
+            onChange={e => setTxPanelForm(p => ({ ...p, amount_str: e.target.value }))}
+          />
+        </div>
+      </div>
+      <div className="form-row">
+        <label>Category <span className="form-optional">(optional)</span></label>
+        <select
+          value={txPanelForm.category_id}
+          onChange={e => setTxPanelForm(p => ({ ...p, category_id: e.target.value }))}
+        >
+          <option value="">— uncategorised —</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div className="form-row">
+        <label>Type <span className="form-optional">(optional)</span></label>
+        <input
+          type="text"
+          value={txPanelForm.tx_type}
+          onChange={e => setTxPanelForm(p => ({ ...p, tx_type: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea
+          rows={2}
+          value={txPanelForm.notes}
+          onChange={e => setTxPanelForm(p => ({ ...p, notes: e.target.value }))}
+        />
+      </div>
+      {txPanelMode === 'edit' && (
+        <div className="form-row form-row--checkbox">
+          <input
+            type="checkbox"
+            id="fa-create-rule"
+            checked={createRuleChecked}
+            onChange={e => setCreateRuleChecked(e.target.checked)}
+          />
+          <label htmlFor="fa-create-rule">Create categorisation rule from this edit</label>
+        </div>
+      )}
+    </div>
+  )
+
+  const ruleConfirmBody = ruleConfirmForm ? (
+    <div className="fa-rule-confirm">
+      {txPanelError && <p className="fa-add-error">{txPanelError}</p>}
+      <p className="fa-rule-confirm-label">
+        Transactions where <strong>{ruleConfirmForm.match_field === 'merchant_clean' ? 'merchant' : 'description'}</strong> contains &ldquo;<strong>{ruleConfirmForm.match_value}</strong>&rdquo; will be assigned to <strong>{getCategoryName(ruleConfirmForm.category_id)}</strong>.
+      </p>
+      <p className="fa-rule-confirm-label">
+        Existing uncategorised transactions that match will also be updated.
+      </p>
+      <button type="button" className="fa-rule-skip-btn" onClick={handleRuleSkip}>
+        Skip — save edit only
+      </button>
+    </div>
+  ) : null
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="fa-page">
       <div className="fa-header">
@@ -348,6 +638,29 @@ export default function FinanceAccounts() {
         confirmDisabled={addDisabled}
         onConfirm={handleAddAccount}
         onCancel={() => { setShowAdd(false); setAddForm(ADD_BLANK); setAddError(null) }}
+      />
+
+      <CadencePanel
+        open={txPanelMode === 'add' || txPanelMode === 'edit'}
+        title={txPanelMode === 'edit' ? 'Edit transaction' : 'Add transaction'}
+        body={txFormBody}
+        confirmLabel={txPanelSaving ? 'Saving…' : (txPanelMode === 'edit' ? 'Save' : 'Add')}
+        confirmClass="btn-primary"
+        confirmDisabled={txFormDisabled}
+        onConfirm={handleTxSave}
+        onCancel={handleTxCancel}
+      />
+
+      <CadencePanel
+        open={txPanelMode === 'rule-confirm'}
+        title="Create rule"
+        body={ruleConfirmBody}
+        confirmLabel={txPanelSaving ? 'Creating…' : 'Create rule'}
+        confirmClass="btn-primary"
+        confirmDisabled={txPanelSaving}
+        onConfirm={handleRuleSave}
+        cancelLabel={null}
+        onCancel={handleRuleSkip}
       />
 
       {accounts.length === 0 ? (
@@ -380,6 +693,15 @@ export default function FinanceAccounts() {
 
                 {isExpanded && (
                   <div className="fa-account-body">
+                    <div className="fa-account-body-header">
+                      <button
+                        type="button"
+                        className="fa-add-tx-btn"
+                        onClick={() => handleOpenAddTx(account.id)}
+                      >
+                        Add transaction
+                      </button>
+                    </div>
                     {txLoadingFor === account.id ? (
                       <p className="fa-tx-loading">Loading…</p>
                     ) : !cached ? (
@@ -394,10 +716,11 @@ export default function FinanceAccounts() {
                             <th>Description</th>
                             <th>Category</th>
                             <th className="fa-tx-amount-col">Amount</th>
+                            <th className="fa-tx-edit-col"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {cached.txs.slice(0, 50).map(tx => {
+                          {cached.txs.map(tx => {
                             const catName  = getCategoryName(tx.category_id)
                             const isCredit = tx.amount_pence >= 0
                             return (
@@ -409,6 +732,18 @@ export default function FinanceAccounts() {
                                 </td>
                                 <td className={`fa-tx-amount${isCredit ? ' fa-tx-amount--credit' : ' fa-tx-amount--debit'}`}>
                                   {formatPence(tx.amount_pence)}
+                                </td>
+                                <td className="fa-tx-edit-col">
+                                  <button
+                                    type="button"
+                                    className="fa-tx-edit-btn"
+                                    onClick={() => handleOpenEditTx(tx, account.id)}
+                                    aria-label="Edit transaction"
+                                  >
+                                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11.5 2.5a1.41 1.41 0 0 1 2 2L5 13H3v-2L11.5 2.5z"/>
+                                    </svg>
+                                  </button>
                                 </td>
                               </tr>
                             )
@@ -457,7 +792,14 @@ export default function FinanceAccounts() {
               return (
                 <li key={doc.id} className="fa-doc-row">
                   <span className="fa-doc-date">{fmtUploadDate(doc.uploaded_at)}</span>
-                  <span className="fa-doc-filename">{doc.file_name}</span>
+                  <button
+                    type="button"
+                    className="fa-doc-filename-btn"
+                    onClick={() => handleOpenStatement(doc)}
+                    title={doc.file_name}
+                  >
+                    {doc.file_name}
+                  </button>
                   <span className="fa-doc-account">{account?.name ?? '—'}</span>
                   {parsingDocId === doc.id ? (
                     <span className="fa-doc-status fa-doc-status--processing fa-parse-btn--loading">Parsing…</span>

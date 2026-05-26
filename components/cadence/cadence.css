@@ -6366,3 +6366,166 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--clay-deep);
 }
 [data-theme="dark"] [data-cadence] .fa-doc-error { color: var(--clay); }
+
+/* ── Finance Accounts: account body header ───────────────────────── */
+[data-cadence] .fa-account-body-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 0 8px;
+}
+
+[data-cadence] .fa-add-tx-btn {
+  padding: 4px 12px;
+  font-size: var(--type-caption);
+  font-family: var(--sans);
+  color: var(--text-quiet);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .fa-add-tx-btn:hover { color: var(--text); }
+
+/* ── Finance Accounts: transaction edit column ───────────────────── */
+[data-cadence] .fa-tx-table th.fa-tx-edit-col,
+[data-cadence] .fa-tx-table td.fa-tx-edit-col {
+  width: 28px;
+  padding-right: 0;
+  text-align: right;
+}
+
+[data-cadence] .fa-tx-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s ease-out;
+  margin-left: auto;
+}
+[data-cadence] .fa-tx-table tr:hover .fa-tx-edit-btn { opacity: 1; }
+[data-cadence] .fa-tx-edit-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Finance Accounts: file name link ────────────────────────────── */
+[data-cadence] .fa-doc-filename-btn {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .fa-doc-filename-btn:hover { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .fa-doc-filename-btn:hover { color: var(--moss); }
+
+/* ── Finance Accounts: transaction form ──────────────────────────── */
+[data-cadence] .fa-tx-form-account {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+[data-cadence] .fa-amount-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+[data-cadence] .fa-amount-row input[type="number"] {
+  flex: 1;
+  width: auto;
+}
+
+[data-cadence] .fa-direction-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+[data-cadence] .fa-direction-btn {
+  padding: 7px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-quiet);
+  background: var(--bg-paper);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease-out, color 0.15s ease-out;
+}
+[data-cadence] .fa-direction-btn + .fa-direction-btn {
+  border-left: 1px solid var(--border);
+}
+[data-cadence] .fa-direction-btn--active {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+[data-cadence] .bm-add-form .form-row--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+[data-cadence] .bm-add-form .form-row--checkbox label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--type-caption);
+  cursor: pointer;
+}
+[data-cadence] .bm-add-form .form-row--checkbox input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  accent-color: var(--moss);
+  flex-shrink: 0;
+}
+
+/* ── Finance Accounts: rule confirmation ─────────────────────────── */
+[data-cadence] .fa-rule-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+[data-cadence] .fa-rule-confirm-label {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+[data-cadence] .fa-rule-confirm-label strong {
+  color: var(--text);
+  font-weight: 500;
+}
+[data-cadence] .fa-rule-skip-btn {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  align-self: flex-start;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .fa-rule-skip-btn:hover { color: var(--text); }
