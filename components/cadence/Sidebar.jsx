@@ -24,7 +24,14 @@ const NAV_HEALTH = [
   ) },
 ]
 
-const NAV_FINANCE = []
+const NAV_FINANCE = [
+  { view: 'finance-accounts', label: 'Accounts', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="14" rx="2"/>
+      <path d="M2 10h20"/>
+    </svg>
+  ) },
+]
 
 const NAV_PRODUCTIVITY = [
   { view: 'journal', label: 'Journal', icon: (

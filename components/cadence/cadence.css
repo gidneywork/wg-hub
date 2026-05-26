@@ -5960,3 +5960,265 @@ html::-webkit-scrollbar-track { background: transparent; }
   margin: 6px 0 0;
   line-height: 1.5;
 }
+
+/* ─── Finance — Accounts ──────────────────────────────────────────────────── */
+
+[data-cadence] .fa-loading {
+  padding: 48px 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+
+[data-cadence] .fa-page { max-width: 800px; }
+
+[data-cadence] .fa-header {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+
+[data-cadence] .fa-title {
+  font-family: var(--display);
+  font-size: var(--type-h4);
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: var(--tracking-h3);
+}
+
+[data-cadence] .fa-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  text-align: center;
+  padding: 40px 0;
+  margin: 0;
+}
+
+[data-cadence] .fa-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 48px;
+}
+
+[data-cadence] .fa-account-row { border-bottom: 1px solid var(--border); }
+[data-cadence] .fa-account-row:first-child { border-top: 1px solid var(--border); }
+
+[data-cadence] .fa-account-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+[data-cadence] .fa-account-header:hover { background: var(--bg-elevated); }
+[data-cadence] .fa-account-row--open .fa-account-header { background: var(--bg-elevated); }
+
+[data-cadence] .fa-account-name {
+  flex: 1;
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text);
+}
+
+[data-cadence] .fa-account-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-cadence] .fa-account-bank {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+[data-cadence] .fa-account-type {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  color: var(--text-quiet);
+}
+
+[data-cadence] .fa-account-balance {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 72px;
+  text-align: right;
+}
+
+[data-cadence] .fa-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+  transition: transform 0.2s ease-out;
+  flex-shrink: 0;
+}
+
+[data-cadence] .fa-chevron--open { transform: rotate(180deg); }
+
+[data-cadence] .fa-account-body {
+  padding: 0 0 16px;
+}
+
+[data-cadence] .fa-tx-loading,
+[data-cadence] .fa-tx-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  padding: 16px 0;
+  margin: 0;
+}
+
+[data-cadence] .fa-tx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+}
+
+[data-cadence] .fa-tx-table th {
+  text-align: left;
+  font-size: var(--type-label);
+  color: var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+[data-cadence] .fa-tx-table th.fa-tx-amount-col { text-align: right; }
+
+[data-cadence] .fa-tx-table td {
+  padding: 8px 8px 8px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
+}
+
+[data-cadence] .fa-tx-table tr:last-child td { border-bottom: none; }
+
+[data-cadence] .fa-tx-date {
+  white-space: nowrap;
+  color: var(--text-quiet);
+  min-width: 90px;
+}
+
+[data-cadence] .fa-tx-desc {
+  color: var(--text);
+  max-width: 260px;
+}
+
+[data-cadence] .fa-tx-cat { white-space: nowrap; }
+
+[data-cadence] .fa-cat-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+[data-cadence] .fa-tx-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+[data-cadence] .fa-tx-amount--credit { color: var(--moss-deep); }
+[data-cadence] .fa-tx-amount--debit  { color: var(--text); }
+
+[data-theme="dark"] [data-cadence] .fa-tx-amount--credit { color: var(--moss); }
+
+/* ─── Finance — Statements ────────────────────────────────────────────────── */
+
+[data-cadence] .fa-docs-section { margin-top: 48px; }
+
+[data-cadence] .fa-docs-title {
+  font-family: var(--display);
+  font-size: var(--type-h4);
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 20px;
+  letter-spacing: var(--tracking-h3);
+}
+
+[data-cadence] .fa-docs-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  padding: 20px 0;
+  margin: 0;
+}
+
+[data-cadence] .fa-docs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+[data-cadence] .fa-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+[data-cadence] .fa-doc-date {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+[data-cadence] .fa-doc-filename {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-cadence] .fa-doc-account {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+[data-cadence] .fa-doc-status {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+[data-cadence] .fa-doc-status--pending    { color: var(--text-quiet);  background: var(--bg-elevated); }
+[data-cadence] .fa-doc-status--processing { color: var(--sand);        background: var(--bg-elevated); }
+[data-cadence] .fa-doc-status--imported   { color: var(--moss-deep);   background: var(--bg-elevated); }
+[data-cadence] .fa-doc-status--failed     { color: var(--clay-deep);   background: var(--bg-elevated); }
+
+[data-theme="dark"] [data-cadence] .fa-doc-status--imported { color: var(--moss); }
+[data-theme="dark"] [data-cadence] .fa-doc-status--failed   { color: var(--clay); }
