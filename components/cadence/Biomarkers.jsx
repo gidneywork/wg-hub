@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '../../lib/db'
+import { supabase } from '../../lib/supabase'
 import { SUB_MARKERS, getStatus, getNextDue, fmtDue } from '../../lib/biomarkers'
 import CadenceDialog from './CadenceDialog'
 
@@ -17,12 +18,24 @@ const PILL_LABELS = {
   due:          'Due',
 }
 
+const PROVIDER_LABELS = {
+  thriva:      'Thriva',
+  medichecks:  'Medichecks',
+  randox:      'Randox',
+  nhs:         'NHS',
+  other:       'Other',
+}
+
+const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+
 function todayIso() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-const DIALOG_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
+const DIALOG_BLANK  = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
+const UPLOAD_BLANK  = { open: false, file: null, date: '', provider: '', providerOther: '', notes: '', uploading: false, error: null }
 
 function StatusPill({ status }) {
   if (status === 'logged' || status === 'no_data' || status === 'due') return null
@@ -148,12 +161,13 @@ function CadenceToggle({ def, latestResult, onToggle }) {
 }
 
 export default function CadenceBiomarkers() {
-  const [defs,      setDefs     ] = useState([])
-  const [results,   setResults  ] = useState([])
-  const [documents, setDocuments] = useState([])
-  const [loading,   setLoading  ] = useState(true)
-  const [expanded,  setExpanded ] = useState({})
-  const [addDialog, setAddDialog] = useState(DIALOG_BLANK)
+  const [defs,         setDefs        ] = useState([])
+  const [results,      setResults     ] = useState([])
+  const [documents,    setDocuments   ] = useState([])
+  const [loading,      setLoading     ] = useState(true)
+  const [expanded,     setExpanded    ] = useState({})
+  const [addDialog,    setAddDialog   ] = useState(DIALOG_BLANK)
+  const [uploadDialog, setUploadDialog] = useState(UPLOAD_BLANK)
 
   useEffect(() => {
     ;(async () => {
@@ -185,15 +199,15 @@ export default function CadenceBiomarkers() {
     return map
   }, [defs])
 
-  // Dialog state derivations
-  const dialogDef        = defs.find(d => d.key === addDialog.key) ?? null
-  const dialogSubMap     = dialogDef ? (SUB_MARKERS[dialogDef.key] ?? null) : null
+  // ── Add Result dialog state derivations ─────────────────────────────
+  const dialogDef         = defs.find(d => d.key === addDialog.key) ?? null
+  const dialogSubMap      = dialogDef ? (SUB_MARKERS[dialogDef.key] ?? null) : null
   const dialogQualitative = dialogDef?.target_direction === 'qualitative'
-  const needsSubKey      = !!dialogSubMap
-  const valueReady       = dialogQualitative && !dialogSubMap
+  const needsSubKey       = !!dialogSubMap
+  const valueReady        = dialogQualitative && !dialogSubMap
     ? addDialog.valueText.trim() !== ''
     : addDialog.value.trim() !== ''
-  const confirmDisabled  = !addDialog.date || !valueReady || (needsSubKey && !addDialog.subKey)
+  const addConfirmDisabled = !addDialog.date || !valueReady || (needsSubKey && !addDialog.subKey)
 
   async function handleAddResult() {
     try {
@@ -224,8 +238,50 @@ export default function CadenceBiomarkers() {
     }
   }
 
-  // Form body for the Add Result dialog
-  const dialogBody = dialogDef ? (
+  // ── Upload dialog handlers ───────────────────────────────────────────
+  function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ALLOWED_MIME.includes(file.type)) {
+      setUploadDialog(p => ({ ...p, file: null, error: 'Unsupported file type. Use PDF, JPEG, PNG, or HEIC.' }))
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setUploadDialog(p => ({ ...p, file: null, error: 'File too large. Maximum 10 MB.' }))
+      e.target.value = ''
+      return
+    }
+    setUploadDialog(p => ({ ...p, file, error: null }))
+  }
+
+  async function handleUpload() {
+    setUploadDialog(p => ({ ...p, uploading: true, error: null }))
+    try {
+      await db.insertBiomarkerDocument({
+        file:                uploadDialog.file,
+        measured_date:       uploadDialog.date,
+        provider:            uploadDialog.provider,
+        provider_other_text: uploadDialog.provider === 'other' ? uploadDialog.providerOther : null,
+        notes:               uploadDialog.notes || null,
+      })
+      const docs = await db.loadBiomarkerDocuments()
+      setDocuments(docs)
+      setUploadDialog(UPLOAD_BLANK)
+    } catch (e) {
+      setUploadDialog(p => ({ ...p, uploading: false, error: e?.message || 'Upload failed. Please try again.' }))
+    }
+  }
+
+  async function openDocument(doc) {
+    const { data, error } = await supabase.storage
+      .from('biomarker-documents')
+      .createSignedUrl(doc.file_url, 3600)
+    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+  }
+
+  // ── Add Result dialog body ───────────────────────────────────────────
+  const addDialogBody = dialogDef ? (
     <div className="bm-add-form">
       {dialogSubMap && (
         <div className="form-row">
@@ -301,6 +357,74 @@ export default function CadenceBiomarkers() {
     </div>
   ) : null
 
+  // ── Upload Report dialog body ────────────────────────────────────────
+  const uploadDialogBody = (
+    <div className="bm-add-form">
+      {uploadDialog.error && (
+        <p className="bm-upload-error">{uploadDialog.error}</p>
+      )}
+      <div className="form-row">
+        <label>File <span className="form-optional">(PDF, JPEG, PNG, HEIC · max 10 MB)</span></label>
+        <label className="bm-file-picker">
+          <span>{uploadDialog.file ? uploadDialog.file.name : 'Choose file'}</span>
+          <input
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/heic"
+            hidden
+            onChange={handleFileChange}
+          />
+        </label>
+      </div>
+      <div className="form-row">
+        <label>Date measured</label>
+        <input
+          type="date"
+          value={uploadDialog.date}
+          onChange={e => setUploadDialog(p => ({ ...p, date: e.target.value }))}
+        />
+      </div>
+      <div className="form-row">
+        <label>Provider</label>
+        <select
+          value={uploadDialog.provider}
+          onChange={e => setUploadDialog(p => ({ ...p, provider: e.target.value }))}
+        >
+          <option value="">— select —</option>
+          <option value="thriva">Thriva</option>
+          <option value="medichecks">Medichecks</option>
+          <option value="randox">Randox</option>
+          <option value="nhs">NHS</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      {uploadDialog.provider === 'other' && (
+        <div className="form-row">
+          <label>Provider name</label>
+          <input
+            type="text"
+            value={uploadDialog.providerOther}
+            onChange={e => setUploadDialog(p => ({ ...p, providerOther: e.target.value }))}
+          />
+        </div>
+      )}
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea
+          rows={2}
+          value={uploadDialog.notes}
+          onChange={e => setUploadDialog(p => ({ ...p, notes: e.target.value }))}
+        />
+      </div>
+    </div>
+  )
+
+  const uploadConfirmDisabled =
+    !uploadDialog.file
+    || !uploadDialog.date
+    || !uploadDialog.provider
+    || (uploadDialog.provider === 'other' && !uploadDialog.providerOther.trim())
+    || uploadDialog.uploading
+
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
   })
@@ -317,7 +441,16 @@ export default function CadenceBiomarkers() {
     <main>
       <header className="header r r-1">
         <h1 className="greeting">Biomarkers</h1>
-        <span className="stamp">{today}</span>
+        <div className="bm-header-right">
+          <button
+            type="button"
+            className="bm-upload-btn"
+            onClick={() => setUploadDialog({ ...UPLOAD_BLANK, open: true })}
+          >
+            Upload report
+          </button>
+          <span className="stamp">{today}</span>
+        </div>
       </header>
 
       {SECTIONS.map((section, si) => {
@@ -413,15 +546,57 @@ export default function CadenceBiomarkers() {
         )
       })}
 
+      <div className="bm-section r r-5">
+        <div className="bm-section-eyebrow">Reports</div>
+        <div className="bm-docs-list">
+          {documents.length === 0 ? (
+            <p className="bm-docs-empty">No reports uploaded yet.</p>
+          ) : (
+            documents.map(doc => {
+              const providerLabel = doc.provider === 'other'
+                ? (doc.provider_other_text || 'Other')
+                : (PROVIDER_LABELS[doc.provider] || doc.provider)
+              return (
+                <div key={doc.id} className="bm-doc-row">
+                  <div className="bm-doc-meta">
+                    <span className="bm-doc-provider">{providerLabel}</span>
+                    <span className="bm-doc-date">{fmtDate(doc.measured_date)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="bm-doc-file"
+                    onClick={() => openDocument(doc)}
+                  >
+                    {doc.file_name}
+                  </button>
+                  {doc.notes && <p className="bm-doc-notes">{doc.notes}</p>}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+
       <CadenceDialog
         open={addDialog.key !== null}
         title={dialogDef ? `Add result — ${dialogDef.name}` : 'Add result'}
-        body={dialogBody}
+        body={addDialogBody}
         confirmLabel="Save"
         confirmClass="btn-primary"
-        confirmDisabled={confirmDisabled}
+        confirmDisabled={addConfirmDisabled}
         onConfirm={handleAddResult}
         onCancel={() => setAddDialog(DIALOG_BLANK)}
+      />
+
+      <CadenceDialog
+        open={uploadDialog.open}
+        title="Upload report"
+        body={uploadDialogBody}
+        confirmLabel={uploadDialog.uploading ? 'Uploading…' : 'Upload'}
+        confirmClass="btn-primary"
+        confirmDisabled={uploadConfirmDisabled}
+        onConfirm={handleUpload}
+        onCancel={() => setUploadDialog(UPLOAD_BLANK)}
       />
     </main>
   )

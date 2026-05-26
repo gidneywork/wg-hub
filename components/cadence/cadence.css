@@ -5851,3 +5851,112 @@ html::-webkit-scrollbar-track { background: transparent; }
   outline: none;
   border-color: var(--moss);
 }
+
+/* ── Biomarkers: page header ────────────────────────────────────────── */
+[data-cadence] .bm-header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+[data-cadence] .bm-upload-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-quiet);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+  white-space: nowrap;
+}
+[data-cadence] .bm-upload-btn:hover { color: var(--text); }
+
+/* ── Biomarkers: file picker ────────────────────────────────────────── */
+[data-cadence] .bm-file-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-paper);
+  color: var(--text-muted);
+  font-family: var(--ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease-out;
+  box-sizing: border-box;
+}
+[data-cadence] .bm-file-picker:hover { border-color: var(--border-strong); }
+
+/* ── Biomarkers: upload error ───────────────────────────────────────── */
+[data-cadence] .bm-upload-error {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--clay-deep);
+  margin: 0 0 4px;
+}
+[data-theme="dark"] [data-cadence] .bm-upload-error { color: var(--clay); }
+
+/* ── Biomarkers: documents panel ────────────────────────────────────── */
+[data-cadence] .bm-docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+[data-cadence] .bm-docs-empty {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin: 0;
+  padding: 16px 0;
+}
+[data-cadence] .bm-doc-row {
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--border);
+}
+[data-cadence] .bm-doc-row:first-child { border-top: 1px dashed var(--border); }
+[data-cadence] .bm-doc-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+[data-cadence] .bm-doc-provider {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-quiet);
+}
+[data-cadence] .bm-doc-date {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+[data-cadence] .bm-doc-file {
+  display: block;
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--moss-deep);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease-out;
+}
+[data-theme="dark"] [data-cadence] .bm-doc-file { color: var(--moss); }
+[data-cadence] .bm-doc-file:hover { color: var(--text); }
+[data-cadence] .bm-doc-notes {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
