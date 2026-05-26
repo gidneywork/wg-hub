@@ -3,7 +3,7 @@ import { extractTransactionsFromPdf } from '../../../../lib/finance/extraction'
 import { dedupeHash, applyRules } from '../../../../lib/finance/transactions'
 import { insertTransactions } from '../../../../lib/finance/db'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 async function failDoc(docId, message) {
   try {
