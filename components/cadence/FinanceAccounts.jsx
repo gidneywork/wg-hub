@@ -54,6 +54,9 @@ export default function FinanceAccounts() {
   const [uploadSaving, setUploadSaving] = useState(false)
   const [uploadError,  setUploadError ] = useState(null)
 
+  const [parsingDocId,   setParsingDocId  ] = useState(null)
+  const [docParseErrors, setDocParseErrors] = useState({})
+
   useEffect(() => {
     Promise.all([
       loadAccounts(),
@@ -147,6 +150,30 @@ export default function FinanceAccounts() {
     }
     setUploadError(null)
     setUploadForm(p => ({ ...p, file }))
+  }
+
+  async function handleParseStatement(docId) {
+    setParsingDocId(docId)
+    setDocParseErrors(prev => { const n = { ...prev }; delete n[docId]; return n })
+    try {
+      const res = await fetch('/api/finance/parse-statement', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ documentId: docId }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.status === 'failed') {
+        setDocParseErrors(prev => ({ ...prev, [docId]: json.error_detail || 'Parse failed.' }))
+      }
+      const docs = await loadStatementDocuments()
+      setStatementDocs(docs)
+      const doc = docs.find(d => d.id === docId)
+      if (doc) setTxCache(prev => { const n = { ...prev }; delete n[doc.account_id]; return n })
+    } catch (e) {
+      setDocParseErrors(prev => ({ ...prev, [docId]: e.message || 'Parse failed.' }))
+    } finally {
+      setParsingDocId(null)
+    }
   }
 
   async function handleUploadStatement() {
@@ -432,9 +459,34 @@ export default function FinanceAccounts() {
                   <span className="fa-doc-date">{fmtUploadDate(doc.uploaded_at)}</span>
                   <span className="fa-doc-filename">{doc.file_name}</span>
                   <span className="fa-doc-account">{account?.name ?? '—'}</span>
-                  <span className={`fa-doc-status fa-doc-status--${doc.status}`}>
-                    {STATUS_LABELS[doc.status] ?? doc.status}
-                  </span>
+                  {parsingDocId === doc.id ? (
+                    <span className="fa-doc-status fa-doc-status--processing fa-parse-btn--loading">Parsing…</span>
+                  ) : doc.status === 'imported' ? (
+                    <span className="fa-doc-status fa-doc-status--imported">
+                      Imported{doc.row_count != null ? ` · ${doc.row_count}` : ''}
+                    </span>
+                  ) : doc.status === 'pending' || doc.status === 'failed' ? (
+                    <>
+                      <span className={`fa-doc-status fa-doc-status--${doc.status}`}>
+                        {STATUS_LABELS[doc.status]}
+                      </span>
+                      <button
+                        type="button"
+                        className="fa-parse-btn"
+                        onClick={() => handleParseStatement(doc.id)}
+                        disabled={parsingDocId !== null}
+                      >
+                        {doc.status === 'failed' ? 'Retry' : 'Parse'}
+                      </button>
+                    </>
+                  ) : (
+                    <span className={`fa-doc-status fa-doc-status--${doc.status}`}>
+                      {STATUS_LABELS[doc.status] ?? doc.status}
+                    </span>
+                  )}
+                  {docParseErrors[doc.id] && (
+                    <p className="fa-doc-error">{docParseErrors[doc.id]}</p>
+                  )}
                 </li>
               )
             })}

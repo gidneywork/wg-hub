@@ -6332,3 +6332,37 @@ html::-webkit-scrollbar-track { background: transparent; }
   box-sizing: border-box;
 }
 [data-cadence] .fa-file-picker:hover { border-color: var(--border-strong); }
+
+/* ── Finance Accounts: parse button ──────────────────────────────── */
+[data-cadence] .fa-parse-btn {
+  padding: 4px 12px;
+  font-size: var(--type-caption);
+  font-family: var(--sans);
+  color: var(--text-quiet);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .fa-parse-btn:hover    { color: var(--text); }
+[data-cadence] .fa-parse-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+
+[data-cadence] .fa-parse-btn--loading { animation: fa-pulse 1.2s ease-in-out infinite; }
+
+@keyframes fa-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Finance Accounts: per-row parse error ───────────────────────── */
+[data-cadence] .fa-doc-row { flex-wrap: wrap; }
+
+[data-cadence] .fa-doc-error {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--clay-deep);
+}
+[data-theme="dark"] [data-cadence] .fa-doc-error { color: var(--clay); }
