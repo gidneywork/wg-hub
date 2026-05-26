@@ -10,7 +10,7 @@ import {
 } from '../../lib/finance/db'
 import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
 import { formatPence } from '../../lib/finance/transactions'
-import FinanceFormOverlay from './finance/FinanceFormOverlay'
+import CadencePanel from './CadencePanel'
 
 const STATUS_LABELS = {
   pending:    'Pending',
@@ -185,10 +185,26 @@ export default function FinanceAccounts() {
     <div className="fa-page">
       <div className="fa-header">
         <h2 className="fa-title">Accounts</h2>
-        <button type="button" className="fa-add-btn" onClick={() => setShowAdd(true)}>
+        <button
+          type="button"
+          className={`fa-add-btn${showAdd ? ' fa-add-btn--active' : ''}`}
+          onClick={() => { if (!showAdd) setShowAdd(true) }}
+          disabled={showAdd}
+        >
           Add account
         </button>
       </div>
+
+      <CadencePanel
+        open={showAdd}
+        title="Add account"
+        body={addAccountBody}
+        confirmLabel={addSaving ? 'Saving…' : 'Add account'}
+        confirmClass="btn-primary"
+        confirmDisabled={addDisabled}
+        onConfirm={handleAddAccount}
+        onCancel={() => { setShowAdd(false); setAddForm(ADD_BLANK); setAddError(null) }}
+      />
 
       {accounts.length === 0 ? (
         <p className="fa-empty">No accounts yet.</p>
@@ -287,16 +303,6 @@ export default function FinanceAccounts() {
         )}
       </section>
 
-      <FinanceFormOverlay
-        open={showAdd}
-        title="Add account"
-        body={addAccountBody}
-        confirmLabel={addSaving ? 'Saving…' : 'Add account'}
-        confirmDisabled={addDisabled}
-        dialogClass="dialog-wide"
-        onConfirm={handleAddAccount}
-        onCancel={() => { setShowAdd(false); setAddForm(ADD_BLANK); setAddError(null) }}
-      />
     </div>
   )
 }
