@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '../../lib/db'
 import { SUB_MARKERS, getStatus, getNextDue, fmtDue } from '../../lib/biomarkers'
+import CadenceDialog from './CadenceDialog'
 
 const SECTIONS = [
   { key: 'quarterly', label: 'Quarterly' },
@@ -15,6 +16,13 @@ const PILL_LABELS = {
   out_of_range: 'Out of range',
   due:          'Due',
 }
+
+function todayIso() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+const DIALOG_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
 
 function StatusPill({ status }) {
   if (status === 'logged' || status === 'no_data' || status === 'due') return null
@@ -119,20 +127,44 @@ function ResultsTable({ def, results }) {
   )
 }
 
+function CadenceToggle({ def, latestResult, onToggle }) {
+  if (!def.default_cadence_months || !latestResult) return null
+  const effective = latestResult.cadence_override_months ?? def.default_cadence_months
+  return (
+    <div className="bm-cadence-toggle">
+      <span className="bm-cadence-label">Cadence</span>
+      <button
+        type="button"
+        className={`bm-cadence-chip${effective === 3 ? ' active' : ''}`}
+        onClick={() => onToggle(null)}
+      >3 mo</button>
+      <button
+        type="button"
+        className={`bm-cadence-chip${effective === 6 ? ' active' : ''}`}
+        onClick={() => onToggle(6)}
+      >6 mo</button>
+    </div>
+  )
+}
+
 export default function CadenceBiomarkers() {
-  const [defs,    setDefs   ] = useState([])
-  const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState({})
+  const [defs,      setDefs     ] = useState([])
+  const [results,   setResults  ] = useState([])
+  const [documents, setDocuments] = useState([])
+  const [loading,   setLoading  ] = useState(true)
+  const [expanded,  setExpanded ] = useState({})
+  const [addDialog, setAddDialog] = useState(DIALOG_BLANK)
 
   useEffect(() => {
     ;(async () => {
-      const [d, r] = await Promise.all([
+      const [d, r, docs] = await Promise.all([
         db.loadBiomarkerDefinitions(),
         db.loadBiomarkerResults(),
+        db.loadBiomarkerDocuments(),
       ])
       setDefs(d)
       setResults(r)
+      setDocuments(docs)
       setLoading(false)
     })()
   }, [])
@@ -152,6 +184,122 @@ export default function CadenceBiomarkers() {
     defs.forEach(d => { if (map[d.section]) map[d.section].push(d) })
     return map
   }, [defs])
+
+  // Dialog state derivations
+  const dialogDef        = defs.find(d => d.key === addDialog.key) ?? null
+  const dialogSubMap     = dialogDef ? (SUB_MARKERS[dialogDef.key] ?? null) : null
+  const dialogQualitative = dialogDef?.target_direction === 'qualitative'
+  const needsSubKey      = !!dialogSubMap
+  const valueReady       = dialogQualitative && !dialogSubMap
+    ? addDialog.valueText.trim() !== ''
+    : addDialog.value.trim() !== ''
+  const confirmDisabled  = !addDialog.date || !valueReady || (needsSubKey && !addDialog.subKey)
+
+  async function handleAddResult() {
+    try {
+      await db.insertBiomarkerResult({
+        biomarker_key:      addDialog.key,
+        sub_marker_key:     addDialog.subKey || null,
+        measured_date:      addDialog.date,
+        value:              !(dialogQualitative && !dialogSubMap) && addDialog.value !== '' ? addDialog.value : null,
+        value_text:         dialogQualitative && !dialogSubMap ? addDialog.valueText : null,
+        notes:              addDialog.notes || null,
+        source_document_id: addDialog.docId || null,
+      })
+      const r = await db.loadBiomarkerResults()
+      setResults(r)
+      setAddDialog(DIALOG_BLANK)
+    } catch {
+      // error already logged by db helper
+    }
+  }
+
+  async function handleCadenceToggle(latestResult, months) {
+    try {
+      await db.updateBiomarkerResultCadence(latestResult.id, months)
+      const r = await db.loadBiomarkerResults()
+      setResults(r)
+    } catch {
+      // error already logged by db helper
+    }
+  }
+
+  // Form body for the Add Result dialog
+  const dialogBody = dialogDef ? (
+    <div className="bm-add-form">
+      {dialogSubMap && (
+        <div className="form-row">
+          <label>Marker</label>
+          <select
+            value={addDialog.subKey}
+            onChange={e => setAddDialog(p => ({ ...p, subKey: e.target.value, value: '' }))}
+          >
+            <option value="">— select —</option>
+            {Object.entries(dialogSubMap).map(([k, sub]) => (
+              <option key={k} value={k}>{sub.name} ({sub.unit})</option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="form-row">
+        <label>Date</label>
+        <input
+          type="date"
+          value={addDialog.date}
+          onChange={e => setAddDialog(p => ({ ...p, date: e.target.value }))}
+        />
+      </div>
+      {dialogQualitative && !dialogSubMap ? (
+        <div className="form-row">
+          <label>Result summary</label>
+          <textarea
+            rows={2}
+            value={addDialog.valueText}
+            onChange={e => setAddDialog(p => ({ ...p, valueText: e.target.value }))}
+          />
+        </div>
+      ) : (
+        <div className="form-row">
+          <label>
+            Value
+            {dialogSubMap && addDialog.subKey && dialogSubMap[addDialog.subKey]
+              ? ` (${dialogSubMap[addDialog.subKey].unit})`
+              : dialogDef?.unit ? ` (${dialogDef.unit})` : ''}
+          </label>
+          <input
+            type="number"
+            step="any"
+            value={addDialog.value}
+            onChange={e => setAddDialog(p => ({ ...p, value: e.target.value }))}
+          />
+        </div>
+      )}
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea
+          rows={2}
+          value={addDialog.notes}
+          onChange={e => setAddDialog(p => ({ ...p, notes: e.target.value }))}
+        />
+      </div>
+      {documents.length > 0 && (
+        <div className="form-row">
+          <label>Source document <span className="form-optional">(optional)</span></label>
+          <select
+            value={addDialog.docId}
+            onChange={e => setAddDialog(p => ({ ...p, docId: e.target.value }))}
+          >
+            <option value="">No document</option>
+            {documents.map(doc => (
+              <option key={doc.id} value={doc.id}>
+                {doc.file_name} · {doc.measured_date}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  ) : null
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
@@ -243,6 +391,18 @@ export default function CadenceBiomarkers() {
                         {keyResults.length > 0 && (
                           <ResultsTable def={def} results={keyResults.slice(0, 3)} />
                         )}
+                        <CadenceToggle
+                          def={def}
+                          latestResult={latestResult}
+                          onToggle={months => handleCadenceToggle(latestResult, months)}
+                        />
+                        <button
+                          type="button"
+                          className="bm-add-btn"
+                          onClick={() => setAddDialog({ ...DIALOG_BLANK, key: def.key, date: todayIso() })}
+                        >
+                          + Add result
+                        </button>
                       </div>
                     )}
                   </div>
@@ -252,6 +412,17 @@ export default function CadenceBiomarkers() {
           </div>
         )
       })}
+
+      <CadenceDialog
+        open={addDialog.key !== null}
+        title={dialogDef ? `Add result — ${dialogDef.name}` : 'Add result'}
+        body={dialogBody}
+        confirmLabel="Save"
+        confirmClass="btn-primary"
+        confirmDisabled={confirmDisabled}
+        onConfirm={handleAddResult}
+        onCancel={() => setAddDialog(DIALOG_BLANK)}
+      />
     </main>
   )
 }

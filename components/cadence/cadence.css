@@ -5747,3 +5747,107 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ── Biomarkers: cadence toggle ────────────────────────────────────── */
+[data-cadence] .bm-cadence-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+[data-cadence] .bm-cadence-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-quiet);
+  margin-right: 4px;
+}
+[data-cadence] .bm-cadence-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease-out, color 0.15s ease-out;
+}
+[data-cadence] .bm-cadence-chip.active {
+  border-color: var(--moss);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .bm-cadence-chip.active { color: var(--moss); }
+[data-cadence] .bm-cadence-chip:hover:not(.active) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+/* ── Biomarkers: add result button ─────────────────────────────────── */
+[data-cadence] .bm-add-btn {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease-out;
+}
+[data-cadence] .bm-add-btn:hover { color: var(--text); }
+
+/* ── Biomarkers: add result form (inside CadenceDialog) ────────────── */
+[data-cadence] .bm-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 0;
+}
+[data-cadence] .bm-add-form .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+[data-cadence] .bm-add-form label {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+[data-cadence] .bm-add-form .form-optional {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--mono);
+}
+[data-cadence] .bm-add-form input,
+[data-cadence] .bm-add-form select,
+[data-cadence] .bm-add-form textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-paper);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease-out;
+}
+[data-cadence] .bm-add-form textarea { resize: vertical; }
+[data-cadence] .bm-add-form input:focus,
+[data-cadence] .bm-add-form select:focus,
+[data-cadence] .bm-add-form textarea:focus {
+  outline: none;
+  border-color: var(--moss);
+}
