@@ -738,3 +738,55 @@
   color: var(--text-muted);
   line-height: 1.4;
 }
+.tv-page .tv-todo-row.completed .tv-todo-title {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+.tv-page .tv-todo-row.completed .tv-todo-check {
+  background: var(--border-strong);
+  border-color: var(--border-strong);
+}
+.tv-page .tv-todos-empty {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+}
+
+/* ── Calorie target block (Panel 2 extension) ── */
+.tv-page .tv-cal-target {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tv-page .nut-row:has(+ .tv-cal-target) { border-bottom: none; }
+.tv-page .tv-cal-mode {
+  font-family: var(--mono);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text);
+}
+.tv-page .tv-cal-delta {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tv-page .tv-cal-delta.no-data { color: var(--text-faint); }
+.tv-page .tv-cal-status {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--moss-deep);
+}
+[data-theme="dark"] .tv-page .tv-cal-status         { color: var(--moss); }
+.tv-page .tv-cal-status.off                         { color: var(--clay-deep); }
+[data-theme="dark"] .tv-page .tv-cal-status.off     { color: var(--clay); }

@@ -13,6 +13,7 @@ import {
 import { getCurrentWeek } from '../../lib/plan'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
+import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -256,10 +257,18 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   }, [])
 
   const tvToday = useMemo(() => localIso(), [])
-  const pendingTodos = useMemo(
-    () => filterTodosForDate(tvTodos, tvCompletions, tvToday).pending,
+  const { pending: pendingTodos, completed: completedTodos } = useMemo(
+    () => filterTodosForDate(tvTodos, tvCompletions, tvToday),
     [tvTodos, tvCompletions, tvToday]
   )
+
+  const tvTodayIntake = parseFloat(logs?.[tvToday]?.nutrition?.calories)
+  const tvInVal = isFinite(tvTodayIntake) && tvTodayIntake > 0 ? tvTodayIntake : null
+  const tvTodayActs = (activities || []).filter(a => (a.start_date || '').split('T')[0] === tvToday)
+  const tvOutSum = tvTodayActs.reduce((s, a) => s + (parseFloat(a.data?.calories) || 0), 0)
+  const tvOutVal = tvOutSum > 0 ? tvOutSum : null
+  const tvCalMode = getCalorieTargetMode(settings)
+  const tvCalResult = tvCalMode ? evaluateCalorieDelta(tvInVal, tvOutVal, tvCalMode) : null
 
   // ── Live clock (updates every 30s) ──────────────────────────────────────────
   useEffect(() => {
@@ -695,6 +704,26 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
               unit="g"
               dailyAvg={nutDailyAvg ? nutDailyAvg.carbs.toLocaleString('en-GB') : null}
             />
+            {tvCalMode && (
+              <div className="tv-cal-target">
+                <div className="tv-cal-mode">
+                  {tvCalMode.charAt(0).toUpperCase() + tvCalMode.slice(1)}
+                </div>
+                {tvCalResult?.status === 'no_data' ? (
+                  <div className="tv-cal-delta no-data">No data yet</div>
+                ) : tvCalResult ? (
+                  <>
+                    <div className="tv-cal-delta">
+                      {tvCalResult.delta < 0 ? '−' : '+'}
+                      {Math.abs(Math.round(tvCalResult.delta)).toLocaleString('en-GB')} kcal today
+                    </div>
+                    <div className={`tv-cal-status${tvCalResult.status === 'off_target' ? ' off' : ''}`}>
+                      {tvCalResult.status === 'on_target' ? 'On target' : 'Off target'}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Panel 3 — Today's training */}
@@ -723,17 +752,27 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
                 })
               )}
             </div>
-            {pendingTodos.length > 0 && (
-              <div className="tv-todos">
-                <div className="tv-todos-label">To-dos</div>
-                {pendingTodos.map(todo => (
-                  <div key={todo.id} className="tv-todo-row">
-                    <span className="tv-todo-check" aria-hidden="true" />
-                    <span className="tv-todo-title">{todo.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="tv-todos">
+              <div className="tv-todos-label">To-dos</div>
+              {pendingTodos.length === 0 && completedTodos.length === 0 ? (
+                <div className="tv-todos-empty">Nothing scheduled today</div>
+              ) : (
+                <>
+                  {pendingTodos.map(todo => (
+                    <div key={todo.id} className="tv-todo-row">
+                      <span className="tv-todo-check" aria-hidden="true" />
+                      <span className="tv-todo-title">{todo.title}</span>
+                    </div>
+                  ))}
+                  {completedTodos.map(todo => (
+                    <div key={todo.id} className="tv-todo-row completed">
+                      <span className="tv-todo-check" aria-hidden="true" />
+                      <span className="tv-todo-title">{todo.title}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
 
         </section>
