@@ -60,7 +60,11 @@ export async function POST(request) {
     // Extract transactions via Claude
     let extracted
     try {
-      extracted = await extractTransactionsFromPdf(pdfBase64, account.bank, { accountName: account.name })
+      extracted = await extractTransactionsFromPdf(
+        pdfBase64,
+        `${account.bank}_${account.account_type}`,
+        { accountName: account.name }
+      )
     } catch (e) {
       await failDoc(documentId, e.message)
       return Response.json({ status: 'failed', error_detail: e.message }, { status: 500 })
@@ -106,10 +110,14 @@ export async function POST(request) {
     await supabaseServer
       .from('finance_statement_documents')
       .update({
-        status:       'imported',
-        row_count:    inserted + skipped,   // total extracted — accurate on re-parse
-        imported_at:  new Date().toISOString(),
-        error_detail: null,
+        status:                'imported',
+        row_count:             inserted + skipped,   // total extracted — accurate on re-parse
+        imported_at:           new Date().toISOString(),
+        error_detail:          null,
+        closing_balance_pence: extracted.closingBalancePence  ?? null,
+        credit_limit_pence:    extracted.creditLimitPence     ?? null,
+        minimum_payment_pence: extracted.minimumPaymentPence  ?? null,
+        payment_due_date:      extracted.paymentDueDate       ?? null,
       })
       .eq('id', documentId)
 
