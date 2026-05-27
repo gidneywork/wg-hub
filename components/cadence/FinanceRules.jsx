@@ -3,10 +3,12 @@
 import { Fragment, useState, useEffect, useRef } from 'react'
 import {
   loadCategoryRules,
+  insertCategoryRule,
   updateCategoryRule,
   deleteCategoryRule,
   loadCategories,
   applyRuleToExistingTransactions,
+  loadCommonPaymentPatterns,
 } from '../../lib/finance/db'
 import {
   MATCHER_FIELD_LABELS,
@@ -15,7 +17,8 @@ import {
   getRootCategory,
 } from '../../lib/finance/categories'
 
-const RULE_BLANK = { match_value: '', match_field: 'description', match_type: 'contains', category_id: '', priority: 100 }
+const RULE_BLANK   = { match_value: '', match_field: 'description',    match_type: 'contains', category_id: '', priority: 100 }
+const ASSIGN_BLANK = { match_value: '', match_field: 'merchant_clean', match_type: 'exact',    category_id: '', priority: 100 }
 
 function getCategoryLabel(categories, categoryId) {
   const cat = categories.find(c => c.id === categoryId)
@@ -29,12 +32,80 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function FinanceRules() {
-  const [rules,      setRules]      = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [pageError,  setPageError]  = useState(null)
+function RuleFormBody({ form, onChange, categories }) {
+  return (
+    <div className="fr-form-grid">
+      <label className="fr-field">
+        <span className="fr-label">Pattern</span>
+        <input
+          type="text"
+          className="fr-input"
+          value={form.match_value}
+          onChange={e => onChange(f => ({ ...f, match_value: e.target.value }))}
+        />
+      </label>
+      <label className="fr-field">
+        <span className="fr-label">Field</span>
+        <select
+          className="fr-select"
+          value={form.match_field}
+          onChange={e => onChange(f => ({ ...f, match_field: e.target.value }))}
+        >
+          {Object.entries(MATCHER_FIELD_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </label>
+      <label className="fr-field">
+        <span className="fr-label">Match type</span>
+        <select
+          className="fr-select"
+          value={form.match_type}
+          onChange={e => onChange(f => ({ ...f, match_type: e.target.value }))}
+        >
+          {Object.entries(MATCH_TYPE_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </label>
+      <label className="fr-field">
+        <span className="fr-label">Category</span>
+        <select
+          className="fr-select"
+          value={form.category_id}
+          onChange={e => onChange(f => ({ ...f, category_id: e.target.value }))}
+        >
+          <option value="">Select category</option>
+          {categories.map(c => (
+            <option key={c.id} value={c.id}>
+              {getCategoryLabel(categories, c.id)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="fr-field">
+        <span className="fr-label">Priority</span>
+        <input
+          type="number"
+          className="fr-input fr-input--narrow"
+          value={form.priority}
+          onChange={e => onChange(f => ({ ...f, priority: e.target.value }))}
+          min="1"
+          max="999"
+        />
+      </label>
+    </div>
+  )
+}
 
+export default function FinanceRules() {
+  const [rules,          setRules]          = useState([])
+  const [categories,     setCategories]     = useState([])
+  const [commonPayments, setCommonPayments] = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [pageError,      setPageError]      = useState(null)
+
+  // Edit panel state
   const [editId,      setEditId]      = useState(null)
   const [editForm,    setEditForm]    = useState(RULE_BLANK)
   const [editError,   setEditError]   = useState(null)
@@ -47,16 +118,36 @@ export default function FinanceRules() {
   const [reapplyRunning,   setReapplyRunning]   = useState(false)
   const [reapplyResult,    setReapplyResult]    = useState(null)
 
+  // Assign panel state (Common Payments section)
+  const [assigningPattern, setAssigningPattern] = useState(null)
+  const [assignForm,       setAssignForm]       = useState(ASSIGN_BLANK)
+  const [assignError,      setAssignError]      = useState(null)
+  const [assignSaving,     setAssignSaving]     = useState(false)
+  const [assignResult,     setAssignResult]     = useState(null)
+
+  async function reload() {
+    const [r, cp] = await Promise.all([loadCategoryRules(), loadCommonPaymentPatterns(3)])
+    setRules(r)
+    setCommonPayments(cp)
+  }
+
   useEffect(() => {
-    Promise.all([loadCategoryRules(), loadCategories()])
-      .then(([r, c]) => { setRules(r); setCategories(c) })
+    Promise.all([loadCategoryRules(), loadCategories(), loadCommonPaymentPatterns(3)])
+      .then(([r, c, cp]) => { setRules(r); setCategories(c); setCommonPayments(cp) })
       .catch(e => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
+  // ── Edit panel handlers ────────────────────────────────────────────────────
+
   function handleEditOpen(rule) {
     if (editId === rule.id) { handleEditCancel(); return }
     clearTimeout(deleteTimerRef.current)
+    // Close assign panel — single-panel invariant
+    setAssigningPattern(null)
+    setAssignForm(ASSIGN_BLANK)
+    setAssignError(null)
+    setAssignResult(null)
     setEditId(rule.id)
     setEditForm({
       match_value:  rule.match_value,
@@ -142,6 +233,63 @@ export default function FinanceRules() {
     }
   }
 
+  // ── Assign panel handlers ──────────────────────────────────────────────────
+
+  function handleOpenAssign(item) {
+    // Close edit panel — single-panel invariant
+    handleEditCancel()
+    setAssignResult(null)
+
+    if (assigningPattern === item.pattern) {
+      setAssigningPattern(null)
+      setAssignForm(ASSIGN_BLANK)
+      setAssignError(null)
+      return
+    }
+    setAssigningPattern(item.pattern)
+    setAssignForm({
+      match_value:  item.pattern,
+      match_field:  'merchant_clean',
+      match_type:   'exact',
+      category_id:  '',
+      priority:     100,
+    })
+    setAssignError(null)
+  }
+
+  function handleAssignCancel() {
+    setAssigningPattern(null)
+    setAssignForm(ASSIGN_BLANK)
+    setAssignError(null)
+  }
+
+  async function handleAssignSave() {
+    const err = validateRuleForm(assignForm)
+    if (err) { setAssignError(err); return }
+    setAssignSaving(true)
+    setAssignError(null)
+    try {
+      const insertedRule = await insertCategoryRule({
+        match_value:  assignForm.match_value.trim(),
+        match_field:  assignForm.match_field,
+        match_type:   assignForm.match_type,
+        category_id:  assignForm.category_id,
+        priority:     Number(assignForm.priority) || 100,
+      })
+      const { updated } = await applyRuleToExistingTransactions(insertedRule, null)
+      setAssignResult(`Created rule and categorised ${updated} transaction${updated !== 1 ? 's' : ''}.`)
+      await reload()
+      setAssigningPattern(null)
+      setAssignForm(ASSIGN_BLANK)
+    } catch (e) {
+      setAssignError(e.message || 'Failed to create rule.')
+    } finally {
+      setAssignSaving(false)
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   if (loading)   return <div className="fr-loading">Loading rules…</div>
   if (pageError) return <div className="fr-error">{pageError}</div>
 
@@ -151,6 +299,53 @@ export default function FinanceRules() {
         <h1 className="fr-title">Rules</h1>
         <p className="fr-subtitle">Rules auto-categorise transactions on import. Higher priority (lower number) runs first.</p>
       </div>
+
+      {commonPayments.length > 0 && (
+        <section className="fr-common-section">
+          <header className="fr-common-header">
+            <h2 className="fr-common-title">Common payments</h2>
+            <p className="fr-common-subtitle">
+              Recurring merchants in your transaction history without a rule yet.
+            </p>
+          </header>
+
+          {assignResult && (
+            <p className="fr-common-result">{assignResult}</p>
+          )}
+
+          <ul className="fr-common-list">
+            {commonPayments.map(item => (
+              <Fragment key={item.pattern}>
+                <li className="fr-common-row">
+                  <span className="fr-common-pattern">{item.pattern}</span>
+                  <span className="fr-common-count">{item.count} uncategorised</span>
+                  <button
+                    type="button"
+                    className={`btn btn-ghost fr-common-assign-btn${assigningPattern === item.pattern ? ' fr-common-assign-btn--active' : ''}`}
+                    onClick={() => handleOpenAssign(item)}
+                  >
+                    Assign rule
+                  </button>
+                </li>
+                {assigningPattern === item.pattern && (
+                  <li className="fr-common-panel-row">
+                    <div className="fr-common-panel">
+                      <RuleFormBody form={assignForm} onChange={setAssignForm} categories={categories} />
+                      {assignError && <p className="fr-form-error">{assignError}</p>}
+                      <div className="fr-form-actions">
+                        <button type="button" className="btn btn-ghost" onClick={handleAssignCancel}>Cancel</button>
+                        <button type="button" className="btn btn-primary" onClick={handleAssignSave} disabled={assignSaving}>
+                          {assignSaving ? 'Saving…' : 'Save rule'}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                )}
+              </Fragment>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {rules.length === 0 ? (
         <p className="fr-empty">No rules yet. Rules are created from the Edit Transaction panel.</p>
@@ -195,67 +390,7 @@ export default function FinanceRules() {
                     <tr className="fr-rule-panel-row">
                       <td colSpan={6}>
                         <div className="fr-edit-panel">
-                          <div className="fr-form-grid">
-                            <label className="fr-field">
-                              <span className="fr-label">Pattern</span>
-                              <input
-                                type="text"
-                                className="fr-input"
-                                value={editForm.match_value}
-                                onChange={e => setEditForm(f => ({ ...f, match_value: e.target.value }))}
-                              />
-                            </label>
-                            <label className="fr-field">
-                              <span className="fr-label">Field</span>
-                              <select
-                                className="fr-select"
-                                value={editForm.match_field}
-                                onChange={e => setEditForm(f => ({ ...f, match_field: e.target.value }))}
-                              >
-                                {Object.entries(MATCHER_FIELD_LABELS).map(([v, l]) => (
-                                  <option key={v} value={v}>{l}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="fr-field">
-                              <span className="fr-label">Match type</span>
-                              <select
-                                className="fr-select"
-                                value={editForm.match_type}
-                                onChange={e => setEditForm(f => ({ ...f, match_type: e.target.value }))}
-                              >
-                                {Object.entries(MATCH_TYPE_LABELS).map(([v, l]) => (
-                                  <option key={v} value={v}>{l}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="fr-field">
-                              <span className="fr-label">Category</span>
-                              <select
-                                className="fr-select"
-                                value={editForm.category_id}
-                                onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value }))}
-                              >
-                                <option value="">Select category</option>
-                                {categories.map(c => (
-                                  <option key={c.id} value={c.id}>
-                                    {getCategoryLabel(categories, c.id)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="fr-field">
-                              <span className="fr-label">Priority</span>
-                              <input
-                                type="number"
-                                className="fr-input fr-input--narrow"
-                                value={editForm.priority}
-                                onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}
-                                min="1"
-                                max="999"
-                              />
-                            </label>
-                          </div>
+                          <RuleFormBody form={editForm} onChange={setEditForm} categories={categories} />
 
                           {editError && <p className="fr-form-error">{editError}</p>}
 
