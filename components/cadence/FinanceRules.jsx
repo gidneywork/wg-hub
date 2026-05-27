@@ -9,11 +9,14 @@ import {
   loadCategories,
   applyRuleToExistingTransactions,
   loadCommonPaymentPatterns,
+  insertCustomCategory,
+  deleteCategory,
 } from '../../lib/finance/db'
 import {
   MATCHER_FIELD_LABELS,
   MATCH_TYPE_LABELS,
   validateRuleForm,
+  validateCustomCategoryForm,
   getRootCategory,
 } from '../../lib/finance/categories'
 
@@ -125,9 +128,22 @@ export default function FinanceRules() {
   const [assignSaving,     setAssignSaving]     = useState(false)
   const [assignResult,     setAssignResult]     = useState(null)
 
+  // Categories section state
+  const [catFormName,        setCatFormName]        = useState('')
+  const [catError,           setCatError]           = useState(null)
+  const [catSaving,          setCatSaving]          = useState(false)
+  const [catResult,          setCatResult]          = useState(null)
+  const [catDeleteConfirmId, setCatDeleteConfirmId] = useState(null)
+  const catDeleteTimerRef = useRef(null)
+
   async function reload() {
-    const [r, cp] = await Promise.all([loadCategoryRules(), loadCommonPaymentPatterns(3)])
+    const [r, c, cp] = await Promise.all([
+      loadCategoryRules(),
+      loadCategories(),
+      loadCommonPaymentPatterns(3),
+    ])
     setRules(r)
+    setCategories(c)
     setCommonPayments(cp)
   }
 
@@ -236,7 +252,6 @@ export default function FinanceRules() {
   // ── Assign panel handlers ──────────────────────────────────────────────────
 
   function handleOpenAssign(item) {
-    // Close edit panel — single-panel invariant
     handleEditCancel()
     setAssignResult(null)
 
@@ -288,10 +303,67 @@ export default function FinanceRules() {
     }
   }
 
+  // ── Category handlers ──────────────────────────────────────────────────────
+
+  async function handleAddCategory(e) {
+    e.preventDefault()
+    setCatResult(null)
+    const err = validateCustomCategoryForm({ name: catFormName }, categories)
+    if (err) { setCatError(err); return }
+    setCatSaving(true)
+    setCatError(null)
+    const nameToAdd = catFormName.trim()
+    try {
+      await insertCustomCategory(nameToAdd)
+      setCatFormName('')
+      setCatResult(`Added "${nameToAdd}".`)
+      await reload()
+    } catch (e) {
+      if (e.code === '23505') {
+        setCatError('A category with a similar name already exists.')
+      } else {
+        setCatError(e.message || 'Failed to add category.')
+      }
+    } finally {
+      setCatSaving(false)
+    }
+  }
+
+  function handleDeleteCategoryClick(categoryId) {
+    if (catDeleteConfirmId === categoryId) {
+      clearTimeout(catDeleteTimerRef.current)
+      setCatDeleteConfirmId(null)
+      return
+    }
+    clearTimeout(catDeleteTimerRef.current)
+    setCatDeleteConfirmId(categoryId)
+    catDeleteTimerRef.current = setTimeout(() => setCatDeleteConfirmId(null), 5000)
+  }
+
+  async function handleConfirmDeleteCategory(categoryId) {
+    clearTimeout(catDeleteTimerRef.current)
+    setCatDeleteConfirmId(null)
+    setCatResult(null)
+    setCatError(null)
+    try {
+      await deleteCategory(categoryId)
+      setCatResult('Category deleted.')
+      await reload()
+    } catch (e) {
+      setCatError(e.message || 'Failed to delete category.')
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading)   return <div className="fr-loading">Loading rules…</div>
   if (pageError) return <div className="fr-error">{pageError}</div>
+
+  const customCategories    = categories.filter(c => !c.is_system)
+  const ruleCountByCategory = rules.reduce((m, r) => {
+    m.set(r.category_id, (m.get(r.category_id) ?? 0) + 1)
+    return m
+  }, new Map())
 
   return (
     <div className="fr-page">
@@ -300,6 +372,78 @@ export default function FinanceRules() {
         <p className="fr-subtitle">Rules auto-categorise transactions on import. Higher priority (lower number) runs first.</p>
       </div>
 
+      {/* ── Categories section ─────────────────────────────────────────── */}
+      <section className="fr-cat-section">
+        <header className="fr-cat-header">
+          <h2 className="fr-cat-title">Categories</h2>
+          <p className="fr-cat-subtitle">
+            Custom categories appear in the rule and transaction dropdowns.
+          </p>
+        </header>
+
+        <form className="fr-cat-add-form" onSubmit={handleAddCategory}>
+          <input
+            type="text"
+            className="fr-input"
+            placeholder="New category name…"
+            value={catFormName}
+            onChange={e => setCatFormName(e.target.value)}
+            maxLength={60}
+          />
+          <button type="submit" className="btn btn-primary" disabled={catSaving}>
+            {catSaving ? 'Adding…' : 'Add category'}
+          </button>
+        </form>
+
+        {catError  && <p className="fr-form-error">{catError}</p>}
+        {catResult && <p className="fr-cat-result">{catResult}</p>}
+
+        {customCategories.length > 0 ? (
+          <ul className="fr-cat-list">
+            {customCategories.map(cat => {
+              const ruleCount = ruleCountByCategory.get(cat.id) ?? 0
+              return (
+                <li key={cat.id} className="fr-cat-row">
+                  <span className="fr-cat-name">{cat.name}</span>
+                  <span className="fr-cat-usage">
+                    {ruleCount} rule{ruleCount !== 1 ? 's' : ''}
+                  </span>
+                  {catDeleteConfirmId === cat.id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => { clearTimeout(catDeleteTimerRef.current); setCatDeleteConfirmId(null) }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() => handleConfirmDeleteCategory(cat.id)}
+                      >
+                        Confirm — deletes {ruleCount} rule{ruleCount !== 1 ? 's' : ''}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-ghost fr-cat-delete-btn"
+                      onClick={() => handleDeleteCategoryClick(cat.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <p className="fr-cat-empty">No custom categories yet. The 26 seeded categories are always available.</p>
+        )}
+      </section>
+
+      {/* ── Common Payments section ────────────────────────────────────── */}
       {commonPayments.length > 0 && (
         <section className="fr-common-section">
           <header className="fr-common-header">
@@ -347,6 +491,7 @@ export default function FinanceRules() {
         </section>
       )}
 
+      {/* ── Rules table ───────────────────────────────────────────────── */}
       {rules.length === 0 ? (
         <p className="fr-empty">No rules yet. Rules are created from the Edit Transaction panel.</p>
       ) : (

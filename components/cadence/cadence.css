@@ -7179,3 +7179,83 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 [data-cadence] .fr-common-panel { padding: var(--space-4) 0; }
+
+/* ── Finance Rules — Categories section ─────────────────────────────────── */
+/* fr-cat-title uses --type-h4 (mirrors fr-common-title) */
+
+[data-cadence] .fr-cat-section {
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fr-cat-header {
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fr-cat-title {
+  font-family: var(--display);
+  font-size: var(--type-h4);
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 var(--space-1);
+  letter-spacing: var(--tracking-h3);
+}
+
+[data-cadence] .fr-cat-subtitle {
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+[data-cadence] .fr-cat-add-form {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fr-cat-add-form .fr-input {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-cadence] .fr-cat-result {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+[data-cadence] .fr-cat-empty {
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  margin: var(--space-3) 0 0;
+}
+
+[data-cadence] .fr-cat-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
+}
+
+[data-cadence] .fr-cat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+[data-cadence] .fr-cat-name {
+  flex: 1;
+  font-size: var(--type-body-sm);
+  color: var(--text);
+}
+
+[data-cadence] .fr-cat-usage {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+[data-cadence] .fr-cat-delete-btn { color: var(--clay-deep); }
