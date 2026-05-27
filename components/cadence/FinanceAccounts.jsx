@@ -14,6 +14,7 @@ import {
   computeAccountBalance,
 } from '../../lib/finance/accounts'
 import { formatPence } from '../../lib/finance/transactions'
+import { computeNetWorth } from '../../lib/finance/dashboard'
 import CadencePanel from './CadencePanel'
 
 const STATUS_LABELS = {
@@ -36,18 +37,6 @@ const UPLOAD_BLANK = { accountId: '', file: null, periodFrom: '', periodTo: '', 
 
 const ALLOWED_FINANCE_MIME = ['text/csv', 'application/vnd.ms-excel', 'text/plain', 'application/pdf']
 const MAX_STATEMENT_BYTES  = 20 * 1024 * 1024
-
-function computeRollup(accounts, allTransactions, statementDocs) {
-  let assets = 0, debt = 0
-  for (const acc of accounts) {
-    const acTxs = allTransactions.filter(tx => tx.account_id === acc.id)
-    const bal   = computeAccountBalance(acc, acTxs, statementDocs)
-    if (bal == null) continue
-    if (bal >= 0) assets += bal
-    else          debt   += Math.abs(bal)
-  }
-  return { assets, debt, netWorth: assets - debt }
-}
 
 export default function FinanceAccounts({ onViewChange }) {
   const [accounts,        setAccounts       ] = useState([])
@@ -207,7 +196,7 @@ export default function FinanceAccounts({ onViewChange }) {
   if (loading) return <div className="fa-loading">Loading…</div>
 
   const rollup = accounts.length > 0
-    ? computeRollup(accounts, allTransactions, statementDocs)
+    ? computeNetWorth(accounts, allTransactions, statementDocs)
     : null
 
   // ── Panel bodies ───────────────────────────────────────────────────────────

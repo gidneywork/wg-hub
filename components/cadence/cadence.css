@@ -7930,3 +7930,113 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-theme="dark"] [data-cadence] .ass-see-all-btn {
   color: var(--text-quiet);
 }
+
+/* ── FC-046 c1 — FinanceDashboard ───────────────────────────────────────────── */
+
+[data-cadence] .fd-page {
+  padding: var(--space-5) 0;
+}
+
+[data-cadence] .fd-loading,
+[data-cadence] .fd-error {
+  padding: var(--space-6);
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text-muted);
+}
+[data-cadence] .fd-error { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fd-error { color: var(--clay); }
+
+/* Hero stat grid */
+
+[data-cadence] .fd-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+@media (max-width: 860px) {
+  [data-cadence] .fd-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  [data-cadence] .fd-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+[data-cadence] .fd-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-5);
+}
+
+[data-cadence] .fd-stat-label {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+
+[data-cadence] .fd-stat-value {
+  font-family: var(--display);
+  font-size: var(--type-h2);
+  font-weight: 400;
+  font-variation-settings: "opsz" 36, "SOFT" 30;
+  letter-spacing: var(--tracking-h2);
+  color: var(--text);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .fd-stat-value--negative {
+  color: var(--clay-deep);
+}
+[data-theme="dark"] [data-cadence] .fd-stat-value--negative {
+  color: var(--clay);
+}
+
+[data-cadence] .fd-stat-sub {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sections */
+
+[data-cadence] .fd-section {
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+[data-cadence] .fd-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+[data-cadence] .fd-section-title {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fd-placeholder {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+  font-style: italic;
+}
