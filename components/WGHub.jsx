@@ -23,6 +23,7 @@ import CadenceBiomarkers from './cadence/Biomarkers'
 import CadenceFinanceAccounts from './cadence/FinanceAccounts'
 import CadenceFinanceBills from './cadence/FinanceBills'
 import CadenceFinanceRules from './cadence/FinanceRules'
+import FinanceAccountSummary from './cadence/FinanceAccountSummary'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -329,6 +330,13 @@ export default function WGHub({ onSignOut }) {
     )
   }
 
+  function renderFinanceAccount(v) {
+    const parts     = v.split(':')
+    const accountId = parts[1]
+    const activeTab = parts[2] || 'overview'
+    return <FinanceAccountSummary accountId={accountId} activeTab={activeTab} onViewChange={setView} />
+  }
+
   return (
     <DashboardShell view={view} setView={setView} userName={userProfile?.identity?.displayName ?? 'You'} onSignOut={onSignOut} onThemeToggle={handleThemeToggle}>
       {!ready ? (
@@ -391,7 +399,8 @@ export default function WGHub({ onSignOut }) {
         <CadenceFinanceBills />
       ) : view === 'finance-rules' ? (
         <CadenceFinanceRules />
-      ) : isLegacy ? (
+      ) : view.startsWith('finance-account:') ? renderFinanceAccount(view)
+      : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
           {view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>

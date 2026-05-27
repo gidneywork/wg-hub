@@ -7292,3 +7292,166 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 [data-cadence] .fr-cat-delete-btn { color: var(--clay-deep); }
+
+/* ─── CadenceTabs ─────────────────────────────────────────────────────────── */
+
+[data-cadence] .ct-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .ct-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color var(--t-ui) var(--ease), border-color var(--t-ui) var(--ease);
+}
+
+[data-cadence] .ct-tab:hover { color: var(--text); }
+
+[data-cadence] .ct-tab--active {
+  color: var(--text);
+  border-bottom-color: var(--moss-deep);
+}
+
+[data-theme="dark"] [data-cadence] .ct-tab--active {
+  border-bottom-color: var(--moss);
+}
+
+/* ─── Finance Account Summary ─────────────────────────────────────────────── */
+
+[data-cadence] .fas-page {
+  max-width: 860px;
+}
+
+[data-cadence] .fas-loading,
+[data-cadence] .fas-error {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  padding: 40px 0;
+}
+
+[data-cadence] .fas-error { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fas-error { color: var(--clay); }
+
+[data-cadence] .fas-hero {
+  padding-bottom: var(--space-7);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-cadence] .fas-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fas-hero-pill {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+
+[data-cadence] .fas-hero-name {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-h2);
+  letter-spacing: var(--tracking-h2);
+  color: var(--text);
+  margin: 0 0 var(--space-3);
+  line-height: 1.1;
+}
+
+[data-cadence] .fas-hero-balance {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-h1);
+  letter-spacing: var(--tracking-h1);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1;
+}
+
+[data-cadence] .fas-hero-balance--negative { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fas-hero-balance--negative { color: var(--clay); }
+
+[data-cadence] .fas-tab-content { padding-top: var(--space-5); }
+
+[data-cadence] .fas-tab-placeholder {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-body-lg);
+  color: var(--text-muted);
+  padding: var(--space-9) 0;
+}
+
+/* ─── Account Summary Overview ────────────────────────────────────────────── */
+
+[data-cadence] .fas-tab-empty {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-body);
+  color: var(--text-muted);
+  padding: var(--space-7) 0;
+}
+
+[data-cadence] .fas-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 600px) {
+  [data-cadence] .fas-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+[data-cadence] .fas-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+[data-cadence] .fas-stat-label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+
+[data-cadence] .fas-stat-value {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-h3);
+  letter-spacing: var(--tracking-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1;
+}
+
+[data-cadence] .fas-stat-value--negative { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fas-stat-value--negative { color: var(--clay); }
+
+[data-cadence] .fas-stat-value--warning { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fas-stat-value--warning { color: var(--clay); }
