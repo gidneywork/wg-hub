@@ -77,14 +77,12 @@ export default function FinanceDashboard({ onViewChange }) {
         />
         <StatCard
           label="Spending this month"
-          value={thisMonthSpending > 0 ? formatPence(-thisMonthSpending) : '—'}
-          negative={thisMonthSpending > 0}
+          value={thisMonthSpending > 0 ? formatPence(thisMonthSpending) : '—'}
         />
         <StatCard
           label="Monthly bills"
-          value={monthlyBills > 0 ? formatPence(-monthlyBills) : '—'}
+          value={monthlyBills > 0 ? formatPence(monthlyBills) : '—'}
           sub="monthly equivalent"
-          negative={monthlyBills > 0}
         />
         <StatCard
           label="Last month cashflow"
