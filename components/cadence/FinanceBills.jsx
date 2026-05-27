@@ -18,6 +18,7 @@ import {
   BILL_TYPE_LABELS,
   FREQUENCY_LABELS,
   STATUS_LABELS,
+  billMonthlyEquivalent,
   validateBillForm,
   isTransactionInBillToleranceWindow,
   advanceNextDueDate,
@@ -457,6 +458,34 @@ export default function FinanceBills({ accountId = null }) {
 
   const today = todayISO()
 
+  // ── Monthly bills report (global view only) ────────────────────────────────
+
+  const activeBills   = bills.filter(b => b.is_active)
+  const monthlyByBill = activeBills.map(b => ({ ...b, _monthly: billMonthlyEquivalent(b) }))
+  const totalMonthly  = monthlyByBill.reduce((sum, b) => sum + b._monthly, 0)
+
+  const byAccount = {}
+  for (const b of monthlyByBill) {
+    if (!byAccount[b.account_id]) {
+      const acc = accounts.find(a => a.id === b.account_id)
+      byAccount[b.account_id] = { name: acc?.name ?? 'Unknown', total: 0 }
+    }
+    byAccount[b.account_id].total += b._monthly
+  }
+  const accountBreakdown = Object.values(byAccount)
+    .filter(item => item.total > 0)
+    .sort((a, b) => b.total - a.total)
+
+  const byType = {}
+  for (const b of monthlyByBill) {
+    const key = b.bill_type || 'other'
+    if (!byType[key]) byType[key] = { label: BILL_TYPE_LABELS[key] ?? key, total: 0 }
+    byType[key].total += b._monthly
+  }
+  const typeBreakdown = Object.values(byType)
+    .filter(item => item.total > 0)
+    .sort((a, b) => b.total - a.total)
+
   const billsWithStatus = bills.map(bill => ({
     ...bill,
     _status: deriveBillStatus(bill, allPayments, today),
@@ -628,6 +657,39 @@ export default function FinanceBills({ accountId = null }) {
         onConfirm={handleAddSave}
         onCancel={handleAddCancel}
       />
+
+      {!accountId && totalMonthly > 0 && (
+        <section className="fb-report">
+          <div className="fb-report-headline">
+            <span className="fb-report-label">Total bills per month</span>
+            <span className="fb-report-total">{formatPence(-totalMonthly)}</span>
+          </div>
+          <div className="fb-report-breakdowns">
+            <div className="fb-report-breakdown">
+              <span className="fb-report-breakdown-label">By account</span>
+              <ul className="fb-report-breakdown-list">
+                {accountBreakdown.map(item => (
+                  <li key={item.name}>
+                    <span className="fb-report-breakdown-name">{item.name}</span>
+                    <span className="fb-report-breakdown-amount">{formatPence(-item.total)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="fb-report-breakdown">
+              <span className="fb-report-breakdown-label">By type</span>
+              <ul className="fb-report-breakdown-list">
+                {typeBreakdown.map(item => (
+                  <li key={item.label}>
+                    <span className="fb-report-breakdown-name">{item.label}</span>
+                    <span className="fb-report-breakdown-amount">{formatPence(-item.total)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
 
       {overdue.length > 0 && (
         <div className="fb-section">

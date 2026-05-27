@@ -7749,3 +7749,97 @@ html::-webkit-scrollbar-track { background: transparent; }
   white-space: nowrap;
 }
 [data-theme="dark"] [data-cadence] .ass-merchants-total { color: var(--clay); }
+
+/* ── fb-report — Monthly bills summary (global Bills page only) ─────────── */
+
+[data-cadence] .fb-report {
+  background:    var(--bg-card);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:       var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fb-report-headline {
+  display:     flex;
+  align-items: baseline;
+  gap:         var(--space-4);
+}
+
+[data-cadence] .fb-report-label {
+  font-family:    var(--mono);
+  font-size:      var(--type-label);
+  color:          var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+[data-cadence] .fb-report-total {
+  font-family:          var(--mono);
+  font-size:            var(--type-h3);
+  font-weight:          600;
+  color:                var(--clay-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .fb-report-breakdowns {
+  display:    flex;
+  gap:        var(--space-8);
+  margin-top: var(--space-4);
+}
+
+[data-cadence] .fb-report-breakdown {
+  flex:           1;
+  display:        flex;
+  flex-direction: column;
+}
+
+[data-cadence] .fb-report-breakdown-label {
+  font-family:    var(--mono);
+  font-size:      var(--type-caption);
+  color:          var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  margin-bottom:  var(--space-2);
+}
+
+[data-cadence] .fb-report-breakdown-list {
+  list-style: none;
+  padding:    0;
+  margin:     0;
+}
+
+[data-cadence] .fb-report-breakdown-list li {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     baseline;
+  padding:         var(--space-2) 0;
+  border-bottom:   1px solid var(--border);
+}
+
+[data-cadence] .fb-report-breakdown-list li:last-child { border-bottom: none; }
+
+[data-cadence] .fb-report-breakdown-name {
+  font-family: var(--sans);
+  font-size:   var(--type-body-sm);
+  color:       var(--text);
+}
+
+[data-cadence] .fb-report-breakdown-amount {
+  font-family:          var(--mono);
+  font-size:            var(--type-body-sm);
+  color:                var(--clay-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  [data-cadence] .fb-report-breakdowns {
+    flex-direction: column;
+    gap:            var(--space-4);
+  }
+}
+
+[data-theme="dark"] [data-cadence] .fb-report-total,
+[data-theme="dark"] [data-cadence] .fb-report-breakdown-amount {
+  color: var(--clay);
+}
