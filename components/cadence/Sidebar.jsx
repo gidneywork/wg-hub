@@ -37,6 +37,11 @@ const NAV_FINANCE = [
       <path d="M9 7h6M9 11h6M9 15h4"/>
     </svg>
   ) },
+  { view: 'finance-rules', label: 'Rules', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/>
+    </svg>
+  ) },
 ]
 
 const NAV_PRODUCTIVITY = [
