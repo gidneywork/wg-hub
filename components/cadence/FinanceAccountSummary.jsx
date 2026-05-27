@@ -15,6 +15,7 @@ import {
 import { formatPence } from '../../lib/finance/transactions'
 import CadenceTabs from './CadenceTabs'
 import AccountSummaryOverview from './AccountSummaryOverview'
+import AccountSummaryTransactions from './AccountSummaryTransactions'
 
 const TABS = [
   { key: 'overview',     label: 'Overview' },
@@ -92,7 +93,7 @@ export default function FinanceAccountSummary({ accountId, activeTab, onViewChan
           />
         )}
         {activeTab === 'transactions' && (
-          <div className="fas-tab-placeholder">Transactions tab — coming in c3.</div>
+          <AccountSummaryTransactions accountId={accountId} />
         )}
         {activeTab === 'bills' && (
           <div className="fas-tab-placeholder">Bills tab — coming in c4.</div>
