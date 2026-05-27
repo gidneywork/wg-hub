@@ -6689,3 +6689,190 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-size: var(--type-caption);
   color: var(--text-quiet);
 }
+
+/* ── Bills — Commit 3a additions ─────────────────────────────────────────── */
+
+[data-cadence] .fb-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+[data-cadence] .fb-show-inactive {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease-out, color 0.15s ease-out;
+}
+[data-cadence] .fb-show-inactive:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+[data-cadence] .fb-show-inactive--active {
+  border-color: var(--moss);
+  color: var(--moss-deep);
+}
+
+[data-cadence] .fb-add-btn--active {
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  border-color: var(--moss-soft);
+}
+
+[data-cadence] .fb-bill-action-col {
+  width: 1%;
+  white-space: nowrap;
+}
+
+[data-cadence] .fb-bill-action-cell {
+  white-space: nowrap;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+[data-cadence] .fb-mark-paid-btn {
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--moss-deep);
+  cursor: pointer;
+  transition: border-color 0.15s ease-out, background 0.15s ease-out;
+}
+[data-cadence] .fb-mark-paid-btn:hover {
+  border-color: var(--moss);
+  background: var(--moss-glow);
+}
+
+[data-cadence] .fb-bill-edit-btn {
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease-out;
+}
+[data-cadence] .fb-bill-edit-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+[data-cadence] .fb-bill-row--editing {
+  background: var(--bg-elevated);
+}
+
+[data-cadence] .fb-bill-panel-row td {
+  padding: 0;
+  border-bottom: none;
+}
+
+[data-cadence] .fb-edit-danger-zone {
+  padding: var(--space-4) var(--space-4) 0;
+  margin: var(--space-4) var(--space-4) 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Mark paid transaction picker */
+
+[data-cadence] .fb-mark-paid-body {
+  padding: 0 var(--space-1);
+}
+
+[data-cadence] .fb-mark-paid-hint {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fb-mark-paid-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  padding: var(--space-4) 0;
+}
+
+[data-cadence] .fb-mark-paid-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+[data-cadence] .fb-mark-paid-tx {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease-out, background 0.15s ease-out;
+}
+[data-cadence] .fb-mark-paid-tx:hover:not(:disabled) {
+  border-color: var(--moss);
+  background: var(--moss-glow);
+}
+[data-cadence] .fb-mark-paid-tx:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+[data-cadence] .fb-mark-paid-tx--match {
+  border-color: var(--moss-soft);
+}
+
+[data-cadence] .fb-mark-paid-tx-date {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  min-width: 80px;
+}
+
+[data-cadence] .fb-mark-paid-tx-desc {
+  flex: 1;
+  font-size: var(--type-body-sm);
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-cadence] .fb-mark-paid-tx-amount {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+[data-cadence] .fb-mark-paid-match-badge {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--moss-deep);
+  background: var(--moss-soft);
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-sm);
+}
