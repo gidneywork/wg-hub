@@ -50,7 +50,7 @@ const BILL_BLANK = {
   is_active:           true,
 }
 
-function BillForm({ formData, setFormData, formErrors, accounts, categories }) {
+function BillForm({ formData, setFormData, formErrors, accounts, categories, hideAccount = false }) {
   function set(field) {
     return e => setFormData(p => ({ ...p, [field]: e.target.value }))
   }
@@ -62,14 +62,16 @@ function BillForm({ formData, setFormData, formErrors, accounts, categories }) {
         <input type="text" value={formData.name} onChange={set('name')} />
         {formErrors.name && <p className="fa-add-error">{formErrors.name}</p>}
       </div>
-      <div className="form-row">
-        <label>Account</label>
-        <select value={formData.account_id} onChange={set('account_id')}>
-          <option value="">— select —</option>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-        {formErrors.account_id && <p className="fa-add-error">{formErrors.account_id}</p>}
-      </div>
+      {!hideAccount && (
+        <div className="form-row">
+          <label>Account</label>
+          <select value={formData.account_id} onChange={set('account_id')}>
+            <option value="">— select —</option>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          {formErrors.account_id && <p className="fa-add-error">{formErrors.account_id}</p>}
+        </div>
+      )}
       <div className="form-row">
         <label>Type</label>
         <select value={formData.bill_type} onChange={set('bill_type')}>
@@ -159,7 +161,7 @@ function BillForm({ formData, setFormData, formErrors, accounts, categories }) {
   )
 }
 
-export default function FinanceBills() {
+export default function FinanceBills({ accountId = null }) {
   const [bills,             setBills            ] = useState([])
   const [allPayments,       setAllPayments       ] = useState([])
   const [accounts,          setAccounts          ] = useState([])
@@ -181,10 +183,21 @@ export default function FinanceBills() {
   const [retroactiveResult,     setRetroactiveResult    ] = useState(null)
 
   useEffect(() => {
+    setAdding(false)
+    setEditingId(null)
+    setMarkingPaidId(null)
+    setFormData(BILL_BLANK)
+    setFormErrors({})
+    setDeleteConfirming(false)
+    setRetroactiveConfirming(false)
+    setRetroactiveRunning(false)
+    setRetroactiveResult(null)
+    setLoading(true)
+    setError(null)
     Promise.all([
       loadAccounts(),
       loadCategories(),
-      loadBills(false),
+      loadBills(false, accountId),
       loadAllBillPayments(),
     ])
       .then(([accs, cats, b, p]) => {
@@ -195,11 +208,11 @@ export default function FinanceBills() {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [accountId])
 
   async function reload() {
     // Reloads bills and payments only — accounts/categories don't change from bill operations.
-    const [b, p] = await Promise.all([loadBills(showInactive), loadAllBillPayments()])
+    const [b, p] = await Promise.all([loadBills(showInactive, accountId), loadAllBillPayments()])
     setBills(b)
     setAllPayments(p)
   }
@@ -210,7 +223,7 @@ export default function FinanceBills() {
     setAdding(true)
     setEditingId(null)
     setMarkingPaidId(null)
-    setFormData(BILL_BLANK)
+    setFormData({ ...BILL_BLANK, account_id: accountId ?? '' })
     setFormErrors({})
   }
 
@@ -417,7 +430,7 @@ export default function FinanceBills() {
     const next = !showInactive
     setShowInactive(next)
     try {
-      const b = await loadBills(next)
+      const b = await loadBills(next, accountId)
       setBills(b)
     } catch (e) {
       console.error('loadBills toggle:', e)
@@ -428,14 +441,14 @@ export default function FinanceBills() {
 
   if (loading) return (
     <div className="fb-page">
-      <div className="fb-header"><h2 className="fb-title">Bills</h2></div>
+      {!accountId && <div className="fb-header"><h2 className="fb-title">Bills</h2></div>}
       <p className="fb-loading">Loading…</p>
     </div>
   )
 
   if (error) return (
     <div className="fb-page">
-      <div className="fb-header"><h2 className="fb-title">Bills</h2></div>
+      {!accountId && <div className="fb-header"><h2 className="fb-title">Bills</h2></div>}
       <p className="fb-empty">{error}</p>
     </div>
   )
@@ -469,6 +482,7 @@ export default function FinanceBills() {
       formErrors={formErrors}
       accounts={accounts}
       categories={categories}
+      hideAccount={!!accountId}
     />
   )
 
@@ -480,6 +494,7 @@ export default function FinanceBills() {
         formErrors={formErrors}
         accounts={accounts}
         categories={categories}
+        hideAccount={!!accountId}
       />
       <div className="fb-edit-danger-zone">
         <div className="fb-retroactive-section">
@@ -583,7 +598,7 @@ export default function FinanceBills() {
   return (
     <div className="fb-page">
       <div className="fb-header">
-        <h2 className="fb-title">Bills</h2>
+        {!accountId && <h2 className="fb-title">Bills</h2>}
         <div className="fb-header-actions">
           <button
             type="button"
@@ -665,7 +680,11 @@ export default function FinanceBills() {
       <div className="fb-section">
         <p className="fb-section-title">All bills</p>
         {billsWithStatus.length === 0 ? (
-          <p className="fb-section-empty">No bills added yet.</p>
+          <p className="fb-section-empty">
+            {accountId
+              ? 'No bills on this account. Add one to track recurring payments.'
+              : 'No bills added yet.'}
+          </p>
         ) : (
           <table className="fb-bill-table">
             <thead>
