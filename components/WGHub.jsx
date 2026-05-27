@@ -394,7 +394,7 @@ export default function WGHub({ onSignOut }) {
       ) : view === 'biomarkers' ? (
         <CadenceBiomarkers />
       ) : view === 'finance-accounts' ? (
-        <CadenceFinanceAccounts />
+        <CadenceFinanceAccounts onViewChange={setView} />
       ) : view === 'finance-bills' ? (
         <CadenceFinanceBills />
       ) : view === 'finance-rules' ? (

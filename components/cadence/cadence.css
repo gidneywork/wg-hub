@@ -6031,186 +6031,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   margin: 0;
 }
 
-[data-cadence] .fa-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 48px;
-}
-
-[data-cadence] .fa-account-row { border-bottom: 1px solid var(--border); }
-[data-cadence] .fa-account-row:first-child { border-top: 1px solid var(--border); }
-
-[data-cadence] .fa-account-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-}
-
-[data-cadence] .fa-account-header:hover { background: var(--bg-elevated); }
-[data-cadence] .fa-account-row--open .fa-account-header { background: var(--bg-elevated); }
-
-[data-cadence] .fa-account-name {
-  flex: 1;
-  font-family: var(--sans);
-  font-size: var(--type-body);
-  color: var(--text);
-}
-
-[data-cadence] .fa-account-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-[data-cadence] .fa-account-bank {
-  font-family: var(--mono);
-  font-size: var(--type-label);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-[data-cadence] .fa-account-type {
-  font-family: var(--mono);
-  font-size: var(--type-label);
-  color: var(--text-quiet);
-}
-
-[data-cadence] .fa-account-balance {
-  font-family: var(--mono);
-  font-size: var(--type-body-sm);
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  min-width: 72px;
-  text-align: right;
-}
-
-[data-cadence] .fa-account-balance--debt {
-  color: var(--clay-deep);
-}
-
-[data-cadence] .fa-cc-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 20px;
-  padding: 6px 0 10px;
-  border-top: 1px solid var(--border);
-}
-
-[data-cadence] .fa-cc-field {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-}
-
-[data-cadence] .fa-cc-label {
-  font-family: var(--mono);
-  font-size: var(--type-label);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-[data-cadence] .fa-cc-value {
-  font-family: var(--mono);
-  font-size: var(--type-caption);
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-[data-cadence] .fa-chevron {
-  width: 16px;
-  height: 16px;
-  color: var(--text-faint);
-  transition: transform 0.2s ease-out;
-  flex-shrink: 0;
-}
-
-[data-cadence] .fa-chevron--open { transform: rotate(180deg); }
-
-[data-cadence] .fa-account-body {
-  padding: 0 0 16px;
-}
-
-[data-cadence] .fa-tx-loading,
-[data-cadence] .fa-tx-empty {
-  font-family: var(--mono);
-  font-size: var(--type-caption);
-  color: var(--text-quiet);
-  padding: 16px 0;
-  margin: 0;
-}
-
-[data-cadence] .fa-tx-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--mono);
-  font-size: var(--type-caption);
-}
-
-[data-cadence] .fa-tx-table th {
-  text-align: left;
-  font-size: var(--type-label);
-  color: var(--text-quiet);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 6px 8px 6px 0;
-  border-bottom: 1px solid var(--border);
-  font-weight: 400;
-}
-
-[data-cadence] .fa-tx-table th.fa-tx-amount-col { text-align: right; }
-
-[data-cadence] .fa-tx-table td {
-  padding: 8px 8px 8px 0;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-soft);
-}
-
-[data-cadence] .fa-tx-table tr:last-child td { border-bottom: none; }
-
-[data-cadence] .fa-tx-date {
-  white-space: nowrap;
-  color: var(--text-quiet);
-  min-width: 90px;
-}
-
-[data-cadence] .fa-tx-desc {
-  color: var(--text);
-  max-width: 260px;
-}
-
-[data-cadence] .fa-tx-cat { white-space: nowrap; }
-
-[data-cadence] .fa-cat-badge {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: var(--type-meta);
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  border-radius: 3px;
-  padding: 2px 6px;
-}
-
-[data-cadence] .fa-tx-amount {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-[data-cadence] .fa-tx-amount--credit { color: var(--moss-deep); }
-[data-cadence] .fa-tx-amount--debit  { color: var(--text); }
-
-[data-theme="dark"] [data-cadence] .fa-tx-amount--credit { color: var(--moss); }
-
 /* ─── Finance — Statements ────────────────────────────────────────────────── */
 
 [data-cadence] .fa-docs-section { margin-top: 48px; }
@@ -6400,54 +6220,6 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-theme="dark"] [data-cadence] .fa-doc-error { color: var(--clay); }
 
-/* ── Finance Accounts: account body header ───────────────────────── */
-[data-cadence] .fa-account-body-header {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 0 8px;
-}
-
-[data-cadence] .fa-add-tx-btn {
-  padding: 4px 12px;
-  font-size: var(--type-caption);
-  font-family: var(--sans);
-  color: var(--text-quiet);
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: color 0.15s ease-out;
-}
-[data-cadence] .fa-add-tx-btn:hover { color: var(--text); }
-
-/* ── Finance Accounts: transaction edit column ───────────────────── */
-[data-cadence] .fa-tx-table th.fa-tx-edit-col,
-[data-cadence] .fa-tx-table td.fa-tx-edit-col {
-  width: 28px;
-  padding-right: 0;
-  text-align: right;
-}
-
-[data-cadence] .fa-tx-edit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  opacity: 0.4;
-  transition: opacity 0.15s ease-out;
-  margin-left: auto;
-}
-[data-cadence] .fa-tx-table tr:hover .fa-tx-edit-btn { opacity: 1; }
-[data-cadence] .fa-tx-edit-btn svg {
-  width: 12px;
-  height: 12px;
-  stroke-width: 1.5;
-  color: var(--text-muted);
-}
-
 /* ── Finance Accounts: file name link ────────────────────────────── */
 [data-cadence] .fa-doc-filename-btn {
   font-family: var(--mono);
@@ -6466,102 +6238,6 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .fa-doc-filename-btn:hover { color: var(--moss); }
 [data-theme="dark"] [data-cadence] .fa-doc-filename-btn:hover { color: var(--moss); }
-
-/* ── Finance Accounts: transaction form ──────────────────────────── */
-[data-cadence] .fa-tx-form-account {
-  font-family: var(--mono);
-  font-size: var(--type-caption);
-  color: var(--text-muted);
-  margin: 0 0 4px;
-}
-
-[data-cadence] .fa-amount-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-[data-cadence] .fa-amount-row input[type="number"] {
-  flex: 1;
-  width: auto;
-}
-
-[data-cadence] .fa-direction-toggle {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-[data-cadence] .fa-direction-btn {
-  padding: 7px 14px;
-  font-family: var(--mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-quiet);
-  background: var(--bg-paper);
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease-out, color 0.15s ease-out;
-}
-[data-cadence] .fa-direction-btn + .fa-direction-btn {
-  border-left: 1px solid var(--border);
-}
-[data-cadence] .fa-direction-btn--active {
-  background: var(--bg-elevated);
-  color: var(--text);
-}
-
-[data-cadence] .bm-add-form .form-row--checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-[data-cadence] .bm-add-form .form-row--checkbox label {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: var(--type-caption);
-  cursor: pointer;
-}
-[data-cadence] .bm-add-form .form-row--checkbox input[type="checkbox"] {
-  width: auto;
-  padding: 0;
-  border: none;
-  cursor: pointer;
-  accent-color: var(--moss);
-  flex-shrink: 0;
-}
-
-/* ── Finance Accounts: rule confirmation ─────────────────────────── */
-[data-cadence] .fa-rule-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-[data-cadence] .fa-rule-confirm-label {
-  font-family: var(--sans);
-  font-size: var(--type-body-sm);
-  color: var(--text-soft);
-  margin: 0;
-  line-height: 1.5;
-}
-[data-cadence] .fa-rule-confirm-label strong {
-  color: var(--text);
-  font-weight: 500;
-}
-[data-cadence] .fa-rule-skip-btn {
-  font-family: var(--mono);
-  font-size: var(--type-caption);
-  color: var(--text-quiet);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-  align-self: flex-start;
-  transition: color 0.15s ease-out;
-}
-[data-cadence] .fa-rule-skip-btn:hover { color: var(--text); }
 
 /* ── Finance Bills: page shell ───────────────────────────────────── */
 [data-cadence] .fb-page { max-width: 800px; }
@@ -7455,3 +7131,111 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 [data-cadence] .fas-stat-value--warning { color: var(--clay-deep); }
 [data-theme="dark"] [data-cadence] .fas-stat-value--warning { color: var(--clay); }
+
+/* ── Accounts roll-up (ar-) ─────────────────────────────────────────────── */
+
+[data-cadence] .ar-rollup {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-4) 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-5);
+}
+
+[data-cadence] .ar-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+[data-cadence] .ar-stat-label {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  color: var(--text-quiet);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+}
+
+[data-cadence] .ar-stat-value {
+  font-family: var(--display);
+  font-size: var(--type-h3);
+  font-weight: 400;
+  letter-spacing: var(--tracking-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1;
+}
+
+[data-cadence] .ar-stat-value--debt { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .ar-stat-value--debt { color: var(--clay); }
+
+/* ── Account cards (ac-) ────────────────────────────────────────────────── */
+
+[data-cadence] .ac-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+[data-cadence] .ac-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+[data-cadence] .ac-card-body {
+  display: block;
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  transition: background var(--t-ui) var(--ease);
+}
+
+[data-cadence] .ac-card-body:hover { background: var(--bg-elevated); }
+
+[data-cadence] .ac-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+[data-cadence] .ac-card-name {
+  font-family: var(--sans);
+  font-size: var(--type-h4);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-cadence] .ac-card-balance {
+  font-family: var(--display);
+  font-size: var(--type-h3);
+  font-weight: 400;
+  letter-spacing: var(--tracking-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+[data-cadence] .ac-card-balance--debt { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .ac-card-balance--debt { color: var(--clay); }
+
+[data-cadence] .ac-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
