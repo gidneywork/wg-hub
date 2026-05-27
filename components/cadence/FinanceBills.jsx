@@ -11,6 +11,7 @@ import {
   deleteBill,
   insertBillPayment,
   loadAccountTransactionsForBillMatching,
+  applyRetroactiveAutoLinkForBill,
 } from '../../lib/finance/db'
 import {
   deriveBillStatus,
@@ -174,7 +175,10 @@ export default function FinanceBills() {
   const [saving,            setSaving            ] = useState(false)
   const [formData,          setFormData          ] = useState(BILL_BLANK)
   const [formErrors,        setFormErrors        ] = useState({})
-  const [deleteConfirming,  setDeleteConfirming  ] = useState(false)
+  const [deleteConfirming,      setDeleteConfirming     ] = useState(false)
+  const [retroactiveConfirming, setRetroactiveConfirming] = useState(false)
+  const [retroactiveRunning,    setRetroactiveRunning   ] = useState(false)
+  const [retroactiveResult,     setRetroactiveResult    ] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -267,6 +271,9 @@ export default function FinanceBills() {
     })
     setFormErrors({})
     setDeleteConfirming(false)
+    setRetroactiveConfirming(false)
+    setRetroactiveRunning(false)
+    setRetroactiveResult(null)
   }
 
   function handleEditCancel() {
@@ -274,6 +281,9 @@ export default function FinanceBills() {
     setFormData(BILL_BLANK)
     setFormErrors({})
     setDeleteConfirming(false)
+    setRetroactiveConfirming(false)
+    setRetroactiveRunning(false)
+    setRetroactiveResult(null)
   }
 
   async function handleEditSave() {
@@ -375,6 +385,32 @@ export default function FinanceBills() {
     }
   }
 
+  // ── Retroactive auto-link ──────────────────────────────────────────────────
+
+  function handleRetroactiveClick() {
+    if (!retroactiveConfirming) {
+      setRetroactiveConfirming(true)
+      setTimeout(() => setRetroactiveConfirming(false), 5000)
+      return
+    }
+    handleRetroactiveRun()
+  }
+
+  async function handleRetroactiveRun() {
+    setRetroactiveConfirming(false)
+    setRetroactiveRunning(true)
+    setRetroactiveResult(null)
+    try {
+      const result = await applyRetroactiveAutoLinkForBill(editingId)
+      setRetroactiveResult(result)
+      await reload()
+    } catch (e) {
+      setRetroactiveResult({ error: e?.message || 'Auto-link failed.' })
+    } finally {
+      setRetroactiveRunning(false)
+    }
+  }
+
   // ── Show inactive toggle ───────────────────────────────────────────────────
 
   async function handleToggleInactive() {
@@ -446,6 +482,54 @@ export default function FinanceBills() {
         categories={categories}
       />
       <div className="fb-edit-danger-zone">
+        <div className="fb-retroactive-section">
+          {retroactiveResult ? (
+            retroactiveResult.error ? (
+              <p className="fb-retroactive-result fb-retroactive-result--error">
+                {retroactiveResult.error}
+              </p>
+            ) : (
+              <p className="fb-retroactive-result">
+                Linked {retroactiveResult.linkedCount} payment{retroactiveResult.linkedCount !== 1 ? 's' : ''}.
+                {retroactiveResult.advancedCycles > 0 && ` ${retroactiveResult.advancedCycles} cycles advanced.`}
+                {retroactiveResult.rejectedCount  > 0 && ` ${retroactiveResult.rejectedCount} cycles skipped (no confident match).`}
+              </p>
+            )
+          ) : retroactiveConfirming ? (
+            <div className="fb-confirm-section">
+              <p className="fb-retroactive-hint">
+                This will link matching transactions in your history to this bill.
+                Incorrect matches can be unlinked manually later.
+              </p>
+              <div className="fb-confirm-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setRetroactiveConfirming(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleRetroactiveRun}
+                  disabled={retroactiveRunning}
+                >
+                  {retroactiveRunning ? 'Running…' : 'Run'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleRetroactiveClick}
+              disabled={retroactiveRunning || saving}
+            >
+              {retroactiveRunning ? 'Running…' : 'Run auto-link on existing transactions'}
+            </button>
+          )}
+        </div>
         <button
           type="button"
           className="btn btn-danger"

@@ -1,7 +1,7 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
 import { extractTransactionsFromPdf } from '../../../../lib/finance/extraction'
 import { dedupeHash, applyRules } from '../../../../lib/finance/transactions'
-import { insertTransactions } from '../../../../lib/finance/db'
+import { insertTransactions, applyAutoLinkToTransaction } from '../../../../lib/finance/db'
 
 export const maxDuration = 300
 
@@ -98,12 +98,48 @@ export async function POST(request) {
     }
 
     // Insert — dedupe collisions are silent skips, not errors
-    let inserted, skipped
+    let inserted, skipped, insertedRows
     try {
-      ;({ inserted, skipped } = await insertTransactions(rows, supabaseServer))
+      ;({ inserted, skipped, insertedRows } = await insertTransactions(rows, supabaseServer))
     } catch (e) {
       await failDoc(documentId, e.message)
       return Response.json({ status: 'failed', error_detail: e.message }, { status: 500 })
+    }
+
+    // Auto-link newly inserted transactions to active bills.
+    // Pre-load bills + payments once to avoid N+1 queries across the loop.
+    if (inserted > 0) {
+      const { data: preloadedBills } = await supabaseServer
+        .from('finance_bills').select('*')
+        .eq('account_id', account.id).eq('is_active', true)
+      const billsArr = preloadedBills ?? []
+      const billIds  = billsArr.map(b => b.id)
+      let pmtsArr    = []
+      if (billIds.length > 0) {
+        const { data: pmts } = await supabaseServer
+          .from('finance_bill_payments').select('bill_id, due_date').in('bill_id', billIds)
+        pmtsArr = pmts ?? []
+      }
+      const preloaded = { bills: billsArr, payments: pmtsArr }
+
+      let linkedCount = 0
+      for (const row of insertedRows) {
+        try {
+          const result = await applyAutoLinkToTransaction(row.id, supabaseServer, preloaded)
+          if (result.linked) {
+            linkedCount++
+            // Keep preloaded consistent so subsequent iterations see the advanced bill state
+            const idx = preloaded.bills.findIndex(b => b.id === result.billId)
+            if (idx !== -1) {
+              preloaded.payments.push({ bill_id: result.billId, due_date: result.paidDueDate })
+              preloaded.bills[idx] = { ...preloaded.bills[idx], next_due_date: result.newNextDueDate }
+            }
+          }
+        } catch (e) {
+          console.error(`[parse-statement] Auto-link failed for tx ${row.id}:`, e.message)
+        }
+      }
+      console.log(`[parse-statement] Auto-linked ${linkedCount}/${inserted} transactions to bills`)
     }
 
     // processing → imported

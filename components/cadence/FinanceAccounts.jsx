@@ -13,6 +13,7 @@ import {
   insertCategoryRule,
   applyRuleToExistingTransactions,
   getStatementSignedUrl,
+  applyAutoLinkToTransaction,
 } from '../../lib/finance/db'
 import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
 import { formatPence, dedupeHash } from '../../lib/finance/transactions'
@@ -285,7 +286,7 @@ export default function FinanceAccounts() {
 
       if (txPanelMode === 'add') {
         const hash = await dedupeHash(txPanelAccountId, txPanelForm.tx_date, amount_pence, txPanelForm.description)
-        await addTransaction({
+        const newTx = await addTransaction({
           account_id:     txPanelAccountId,
           tx_date:        txPanelForm.tx_date,
           description:    txPanelForm.description.trim(),
@@ -299,6 +300,10 @@ export default function FinanceAccounts() {
         })
         bustTxCache(txPanelAccountId)
         handleTxCancel()
+        // Fire-and-forget — auto-link failure must not surface to the user
+        applyAutoLinkToTransaction(newTx.id).catch(e =>
+          console.error('Auto-link after manual add:', e.message)
+        )
       } else {
         const changes = {
           tx_date:        txPanelForm.tx_date,
