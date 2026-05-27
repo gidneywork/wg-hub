@@ -6556,3 +6556,136 @@ html::-webkit-scrollbar-track { background: transparent; }
   padding: 40px 0;
   margin: 0;
 }
+
+[data-cadence] .fb-add-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: var(--type-caption);
+  font-family: var(--sans);
+  color: var(--text-quiet);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease-out;
+}
+
+[data-cadence] .fb-add-btn:hover:not(:disabled) { color: var(--text); }
+[data-cadence] .fb-add-btn:disabled              { opacity: 0.4; cursor: default; }
+
+[data-cadence] .fb-section {
+  margin-bottom: 40px;
+}
+
+[data-cadence] .fb-section-title {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-quiet);
+  margin: 0 0 12px;
+}
+
+[data-cadence] .fb-section-empty {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  margin: 0;
+}
+
+[data-cadence] .fb-bill-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+[data-cadence] .fb-bill-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+}
+
+[data-cadence] .fb-bill-name {
+  flex: 1;
+  color: var(--text);
+}
+
+[data-cadence] .fb-bill-type,
+[data-cadence] .fb-bill-account {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+[data-cadence] .fb-bill-amount {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+[data-cadence] .fb-bill-date {
+  color: var(--text-quiet);
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+[data-cadence] .fb-bill-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+}
+
+[data-cadence] .fb-bill-table th {
+  text-align: left;
+  font-size: var(--type-label);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-quiet);
+  padding: 0 8px 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+[data-cadence] .fb-bill-table th.fb-bill-amount-col { text-align: right; }
+
+[data-cadence] .fb-bill-table td {
+  padding: 8px 8px 8px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
+}
+
+[data-cadence] .fb-bill-table tr:last-child td { border-bottom: none; }
+
+[data-cadence] .fb-bill-table .fb-bill-name   { color: var(--text); }
+[data-cadence] .fb-bill-table .fb-bill-amount { text-align: right; font-variant-numeric: tabular-nums; }
+
+[data-cadence] .fb-status-badge {
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+[data-cadence] .fb-status-badge--overdue  { color: var(--clay-deep);  background: var(--bg-elevated); }
+[data-cadence] .fb-status-badge--due_soon { color: var(--sand);       background: var(--bg-elevated); }
+[data-cadence] .fb-status-badge--paid     { color: var(--moss-deep);  background: var(--bg-elevated); }
+[data-cadence] .fb-status-badge--upcoming { color: var(--text-quiet); background: var(--bg-elevated); }
+[data-cadence] .fb-status-badge--inactive { color: var(--text-faint); background: var(--bg-elevated); }
+
+[data-theme="dark"] [data-cadence] .fb-status-badge--overdue { color: var(--clay); }
+[data-theme="dark"] [data-cadence] .fb-status-badge--paid    { color: var(--moss); }
+
+[data-cadence] .fb-loading {
+  padding: 48px 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+}
