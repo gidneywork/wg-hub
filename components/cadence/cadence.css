@@ -7599,3 +7599,153 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-quiet);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── FC-052 c5 — AccountSummarySpending ─────────────────────────────────── */
+
+[data-cadence] .ass-page {
+  padding: var(--space-5) 0;
+}
+
+[data-cadence] .ass-loading,
+[data-cadence] .ass-error {
+  padding: var(--space-6);
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text-muted);
+}
+[data-cadence] .ass-error { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .ass-error { color: var(--clay); }
+
+[data-cadence] .ass-empty {
+  padding: var(--space-6) 0;
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  color: var(--text-muted);
+}
+
+/* Time range selector */
+
+[data-cadence] .ass-time-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .ass-time-range-btn {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 32px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+[data-cadence] .ass-time-range-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+[data-cadence] .ass-time-range-btn--active {
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+  border-color: transparent;
+  font-weight: 500;
+}
+[data-theme="dark"] [data-cadence] .ass-time-range-btn--active {
+  background: var(--moss-soft);
+  color: var(--moss);
+}
+
+/* Section blocks */
+
+[data-cadence] .ass-section {
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+[data-cadence] .ass-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+[data-cadence] .ass-section-title {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+  margin-bottom: var(--space-4);
+}
+
+[data-cadence] .ass-chart-container {
+  overflow-x: auto;
+  padding-top: var(--space-2);
+}
+
+/* Top merchants table */
+
+[data-cadence] .ass-merchants-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+}
+
+[data-cadence] .ass-merchants-table th {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-cadence] .ass-merchants-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+[data-cadence] .ass-merchants-table tr:last-child td { border-bottom: none; }
+[data-cadence] .ass-merchants-table tr:hover td { background: var(--bg-elevated); }
+
+[data-cadence] .ass-merchants-rank {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  text-align: right;
+  padding-right: var(--space-4);
+  width: 28px;
+}
+
+[data-cadence] .ass-merchants-name {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-cadence] .ass-merchants-tx-count {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  text-align: center;
+  width: 80px;
+}
+
+[data-cadence] .ass-merchants-total {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--clay-deep);
+  white-space: nowrap;
+}
+[data-theme="dark"] [data-cadence] .ass-merchants-total { color: var(--clay); }

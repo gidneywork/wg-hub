@@ -17,6 +17,7 @@ import CadenceTabs from './CadenceTabs'
 import AccountSummaryOverview from './AccountSummaryOverview'
 import AccountSummaryTransactions from './AccountSummaryTransactions'
 import AccountSummaryBills from './AccountSummaryBills'
+import AccountSummarySpending from './AccountSummarySpending'
 
 const TABS = [
   { key: 'overview',     label: 'Overview' },
@@ -100,7 +101,7 @@ export default function FinanceAccountSummary({ accountId, activeTab, onViewChan
           <AccountSummaryBills accountId={accountId} />
         )}
         {activeTab === 'spending' && (
-          <div className="fas-tab-placeholder">Spending tab — coming in c5.</div>
+          <AccountSummarySpending accountId={accountId} />
         )}
       </div>
     </div>
