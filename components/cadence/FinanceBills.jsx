@@ -162,7 +162,7 @@ function BillForm({ formData, setFormData, formErrors, accounts, categories, hid
   )
 }
 
-export default function FinanceBills({ accountId = null }) {
+export default function FinanceBills({ accountId = null, pendingPreFill = null, onPreFillConsumed = null }) {
   const [bills,             setBills            ] = useState([])
   const [allPayments,       setAllPayments       ] = useState([])
   const [accounts,          setAccounts          ] = useState([])
@@ -210,6 +210,30 @@ export default function FinanceBills({ accountId = null }) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [accountId])
+
+  useEffect(() => {
+    if (!pendingPreFill) return
+    setAdding(true)
+    setEditingId(null)
+    setMarkingPaidId(null)
+    setFormData({
+      ...BILL_BLANK,
+      account_id:          accountId ?? '',
+      name:                pendingPreFill.merchant_clean,
+      bill_type:           '',
+      category_id:         '',
+      expected_amount_str: (Math.abs(pendingPreFill.medianAmountPence) / 100).toFixed(2),
+      tolerance_pct:       '25',
+      frequency:           pendingPreFill.frequency,
+      anchor_day:          pendingPreFill.anchorDay != null ? String(pendingPreFill.anchorDay) : '',
+      next_due_date:       pendingPreFill.nextDueDate,
+      description_pattern: pendingPreFill.descriptionPattern,
+      notes:               '',
+      is_active:           true,
+    })
+    setFormErrors({})
+    if (onPreFillConsumed) onPreFillConsumed()
+  }, [pendingPreFill, accountId, onPreFillConsumed])
 
   async function reload() {
     // Reloads bills and payments only — accounts/categories don't change from bill operations.

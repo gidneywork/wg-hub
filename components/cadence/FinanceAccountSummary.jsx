@@ -32,11 +32,12 @@ function fmtDate(iso) {
 }
 
 export default function FinanceAccountSummary({ accountId, activeTab, onViewChange }) {
-  const [account,       setAccount]       = useState(null)
-  const [transactions,  setTransactions]  = useState([])
-  const [statementDocs, setStatementDocs] = useState([])
-  const [loading,       setLoading]       = useState(true)
-  const [pageError,     setPageError]     = useState(null)
+  const [account,            setAccount           ] = useState(null)
+  const [transactions,       setTransactions      ] = useState([])
+  const [statementDocs,      setStatementDocs     ] = useState([])
+  const [loading,            setLoading           ] = useState(true)
+  const [pageError,          setPageError         ] = useState(null)
+  const [pendingBillPreFill, setPendingBillPreFill] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -98,10 +99,20 @@ export default function FinanceAccountSummary({ accountId, activeTab, onViewChan
           <AccountSummaryTransactions accountId={accountId} />
         )}
         {activeTab === 'bills' && (
-          <AccountSummaryBills accountId={accountId} />
+          <AccountSummaryBills
+            accountId={accountId}
+            pendingBillPreFill={pendingBillPreFill}
+            onPreFillConsumed={() => setPendingBillPreFill(null)}
+          />
         )}
         {activeTab === 'spending' && (
-          <AccountSummarySpending accountId={accountId} />
+          <AccountSummarySpending
+            accountId={accountId}
+            onSuggestAsBill={(preFill) => {
+              setPendingBillPreFill(preFill)
+              onViewChange(`finance-account:${accountId}:bills`)
+            }}
+          />
         )}
       </div>
     </div>

@@ -4,13 +4,14 @@ import {
   ResponsiveContainer, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
-import { loadTransactions, loadCategories } from '../../lib/finance/db'
+import { loadTransactions, loadCategories, loadBills, loadDismissedPatterns, dismissPattern } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import {
   toYMD, getTimeRangeBounds,
   bucketByMonthAndCategory, aggregateByCategory, aggregateMerchants,
-  penceToShort, fmtMonthShort,
+  penceToShort, fmtMonthShort, detectRecurringPatterns,
 } from '../../lib/finance/spending'
+import { FREQUENCY_LABELS } from '../../lib/finance/bills'
 
 // Mirrors cadence-tokens.css --d1 through --d7 (light theme values).
 // Must be kept in sync if tokens change. Cannot use CSS variables in SVG fill attributes.
@@ -96,18 +97,31 @@ function CategoryTooltip({ active, payload }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function AccountSummarySpending({ accountId }) {
-  const [transactions, setTransactions] = useState([])
-  const [categories,   setCategories]   = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [pageError,    setPageError]    = useState(null)
-  const [timeRange,    setTimeRange]    = useState('3m')
+export default function AccountSummarySpending({ accountId, onSuggestAsBill }) {
+  const [transactions,       setTransactions      ] = useState([])
+  const [categories,         setCategories        ] = useState([])
+  const [loading,            setLoading           ] = useState(true)
+  const [pageError,          setPageError         ] = useState(null)
+  const [timeRange,          setTimeRange         ] = useState('3m')
+  const [bills,              setBills             ] = useState([])
+  const [dismissedPatterns,  setDismissedPatterns ] = useState([])
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     setPageError(null)
-    Promise.all([loadTransactions(accountId), loadCategories()])
-      .then(([txs, cats]) => { setTransactions(txs); setCategories(cats) })
+    Promise.all([
+      loadTransactions(accountId),
+      loadCategories(),
+      loadBills(false, accountId),
+      loadDismissedPatterns(accountId),
+    ])
+      .then(([txs, cats, b, dp]) => {
+        setTransactions(txs)
+        setCategories(cats)
+        setBills(b)
+        setDismissedPatterns(dp.map(d => d.merchant_clean))
+      })
       .catch(e => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [accountId])
@@ -139,6 +153,34 @@ export default function AccountSummarySpending({ accountId }) {
     () => aggregateMerchants(spendingTxs),
     [spendingTxs]
   )
+
+  const suggestions = useMemo(
+    () => detectRecurringPatterns(transactions, bills, dismissedPatterns),
+    [transactions, bills, dismissedPatterns]
+  )
+  const visibleSuggestions = showAllSuggestions ? suggestions : suggestions.slice(0, 10)
+
+  function handleSuggestAsBill(suggestion) {
+    if (onSuggestAsBill) {
+      onSuggestAsBill({
+        merchant_clean:     suggestion.merchant_clean,
+        medianAmountPence:  suggestion.medianAmountPence,
+        frequency:          suggestion.frequency,
+        anchorDay:          suggestion.anchorDay,
+        nextDueDate:        suggestion.nextDueDate,
+        descriptionPattern: suggestion.descriptionPattern,
+      })
+    }
+  }
+
+  async function handleDismiss(suggestion) {
+    try {
+      await dismissPattern(accountId, suggestion.merchant_clean)
+      setDismissedPatterns(p => [...p, suggestion.merchant_clean])
+    } catch (e) {
+      console.error('Dismiss failed:', e)
+    }
+  }
 
   if (loading)   return <div className="ass-loading">Loading…</div>
   if (pageError) return <div className="ass-error">{pageError}</div>
@@ -274,6 +316,53 @@ export default function AccountSummarySpending({ accountId }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Recurring pattern suggestions */}
+      {suggestions.length > 0 && (
+        <div className="ass-section">
+          <p className="ass-section-title">Possible recurring bills</p>
+          <p className="ass-recurring-description">
+            Cadence has detected these patterns in your spending. Click 'Suggest as bill' to track them or 'Dismiss' to ignore.
+          </p>
+          <ul className="ass-suggestions">
+            {visibleSuggestions.map(s => (
+              <li key={s.merchant_clean} className="ass-suggestion">
+                <div className="ass-suggestion-body">
+                  <span className="ass-suggestion-merchant">{s.merchant_clean}</span>
+                  <span className="ass-suggestion-meta">
+                    {formatPence(-s.medianAmountPence)} · {FREQUENCY_LABELS[s.frequency] ?? s.frequency} · detected from {s.occurrenceCount} transactions
+                  </span>
+                </div>
+                <div className="ass-suggestion-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => handleSuggestAsBill(s)}
+                  >
+                    Suggest as bill
+                  </button>
+                  <button
+                    type="button"
+                    className="ass-suggestion-dismiss"
+                    onClick={() => handleDismiss(s)}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {suggestions.length > 10 && (
+            <button
+              type="button"
+              className="ass-see-all-btn"
+              onClick={() => setShowAllSuggestions(p => !p)}
+            >
+              {showAllSuggestions ? 'Show top 10' : `See all (${suggestions.length - 10} more)`}
+            </button>
+          )}
         </div>
       )}
     </div>
