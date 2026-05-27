@@ -15,7 +15,11 @@ import {
   getStatementSignedUrl,
   applyAutoLinkToTransaction,
 } from '../../lib/finance/db'
-import { getBankLabel, ACCOUNT_TYPE_LABELS } from '../../lib/finance/accounts'
+import {
+  getBankLabel, ACCOUNT_TYPE_LABELS,
+  getMostRecentImportedStatement,
+  computeAvailableToSpend,
+} from '../../lib/finance/accounts'
 import { formatPence, dedupeHash } from '../../lib/finance/transactions'
 import CadencePanel from './CadencePanel'
 
@@ -673,9 +677,19 @@ export default function FinanceAccounts() {
       ) : (
         <ul className="fa-list">
           {accounts.map(account => {
-            const isExpanded = expanded === account.id
-            const cached     = txCache[account.id]
-            const balance    = cached != null ? formatPence(cached.balance) : '—'
+            const isExpanded    = expanded === account.id
+            const cached        = txCache[account.id]
+            const isCreditCard  = account.account_type === 'credit_card'
+            const ccStmt        = isCreditCard ? getMostRecentImportedStatement(statementDocs, account.id) : null
+            const ccAvailable   = isCreditCard && ccStmt ? computeAvailableToSpend(account, statementDocs) : null
+            const isDebt        = isCreditCard && ccStmt?.closing_balance_pence != null
+
+            const balance = (() => {
+              if (isCreditCard && ccStmt?.closing_balance_pence != null) {
+                return formatPence(-Math.abs(Number(ccStmt.closing_balance_pence)))
+              }
+              return cached != null ? formatPence(cached.balance) : '—'
+            })()
 
             return (
               <li key={account.id} className={`fa-account-row${isExpanded ? ' fa-account-row--open' : ''}`}>
@@ -689,12 +703,41 @@ export default function FinanceAccounts() {
                   <div className="fa-account-meta">
                     <span className="fa-account-bank">{getBankLabel(account)}</span>
                     <span className="fa-account-type">{ACCOUNT_TYPE_LABELS[account.account_type]}</span>
-                    <span className="fa-account-balance">{balance}</span>
+                    <span className={`fa-account-balance${isDebt ? ' fa-account-balance--debt' : ''}`}>{balance}</span>
                   </div>
                   <svg className={`fa-chevron${isExpanded ? ' fa-chevron--open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
                 </button>
+
+                {isCreditCard && ccStmt && (
+                  <div className="fa-cc-row">
+                    {ccStmt.credit_limit_pence != null && (
+                      <span className="fa-cc-field">
+                        <span className="fa-cc-label">Limit</span>
+                        <span className="fa-cc-value">{formatPence(ccStmt.credit_limit_pence)}</span>
+                      </span>
+                    )}
+                    {ccAvailable != null && (
+                      <span className="fa-cc-field">
+                        <span className="fa-cc-label">Available</span>
+                        <span className="fa-cc-value">{formatPence(ccAvailable)}</span>
+                      </span>
+                    )}
+                    {ccStmt.minimum_payment_pence != null && (
+                      <span className="fa-cc-field">
+                        <span className="fa-cc-label">Min payment</span>
+                        <span className="fa-cc-value">{formatPence(ccStmt.minimum_payment_pence)}</span>
+                      </span>
+                    )}
+                    {ccStmt.payment_due_date && (
+                      <span className="fa-cc-field">
+                        <span className="fa-cc-label">Due</span>
+                        <span className="fa-cc-value">{fmtDate(ccStmt.payment_due_date)}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {isExpanded && (
                   <div className="fa-account-body">

@@ -6092,6 +6092,39 @@ html::-webkit-scrollbar-track { background: transparent; }
   text-align: right;
 }
 
+[data-cadence] .fa-account-balance--debt {
+  color: var(--clay-deep);
+}
+
+[data-cadence] .fa-cc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+  padding: 6px 0 10px;
+  border-top: 1px solid var(--border);
+}
+
+[data-cadence] .fa-cc-field {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+[data-cadence] .fa-cc-label {
+  font-family: var(--mono);
+  font-size: var(--type-label);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-cadence] .fa-cc-value {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 [data-cadence] .fa-chevron {
   width: 16px;
   height: 16px;
