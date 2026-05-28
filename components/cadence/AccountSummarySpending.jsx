@@ -10,21 +10,9 @@ import {
   toYMD, getTimeRangeBounds,
   bucketByMonthAndCategory, aggregateByCategory, aggregateMerchants,
   penceToShort, fmtMonthShort, detectRecurringPatterns,
+  CHART_PALETTE,
 } from '../../lib/finance/spending'
 import { FREQUENCY_LABELS } from '../../lib/finance/bills'
-
-// Mirrors cadence-tokens.css --d1 through --d7 (light theme values).
-// Must be kept in sync if tokens change. Cannot use CSS variables in SVG fill attributes.
-const CHART_PALETTE = [
-  '#6B7A5A', // d1 — moss
-  '#B96A4D', // d2 — clay
-  '#4A5F6E', // d3 — slate
-  '#C9A24E', // d4 — sand
-  '#8A7396', // d5 — mauve
-  '#5F5C55', // d6 — stone
-  '#A3493D', // d7 — brick
-  '#B8B3A7', // neutral — Other bucket
-]
 
 const TIME_RANGES = [
   { value: '30d', label: 'Last 30 days' },

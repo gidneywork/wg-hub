@@ -1,16 +1,38 @@
 'use client'
 import { useState, useEffect } from 'react'
 import {
+  ResponsiveContainer, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+} from 'recharts'
+import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
+  loadCategories, loadNetWorthSnapshots,
 } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
-import { detectRecurringPatterns } from '../../lib/finance/spending'
+import {
+  detectRecurringPatterns, CHART_PALETTE,
+  getTimeRangeBounds, toYMD, bucketByMonthAndCategory,
+  penceToShort, penceToShortSigned, fmtMonthShort, fmtDateShort,
+} from '../../lib/finance/spending'
 import {
   computeNetWorth, computeMonthlyBillsTotal, computeThisMonthSpending,
   computeMonthlyCashflow, computeHealthAlerts, computeActionItems,
 } from '../../lib/finance/dashboard'
+
+// Chart constants — hex values because CSS vars don't resolve in SVG fill attributes.
+// Light-theme values; dark chart theming is future work (matches c5 precedent).
+const HEX = {
+  grid:   '#DCD7CB', // --chart-grid (light)
+  cursor: '#EDE9E0', // --bg-elevated (light)
+}
+const CHART_MARGIN    = { top: 4, right: 8, left: 8, bottom: 0 }
+const mono11          = { fontFamily: 'var(--mono)', fontSize: 11, fill: '#8A867D' } // --text-quiet
+const INCOME_COLOUR   = '#6B7A5A' // CHART_PALETTE[0] — moss
+const SPENDING_COLOUR = '#C9A24E' // CHART_PALETTE[3] — sand
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub, negative }) {
   return (
@@ -21,6 +43,8 @@ function StatCard({ label, value, sub, negative }) {
     </div>
   )
 }
+
+// ── Alert card ────────────────────────────────────────────────────────────────
 
 function AlertCard({ item, onViewChange }) {
   return (
@@ -47,6 +71,75 @@ function AlertCard({ item, onViewChange }) {
   )
 }
 
+// ── Chart tooltips ────────────────────────────────────────────────────────────
+
+const TT_STYLE = {
+  background: 'var(--bg-paper)', border: '1px solid var(--border)',
+  borderRadius: 4, padding: '10px 14px',
+  fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text)',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+}
+
+function StackedTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const total = payload.reduce((sum, e) => sum + (e.value ?? 0), 0)
+  return (
+    <div style={{ ...TT_STYLE, minWidth: 190 }}>
+      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-muted)' }}>{fmtMonthShort(label)}</div>
+      {[...payload].reverse().map(e => (
+        <div key={e.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 2 }}>
+          <span style={{ color: e.fill }}>■ {e.dataKey}</span>
+          <span>{formatPence(-e.value)}</span>
+        </div>
+      ))}
+      <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', gap: 24, fontWeight: 600 }}>
+        <span>Total</span>
+        <span>{formatPence(-total)}</span>
+      </div>
+    </div>
+  )
+}
+
+function NetWorthTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const { date, netWorth } = payload[0].payload
+  return (
+    <div style={{ ...TT_STYLE, minWidth: 160 }}>
+      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-muted)' }}>{date}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
+        <span>Net worth</span>
+        <span style={{ color: netWorth < 0 ? '#A3493D' : '#4F5A42' }}>{formatPence(netWorth)}</span>
+      </div>
+    </div>
+  )
+}
+
+function CashflowTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const income   = payload.find(p => p.dataKey === 'incomePence')?.value   ?? 0
+  const spending = payload.find(p => p.dataKey === 'spendingPence')?.value ?? 0
+  const net      = income - spending
+  return (
+    <div style={{ ...TT_STYLE, minWidth: 190 }}>
+      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text-muted)' }}>{fmtMonthShort(label)}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 2 }}>
+        <span style={{ color: INCOME_COLOUR }}>■ Income</span>
+        <span>{formatPence(income)}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 2 }}>
+        <span style={{ color: SPENDING_COLOUR }}>■ Spending</span>
+        <span>{formatPence(spending)}</span>
+      </div>
+      <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', gap: 24, fontWeight: 600 }}>
+        <span>Net</span>
+        <span style={{ color: net < 0 ? '#A3493D' : '#4F5A42' }}>{formatPence(net)}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function FinanceDashboard({ onViewChange }) {
   const [loading,            setLoading           ] = useState(true)
   const [pageError,          setPageError          ] = useState(null)
@@ -56,6 +149,8 @@ export default function FinanceDashboard({ onViewChange }) {
   const [bills,              setBills              ] = useState([])
   const [billPayments,       setBillPayments       ] = useState([])
   const [dismissedByAccount, setDismissedByAccount ] = useState({})
+  const [categories,         setCategories         ] = useState([])
+  const [snapshots,          setSnapshots          ] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -63,8 +158,9 @@ export default function FinanceDashboard({ onViewChange }) {
     Promise.all([
       loadAccounts(), loadAllTransactions(), loadStatementDocuments(),
       loadBills(false), loadAllBillPayments(),
+      loadCategories(), loadNetWorthSnapshots(),
     ])
-      .then(async ([accs, txs, docs, b, payments]) => {
+      .then(async ([accs, txs, docs, b, payments, cats, snaps]) => {
         const dpResults   = await Promise.all(accs.map(a => loadDismissedPatterns(a.id)))
         const dpByAccount = {}
         accs.forEach((a, i) => { dpByAccount[a.id] = dpResults[i].map(d => d.merchant_clean) })
@@ -74,6 +170,8 @@ export default function FinanceDashboard({ onViewChange }) {
         setBills(b)
         setBillPayments(payments)
         setDismissedByAccount(dpByAccount)
+        setCategories(cats)
+        setSnapshots(snaps)
         if (accs.length > 0) {
           const { netWorth } = computeNetWorth(accs, txs, docs)
           ensureTodaysSnapshot(netWorth).catch(e => console.error('snapshot:', e))
@@ -108,6 +206,19 @@ export default function FinanceDashboard({ onViewChange }) {
 
   const healthAlerts = computeHealthAlerts(accounts, transactions, statementDocs, billsWithStatus)
   const actionItems  = computeActionItems(accounts, transactions, statementDocs, suggestionCounts)
+
+  // Analytics datasets
+  const { from: catFrom } = getTimeRangeBounds('6m')
+  const catFromStr        = toYMD(catFrom)
+  const spendingTxs       = transactions.filter(tx =>
+    Number(tx.amount_pence) < 0 && tx.tx_date >= catFromStr && tx.tx_date <= today
+  )
+  const { data: categoryData, cats: topCats } = bucketByMonthAndCategory(spendingTxs, categories)
+
+  const netWorthData = [...snapshots].reverse().map(s => ({
+    date:     s.taken_at.split('T')[0],
+    netWorth: Number(s.net_worth_pence),
+  }))
 
   return (
     <div className="fd-page">
@@ -153,10 +264,81 @@ export default function FinanceDashboard({ onViewChange }) {
         </ul>
       </section>
 
-      <div className="fd-section fd-section--placeholder">
-        <p className="fd-section-title">Net worth over time</p>
-        <p className="fd-placeholder">Trend chart and cashflow breakdown — coming in c3.</p>
-      </div>
+      <section className="fd-section">
+        <h2 className="fd-section-title">Analytics</h2>
+
+        <div className="fd-chart-block">
+          <p className="fd-chart-title">Spending by category — last 6 months</p>
+          <div className="fd-chart-container">
+            {categoryData.length === 0
+              ? <p className="fd-chart-empty">No spending data in the last 6 months.</p>
+              : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={categoryData} margin={CHART_MARGIN}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={HEX.grid} vertical={false} />
+                    <XAxis dataKey="month" tickFormatter={fmtMonthShort} tick={mono11} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={penceToShort} tick={mono11} axisLine={false} tickLine={false} width={52} />
+                    <Tooltip content={<StackedTooltip />} cursor={{ fill: HEX.cursor }} />
+                    <Legend wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-muted)' }} />
+                    {topCats.map((cat, idx) => (
+                      <Bar
+                        key={cat}
+                        dataKey={cat}
+                        stackId="spend"
+                        fill={CHART_PALETTE[idx % CHART_PALETTE.length]}
+                        radius={idx === topCats.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )
+            }
+          </div>
+        </div>
+
+        <div className="fd-chart-block">
+          <p className="fd-chart-title">Net worth over time</p>
+          <div className="fd-chart-container">
+            {netWorthData.length < 2
+              ? <p className="fd-chart-empty">Net worth history will appear here as you use Cadence over time. Check back after a few days.</p>
+              : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={netWorthData} margin={CHART_MARGIN}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={HEX.grid} vertical={false} />
+                    <XAxis dataKey="date" tickFormatter={fmtDateShort} tick={mono11} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={penceToShortSigned} tick={mono11} axisLine={false} tickLine={false} width={60} />
+                    <Tooltip content={<NetWorthTooltip />} />
+                    <Line type="monotone" dataKey="netWorth" stroke={CHART_PALETTE[0]} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )
+            }
+          </div>
+        </div>
+
+        <div className="fd-chart-block">
+          <p className="fd-chart-title">Cashflow — last 6 months</p>
+          <div className="fd-chart-container">
+            {cashflow.length === 0
+              ? <p className="fd-chart-empty">No transaction data yet.</p>
+              : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={cashflow} margin={CHART_MARGIN}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={HEX.grid} vertical={false} />
+                    <XAxis dataKey="month" tickFormatter={fmtMonthShort} tick={mono11} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={penceToShort} tick={mono11} axisLine={false} tickLine={false} width={60} />
+                    <Tooltip content={<CashflowTooltip />} />
+                    <Legend wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-muted)' }} />
+                    <Bar dataKey="incomePence"   name="Income"   fill={INCOME_COLOUR}   radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="spendingPence" name="Spending" fill={SPENDING_COLOUR} radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )
+            }
+          </div>
+        </div>
+
+      </section>
     </div>
   )
 }

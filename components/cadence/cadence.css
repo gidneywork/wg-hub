@@ -8145,3 +8145,35 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-theme="dark"] [data-cadence] .fd-card-action { color: var(--moss); }
 
 [data-cadence] .fd-card-action:hover { background: var(--bg-elevated); }
+
+/* ── FC-046 c3 — Analytics chart blocks ─────────────────────────────────────── */
+
+[data-cadence] .fd-chart-block {
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fd-chart-block:last-child {
+  margin-bottom: 0;
+}
+
+[data-cadence] .fd-chart-title {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  color: var(--text-quiet);
+  margin: 0 0 var(--space-3) 0;
+}
+
+[data-cadence] .fd-chart-container {
+  overflow-x: auto;
+  padding-top: var(--space-2);
+}
+
+[data-cadence] .fd-chart-empty {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-6) 0;
+}
