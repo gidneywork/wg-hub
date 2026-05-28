@@ -8199,6 +8199,99 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 [data-cadence] .fd-card-action:hover { background: var(--bg-elevated); }
 
+/* ── FC-059 c1 — Dashboard inline categorisation ─────────────────────────────── */
+
+[data-cadence] .fd-card--expandable {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+[data-cadence] .fd-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+[data-cadence] .fd-uncat-panel {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+[data-cadence] .fd-uncat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-cadence] .fd-uncat-row {
+  display: grid;
+  grid-template-columns: 6ch 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+[data-cadence] .fd-uncat-date {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .fd-uncat-merchant {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+[data-cadence] .fd-uncat-amount {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+[data-cadence] .fd-uncat-select {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px var(--space-2);
+  cursor: pointer;
+  max-width: 160px;
+}
+
+[data-cadence] .fd-uncat-more {
+  display: inline-block;
+  margin-top: var(--space-3);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--moss-deep);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+[data-theme="dark"] [data-cadence] .fd-uncat-more { color: var(--moss); }
+
 /* ── FC-046 c3 — Analytics chart blocks ─────────────────────────────────────── */
 
 [data-cadence] .fd-chart-block {

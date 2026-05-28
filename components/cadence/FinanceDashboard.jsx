@@ -8,7 +8,7 @@ import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
   loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome,
-  loadFinanceSetting, saveFinanceSetting,
+  loadFinanceSetting, saveFinanceSetting, recategoriseTransaction,
 } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
@@ -159,6 +159,7 @@ export default function FinanceDashboard({ onViewChange }) {
   const [incomeRows,         setIncomeRows         ] = useState([])
   const [budgetRatio,        setBudgetRatio        ] = useState(0.5)
   const [ratioSaving,        setRatioSaving        ] = useState(false)
+  const [uncatExpanded,      setUncatExpanded      ] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -228,6 +229,11 @@ export default function FinanceDashboard({ onViewChange }) {
   const incomeBreakdown        = computeIncomeBreakdown(incomeRows)
   const billsBreakdown         = computeMonthlyBillsByType(bills)
 
+  const allUncatTxs   = transactions.filter(t => t.category_id == null)
+                                     .sort((a, b) => b.tx_date.localeCompare(a.tx_date))
+  const uncatPanelTxs = allUncatTxs.slice(0, 20)
+  const uncatHasMore  = allUncatTxs.length > 20
+
   // Budget allocation slider
   const pool             = Math.max(0, monthlyIncome - monthlyBills - monthlyDebtCommitments)
   const poolIsZero       = pool === 0
@@ -242,6 +248,14 @@ export default function FinanceDashboard({ onViewChange }) {
 
   function handleRatioChange(e) {
     setBudgetRatio(Number(e.target.value) / 100)
+  }
+
+  function handleCategorise(txId, categoryId) {
+    recategoriseTransaction(txId, categoryId)
+      .then(() => {
+        setTransactions(prev => prev.map(t => t.id === txId ? { ...t, category_id: categoryId } : t))
+      })
+      .catch(e => console.error('recategoriseTransaction:', e))
   }
 
   function handleRatioSettle(e) {
@@ -435,9 +449,66 @@ export default function FinanceDashboard({ onViewChange }) {
       <section className="fd-section">
         <h2 className="fd-section-title">Actions</h2>
         <ul className="fd-cards">
-          {actionItems.map(item => (
-            <AlertCard key={item.id} item={item} onViewChange={onViewChange} />
-          ))}
+          {actionItems.map(item => {
+            if (item.id === 'uncat') {
+              return (
+                <li key={item.id} className="fd-card fd-card--action fd-card--expandable">
+                  <div className="fd-card-header">
+                    <div className="fd-card-status">
+                      {item.count != null && <span className="fd-card-count">{item.count}</span>}
+                    </div>
+                    <div className="fd-card-body">
+                      <p className="fd-card-title">{item.title}</p>
+                      {item.description && <p className="fd-card-description">{item.description}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      className="fd-card-action"
+                      onClick={() => setUncatExpanded(v => !v)}
+                    >
+                      {uncatExpanded ? 'Close' : 'Categorise'}
+                    </button>
+                  </div>
+                  {uncatExpanded && (
+                    <div className="fd-uncat-panel">
+                      <ul className="fd-uncat-list">
+                        {uncatPanelTxs.map(tx => (
+                          <li key={tx.id} className="fd-uncat-row">
+                            <span className="fd-uncat-date">{fmtDateShort(tx.tx_date)}</span>
+                            <span className="fd-uncat-merchant">{tx.merchant_clean || tx.description}</span>
+                            <span className="fd-uncat-amount">{formatPence(Number(tx.amount_pence))}</span>
+                            <select
+                              className="fd-uncat-select"
+                              defaultValue=""
+                              onChange={e => {
+                                if (!e.target.value) return
+                                handleCategorise(tx.id, e.target.value)
+                              }}
+                            >
+                              <option value="" disabled>— choose —</option>
+                              {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </li>
+                        ))}
+                      </ul>
+                      {uncatHasMore && item.action && (
+                        <button
+                          type="button"
+                          className="fd-uncat-more"
+                          onClick={() => onViewChange(item.action.view)}
+                        >
+                          View all {allUncatTxs.length} uncategorised
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </li>
+              )
+            }
+            return <AlertCard key={item.id} item={item} onViewChange={onViewChange} />
+          })}
         </ul>
       </section>
 
