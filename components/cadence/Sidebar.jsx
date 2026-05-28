@@ -40,7 +40,7 @@ const NAV_FINANCE = [
       <path d="M9 7h6M9 11h6M9 15h4"/>
     </svg>
   ) },
-  { view: 'finance-debt', label: 'Debt', icon: (
+  { view: 'finance-debt', label: 'Holdings', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9"/>
       <path d="M14.5 9.5a3 3 0 0 0-5 2.1c0 2.4 5 3.4 5 5.9a3 3 0 0 1-5 .5"/>

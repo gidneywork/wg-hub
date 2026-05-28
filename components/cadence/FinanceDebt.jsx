@@ -755,7 +755,7 @@ export default function FinanceDebt() {
   return (
     <div className="fdt-page">
       <div className="fdt-header">
-        <h2 className="fb-title">Debt</h2>
+        <h2 className="fb-title">Holdings</h2>
         <div className="fdt-header-actions">
           <button type="button"
             className={`btn btn-primary fdt-add-btn${addType === 'revolving' ? ' fdt-add-btn--active' : ''}`}
@@ -776,8 +776,9 @@ export default function FinanceDebt() {
       </div>
 
       <p className="fdt-intro">
-        Cadence auto-detects accounts with a negative balance. Set an APR to enable
-        paydown projections. Loans and mortgages can be added separately.
+        Your financial position — what you own and what you owe. Cadence auto-detects
+        accounts with a negative balance; set an APR to enable paydown projections.
+        Loans and mortgages can be added separately. Property and other assets will follow.
       </p>
 
       <CadencePanel
