@@ -8178,6 +8178,13 @@ html::-webkit-scrollbar-track { background: transparent; }
   padding: var(--space-6) 0;
 }
 
+[data-cadence] .fd-chart-note {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+  margin-top: var(--space-2);
+}
+
 /* ── FC-041 c1 — Debt tool ───────────────────────────────────────────────────── */
 
 [data-cadence] .fdt-page {

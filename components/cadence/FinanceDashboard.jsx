@@ -7,7 +7,7 @@ import {
 import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
-  loadCategories, loadNetWorthSnapshots,
+  loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts,
 } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
@@ -151,6 +151,8 @@ export default function FinanceDashboard({ onViewChange }) {
   const [dismissedByAccount, setDismissedByAccount ] = useState({})
   const [categories,         setCategories         ] = useState([])
   const [snapshots,          setSnapshots          ] = useState([])
+  const [properties,         setProperties         ] = useState([])
+  const [debtRows,           setDebtRows           ] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -159,8 +161,9 @@ export default function FinanceDashboard({ onViewChange }) {
       loadAccounts(), loadAllTransactions(), loadStatementDocuments(),
       loadBills(false), loadAllBillPayments(),
       loadCategories(), loadNetWorthSnapshots(),
+      loadProperties(), loadDebts(),
     ])
-      .then(async ([accs, txs, docs, b, payments, cats, snaps]) => {
+      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts]) => {
         const dpResults   = await Promise.all(accs.map(a => loadDismissedPatterns(a.id)))
         const dpByAccount = {}
         accs.forEach((a, i) => { dpByAccount[a.id] = dpResults[i].map(d => d.merchant_clean) })
@@ -172,8 +175,10 @@ export default function FinanceDashboard({ onViewChange }) {
         setDismissedByAccount(dpByAccount)
         setCategories(cats)
         setSnapshots(snaps)
+        setProperties(props)
+        setDebtRows(debts)
         if (accs.length > 0) {
-          const { netWorth } = computeNetWorth(accs, txs, docs)
+          const { netWorth } = computeNetWorth(accs, txs, docs, props, debts)
           ensureTodaysSnapshot(netWorth).catch(e => console.error('snapshot:', e))
         }
       })
@@ -186,7 +191,7 @@ export default function FinanceDashboard({ onViewChange }) {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const { assets, debt, netWorth } = computeNetWorth(accounts, transactions, statementDocs)
+  const { assets, debt, netWorth } = computeNetWorth(accounts, transactions, statementDocs, properties, debtRows)
   const monthlyBills               = computeMonthlyBillsTotal(bills)
   const thisMonthSpending          = computeThisMonthSpending(transactions)
   const cashflow                   = computeMonthlyCashflow(transactions)
@@ -219,6 +224,16 @@ export default function FinanceDashboard({ onViewChange }) {
     date:     s.taken_at.split('T')[0],
     netWorth: Number(s.net_worth_pence),
   }))
+
+  // properties loaded ascending by created_at; snapshots loaded descending by taken_at
+  const earliestPropertyDate = properties.length > 0 ? properties[0].created_at : null
+  const oldestSnapshotDate   = snapshots.length   > 0 ? snapshots[snapshots.length - 1].taken_at : null
+  const showContinuityCaveat = (
+    earliestPropertyDate !== null &&
+    oldestSnapshotDate   !== null &&
+    oldestSnapshotDate < earliestPropertyDate &&
+    netWorthData.length >= 2
+  )
 
   return (
     <div className="fd-page">
@@ -314,6 +329,9 @@ export default function FinanceDashboard({ onViewChange }) {
               )
             }
           </div>
+          {showContinuityCaveat && (
+            <p className="fd-chart-note">Property equity now included in net worth. Earlier snapshots reflect account balances only.</p>
+          )}
         </div>
 
         <div className="fd-chart-block">
