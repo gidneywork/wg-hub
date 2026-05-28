@@ -8515,3 +8515,38 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .fdt-toggle:hover { background: var(--bg-elevated); }
 
 [data-cadence] .fdt-toggle--on:hover { background: var(--sand-deep, var(--sand)); }
+
+/* ── FC-041 c2 — Strategy comparison ─────────────────────────────────────── */
+[data-cadence] .fdt-strategy {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+}
+[data-cadence] .fdt-strategy-scope { font-family: var(--sans); font-size: var(--type-body-sm); color: var(--text-quiet); margin-bottom: var(--space-5); }
+[data-cadence] .fdt-budget-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-2); }
+[data-cadence] .fdt-budget-label { font-family: var(--sans); font-size: var(--type-body-sm); color: var(--text-muted); white-space: nowrap; }
+[data-cadence] .fdt-budget-input-wrap { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; max-width: 160px; }
+[data-cadence] .fdt-budget-prefix { padding: 0 var(--space-2) 0 var(--space-3); font-family: var(--mono); font-size: var(--type-body-sm); color: var(--text-quiet); background: var(--bg-elevated); border-right: 1px solid var(--border); line-height: 32px; }
+[data-cadence] .fdt-budget-input { border: none; outline: none; background: transparent; font-family: var(--mono); font-size: var(--type-body-sm); color: var(--text); padding: 0 var(--space-3); width: 100px; height: 32px; }
+[data-cadence] .fdt-budget-helper { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin-bottom: var(--space-5); }
+[data-cadence] .fdt-takeaway { font-family: var(--sans); font-size: var(--type-body-sm); color: var(--text-muted); margin-bottom: var(--space-5); line-height: 1.5; }
+[data-cadence] .fdt-takeaway strong { color: var(--text); font-weight: 500; }
+[data-cadence] .fdt-strategy-empty,
+[data-cadence] .fdt-strategy-infeasible { font-family: var(--sans); font-size: var(--type-body-sm); color: var(--text-quiet); margin-top: var(--space-4); }
+[data-cadence] .fdt-comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
+@media (max-width: 540px) { [data-cadence] .fdt-comparison-grid { grid-template-columns: 1fr; } }
+[data-cadence] .fdt-card { border: 1px solid var(--border); border-radius: 8px; padding: var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+[data-cadence] .fdt-card--accent { border-top: 2px solid var(--sand); }
+[data-cadence] .fdt-card-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-quiet); }
+[data-cadence] .fdt-card-method { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin-bottom: var(--space-2); }
+[data-cadence] .fdt-card-figure { font-family: var(--sans); font-size: var(--type-body-sm); color: var(--text-muted); line-height: 1.5; }
+[data-cadence] .fdt-card-figure strong { color: var(--text); font-weight: 500; }
+[data-cadence] .fdt-card-figure--muted { color: var(--text-quiet); font-style: italic; }
+[data-cadence] .fdt-card-order { margin: var(--space-2) 0 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
+[data-cadence] .fdt-card-order li { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-muted); }
+[data-cadence] .fdt-card-order-month { color: var(--text-quiet); font-family: var(--mono); font-size: 10px; }
+[data-cadence] .fdt-chart-wrap { margin-top: var(--space-2); }
+[data-cadence] .fdt-chart-note { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin-top: var(--space-3); }
+[data-cadence] .fdt-chart-tooltip { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: var(--space-3) var(--space-4); font-family: var(--sans); font-size: var(--type-caption); }
+[data-cadence] .fdt-chart-tooltip-month { font-family: var(--mono); font-size: 10px; color: var(--text-quiet); margin-bottom: var(--space-1); }
+[data-cadence] .fdt-chart-tooltip-row { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--text-muted); }

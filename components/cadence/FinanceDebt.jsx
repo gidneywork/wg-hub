@@ -1,15 +1,18 @@
 'use client'
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState, useEffect, useMemo } from 'react'
 import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadDebts, createDebt, updateDebt, deleteDebt,
 } from '../../lib/finance/db'
 import { computeAccountBalance } from '../../lib/finance/accounts'
 import {
-  buildWorkingDebts, bpsToPercent, percentToBps, formatApr,
+  buildWorkingDebts, simulateStrategy, buildComparisonChartData,
+  bpsToPercent, percentToBps, formatApr,
   computeAmortisationPayment, projectAmortisation, formatMonths,
 } from '../../lib/finance/debt'
 import { formatPence } from '../../lib/finance/transactions'
+import { CHART_PALETTE, penceToShort } from '../../lib/finance/spending'
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import CadencePanel from './CadencePanel'
 
 const DEBT_BLANK = {
@@ -123,6 +126,7 @@ export default function FinanceDebt() {
   const [formData,         setFormData        ] = useState(DEBT_BLANK)
   const [formErrors,       setFormErrors      ] = useState({})
   const [deleteConfirming, setDeleteConfirming] = useState(false)
+  const [budgetStr,        setBudgetStr        ] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -355,7 +359,29 @@ export default function FinanceDebt() {
 
   // ── Computed data ──────────────────────────────────────────────────────────
 
-  const workingDebts      = buildWorkingDebts(accounts, transactions, statementDocs, debtRows)
+  const simMemo = useMemo(() => {
+    const wd         = buildWorkingDebts(accounts, transactions, statementDocs, debtRows)
+    const startTotal = wd.reduce((s, d) => s + (d.balancePence ?? 0), 0)
+    const minTotal   = wd.reduce((s, d) => s + (d.minPaymentPence ?? 0), 0)
+    const parsedBudget = budgetStr.trim() && !isNaN(parseFloat(budgetStr))
+      ? Math.round(parseFloat(budgetStr) * 100)
+      : null
+    const budgetP = parsedBudget != null ? parsedBudget : minTotal
+    const a = simulateStrategy(wd, budgetP, 'avalanche')
+    const s = simulateStrategy(wd, budgetP, 'snowball')
+    return {
+      workingDebts:       wd,
+      minimumsTotalPence: minTotal,
+      budgetPence:        budgetP,
+      avalanche:          a,
+      snowball:           s,
+      startTotal,
+      chartData:          buildComparisonChartData(a, s, startTotal),
+    }
+  }, [accounts, transactions, statementDocs, debtRows, budgetStr])
+
+  const { workingDebts, minimumsTotalPence, budgetPence, avalanche, snowball, startTotal, chartData } = simMemo
+
   const revolvingIncluded = workingDebts.filter(d => !d.isArrears)
 
   // Excluded revolving rows: include_in_strategy=false filtered out of workingDebts.
@@ -693,6 +719,37 @@ export default function FinanceDebt() {
     )
   }
 
+  // ── Strategy comparison ────────────────────────────────────────────────────
+
+  const eligibleDebts = workingDebts
+  const bothFeasible  = avalanche.feasible && snowball.feasible
+  const bothClear     = bothFeasible && !avalanche.neverClears && !snowball.neverClears
+  const isTie         = bothClear
+    && avalanche.months === snowball.months
+    && avalanche.totalInterestPence === snowball.totalInterestPence
+  const interestDiff  = bothClear && !isTie ? Math.abs(avalanche.totalInterestPence - snowball.totalInterestPence) : 0
+  const monthsDiff    = bothClear && !isTie ? Math.abs(avalanche.months - snowball.months) : 0
+  const cheaperIs     = bothClear && !isTie
+    ? (avalanche.totalInterestPence <= snowball.totalInterestPence ? 'avalanche' : 'snowball') : null
+  const fasterIs      = bothClear && !isTie
+    ? (avalanche.months <= snowball.months ? 'avalanche' : 'snowball') : null
+  const showChart     = bothClear
+
+  function PaydownTooltip({ active, payload, label }) {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="fdt-chart-tooltip" data-cadence="">
+        <div className="fdt-chart-tooltip-month">Month {label}</div>
+        {payload.map(p => (
+          <div key={p.dataKey} className="fdt-chart-tooltip-row">
+            <span style={{ color: p.color }}>{p.name}</span>
+            <span>{formatPence(p.value)}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -974,11 +1031,116 @@ export default function FinanceDebt() {
         </table>
       )}
 
-      <section className="fd-section">
-        <h2 className="fd-section-title">Paydown simulator</h2>
-        <p className="fd-placeholder">
-          Avalanche vs snowball comparison — coming in the next release.
+      <section className="fdt-strategy">
+        <h2 className="fd-section-title">Strategy comparison</h2>
+        <p className="fdt-strategy-scope">
+          Covers your revolving debts and any arrears. Loan and mortgage principal follows its own amortisation schedule — see each loan&apos;s projection in the table above.
         </p>
+
+        <div className="fdt-budget-row">
+          <label className="fdt-budget-label" htmlFor="fdt-budget">Monthly budget</label>
+          <div className="fdt-budget-input-wrap">
+            <span className="fdt-budget-prefix">£</span>
+            <input
+              id="fdt-budget"
+              type="number"
+              step="0.01"
+              min="0"
+              className="fdt-budget-input"
+              value={budgetStr}
+              placeholder={(minimumsTotalPence / 100).toFixed(2)}
+              onChange={e => setBudgetStr(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="fdt-budget-helper">
+          Defaults to your minimum payments ({formatPence(minimumsTotalPence)}). Increase it to see faster payoff.
+        </p>
+
+        {eligibleDebts.length === 0 ? (
+          <p className="fdt-strategy-empty">
+            No debts are currently included in the comparison. Add a debt, or enable &apos;include in strategy&apos; on an existing one.
+          </p>
+        ) : !avalanche.feasible ? (
+          <p className="fdt-strategy-infeasible">
+            Your budget of {formatPence(budgetPence)} doesn&apos;t cover the minimum payments, which total {formatPence(avalanche.minimumsTotalPence)}. Increase your budget to see projections.
+          </p>
+        ) : (
+          <>
+            {bothClear && (isTie ? (
+              <p className="fdt-takeaway">
+                Both strategies clear your debt in the same time and cost — the order doesn&apos;t change the outcome here.
+              </p>
+            ) : cheaperIs === fasterIs ? (
+              <p className="fdt-takeaway">
+                {cheaperIs === 'avalanche' ? 'Avalanche' : 'Snowball'} clears your debt{' '}
+                {monthsDiff > 0 && <><strong>{formatMonths(monthsDiff)}</strong> sooner and </>}
+                saves <strong>{formatPence(interestDiff)}</strong> in interest.
+              </p>
+            ) : (
+              <p className="fdt-takeaway">
+                {cheaperIs === 'avalanche' ? 'Avalanche' : 'Snowball'} saves <strong>{formatPence(interestDiff)}</strong> in interest.
+                {' '}{fasterIs === 'avalanche' ? 'Avalanche' : 'Snowball'} clears <strong>{formatMonths(monthsDiff)}</strong> sooner.
+              </p>
+            ))}
+
+            <div className="fdt-comparison-grid">
+              {[
+                { key: 'avalanche', result: avalanche, title: 'Avalanche', method: 'Highest APR first' },
+                { key: 'snowball',  result: snowball,  title: 'Snowball',  method: 'Smallest balance first' },
+              ].map(({ key, result, title, method }) => {
+                const isAccent = cheaperIs === key && !isTie
+                return (
+                  <div key={key} className={`fdt-card${isAccent ? ' fdt-card--accent' : ''}`}>
+                    <div className="fdt-card-title">{title}</div>
+                    <div className="fdt-card-method">{method}</div>
+                    {result.neverClears ? (
+                      <div className="fdt-card-figure fdt-card-figure--muted">
+                        Won&apos;t clear within 50 years at this budget
+                      </div>
+                    ) : (
+                      <div className="fdt-card-figure">
+                        Debt-free in <strong>{formatMonths(result.months)}</strong>
+                      </div>
+                    )}
+                    <div className="fdt-card-figure">
+                      Total interest <strong>{formatPence(result.totalInterestPence)}</strong>
+                    </div>
+                    {result.payoffOrder.length > 0 && (
+                      <ol className="fdt-card-order">
+                        {result.payoffOrder.map((item) => (
+                          <li key={item.key}>
+                            {item.name} <span className="fdt-card-order-month">(month {item.month})</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {showChart && chartData.length > 1 ? (
+              <div className="fdt-chart-wrap">
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E0D8" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontFamily: 'var(--mono)', fontSize: 11, fill: '#8A867D' }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={penceToShort} tick={{ fontFamily: 'var(--mono)', fontSize: 11, fill: '#8A867D' }} axisLine={false} tickLine={false} width={56} />
+                    <Tooltip content={<PaydownTooltip />} />
+                    <Legend wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-muted)' }} />
+                    <Line type="monotone" dataKey="avalanche" name="Avalanche" stroke={CHART_PALETTE[0]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="snowball"  name="Snowball"  stroke={CHART_PALETTE[1]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : !showChart && bothFeasible && (
+              <p className="fdt-chart-note">
+                Chart not available — at this budget, one or more debts won&apos;t clear within 50 years. Increase your budget to see the projection.
+              </p>
+            )}
+          </>
+        )}
       </section>
     </div>
   )
