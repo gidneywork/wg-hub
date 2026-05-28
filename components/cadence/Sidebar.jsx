@@ -40,6 +40,14 @@ const NAV_FINANCE = [
       <path d="M9 7h6M9 11h6M9 15h4"/>
     </svg>
   ) },
+  { view: 'finance-debt', label: 'Debt', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M14.5 9.5a3 3 0 0 0-5 2.1c0 2.4 5 3.4 5 5.9a3 3 0 0 1-5 .5"/>
+      <line x1="12" y1="6" x2="12" y2="8"/>
+      <line x1="12" y1="16" x2="12" y2="18"/>
+    </svg>
+  ) },
   { view: 'finance-rules', label: 'Rules', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/>

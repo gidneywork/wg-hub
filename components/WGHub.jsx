@@ -25,6 +25,7 @@ import CadenceFinanceBills from './cadence/FinanceBills'
 import CadenceFinanceRules from './cadence/FinanceRules'
 import FinanceAccountSummary from './cadence/FinanceAccountSummary'
 import FinanceDashboard from './cadence/FinanceDashboard'
+import FinanceDebt from './cadence/FinanceDebt'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -400,6 +401,8 @@ export default function WGHub({ onSignOut }) {
         <CadenceFinanceAccounts onViewChange={setView} />
       ) : view === 'finance-bills' ? (
         <CadenceFinanceBills />
+      ) : view === 'finance-debt' ? (
+        <FinanceDebt />
       ) : view === 'finance-rules' ? (
         <CadenceFinanceRules />
       ) : view.startsWith('finance-account:') ? renderFinanceAccount(view)

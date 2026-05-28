@@ -8177,3 +8177,194 @@ html::-webkit-scrollbar-track { background: transparent; }
   text-align: center;
   padding: var(--space-6) 0;
 }
+
+/* ── FC-041 c1 — Debt tool ───────────────────────────────────────────────────── */
+
+[data-cadence] .fdt-page {
+  padding: var(--space-5) var(--space-6);
+  max-width: 720px;
+}
+
+[data-cadence] .fdt-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+[data-cadence] .fdt-intro {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+  margin: 0 0 var(--space-5) 0;
+}
+
+[data-cadence] .fdt-empty {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+  font-style: italic;
+  padding: var(--space-8) 0;
+  text-align: center;
+}
+
+/* Table */
+
+[data-cadence] .fdt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fdt-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-quiet);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+[data-cadence] .fdt-table td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+[data-cadence] .fdt-table tr:last-child td { border-bottom: none; }
+
+[data-cadence] .fdt-col-balance,
+[data-cadence] .fdt-col-apr,
+[data-cadence] .fdt-col-min   { width: 110px; text-align: right; }
+[data-cadence] .fdt-col-actions { width: 64px; text-align: right; }
+
+[data-cadence] .fdt-table th.fdt-col-balance,
+[data-cadence] .fdt-table th.fdt-col-apr,
+[data-cadence] .fdt-table th.fdt-col-min,
+[data-cadence] .fdt-table th.fdt-col-actions { text-align: right; }
+
+/* Debt name + source badge */
+
+[data-cadence] .fdt-debt-name {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+[data-cadence] .fdt-source-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+[data-cadence] .fdt-source-badge--linked {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+[data-cadence] .fdt-source-badge--manual {
+  background: transparent;
+  color: var(--text-quiet);
+  border: 1px solid var(--border-subtle);
+}
+
+/* "Set APR →" inline prompt */
+
+[data-cadence] .fdt-set-apr {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--sand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-cadence] .fdt-set-apr:hover { color: var(--sand-deep, var(--sand)); }
+
+/* Edit button */
+
+[data-cadence] .fdt-edit-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+[data-cadence] .fdt-edit-btn:hover { background: var(--bg-elevated); }
+
+[data-cadence] .fdt-edit-btn--active {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--text-quiet);
+}
+
+/* Panel row — spans all columns */
+
+[data-cadence] .fdt-panel-row > td {
+  padding: 0 0 var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Edit-panel read-only balance row */
+
+[data-cadence] .fdt-edit-readonly-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fdt-edit-readonly-row strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Danger zone */
+
+[data-cadence] .fdt-danger-zone {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+[data-cadence] .fdt-danger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--clay-deep);
+}
+
+[data-cadence] .fdt-danger-btn:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-cadence] .fdt-danger-confirm {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+}
