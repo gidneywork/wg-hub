@@ -7,7 +7,7 @@ import {
 import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
-  loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts,
+  loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome,
 } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
@@ -20,6 +20,7 @@ import {
   computeNetWorth, computeMonthlyBillsTotal, computeThisMonthSpending,
   computeMonthlyCashflow, computeHealthAlerts, computeActionItems,
 } from '../../lib/finance/dashboard'
+import { monthlyIncomeTotal } from '../../lib/finance/income'
 
 // Chart constants — hex values because CSS vars don't resolve in SVG fill attributes.
 // Light-theme values; dark chart theming is future work (matches c5 precedent).
@@ -153,6 +154,7 @@ export default function FinanceDashboard({ onViewChange }) {
   const [snapshots,          setSnapshots          ] = useState([])
   const [properties,         setProperties         ] = useState([])
   const [debtRows,           setDebtRows           ] = useState([])
+  const [incomeRows,         setIncomeRows         ] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -161,9 +163,9 @@ export default function FinanceDashboard({ onViewChange }) {
       loadAccounts(), loadAllTransactions(), loadStatementDocuments(),
       loadBills(false), loadAllBillPayments(),
       loadCategories(), loadNetWorthSnapshots(),
-      loadProperties(), loadDebts(),
+      loadProperties(), loadDebts(), loadIncome(),
     ])
-      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts]) => {
+      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts, inc]) => {
         const dpResults   = await Promise.all(accs.map(a => loadDismissedPatterns(a.id)))
         const dpByAccount = {}
         accs.forEach((a, i) => { dpByAccount[a.id] = dpResults[i].map(d => d.merchant_clean) })
@@ -177,6 +179,7 @@ export default function FinanceDashboard({ onViewChange }) {
         setSnapshots(snaps)
         setProperties(props)
         setDebtRows(debts)
+        setIncomeRows(inc)
         if (accs.length > 0) {
           const { netWorth } = computeNetWorth(accs, txs, docs, props, debts)
           ensureTodaysSnapshot(netWorth).catch(e => console.error('snapshot:', e))
@@ -193,6 +196,7 @@ export default function FinanceDashboard({ onViewChange }) {
 
   const { assets, debt, netWorth } = computeNetWorth(accounts, transactions, statementDocs, properties, debtRows)
   const monthlyBills               = computeMonthlyBillsTotal(bills)
+  const monthlyIncome              = monthlyIncomeTotal(incomeRows)
   const thisMonthSpending          = computeThisMonthSpending(transactions)
   const cashflow                   = computeMonthlyCashflow(transactions)
   const lastMonthNet               = cashflow.length > 0 ? cashflow[cashflow.length - 1].netPence : null
@@ -258,6 +262,11 @@ export default function FinanceDashboard({ onViewChange }) {
           value={lastMonthNet != null ? formatPence(lastMonthNet) : '—'}
           sub={lastMonthNet != null ? lastMonthNet >= 0 ? 'surplus' : 'deficit' : null}
           negative={lastMonthNet != null && lastMonthNet < 0}
+        />
+        <StatCard
+          label="Monthly income"
+          value={monthlyIncome > 0 ? formatPence(monthlyIncome) : '—'}
+          sub="recurring only"
         />
       </div>
 

@@ -7844,6 +7844,27 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--clay);
 }
 
+/* ── fb-income — Income section (Cashflow page) ─────────────────────────── */
+
+[data-cadence] .fb-income-section {
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fb-income-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fb-income-title {
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
 /* ── ass-suggestions — Recurring pattern suggestions (Spending tab) ─────────── */
 
 [data-cadence] .ass-recurring-description {
@@ -7951,7 +7972,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 [data-cadence] .fd-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-8);
 }

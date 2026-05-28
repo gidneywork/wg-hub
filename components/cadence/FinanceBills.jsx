@@ -12,6 +12,10 @@ import {
   insertBillPayment,
   loadAccountTransactionsForBillMatching,
   applyRetroactiveAutoLinkForBill,
+  loadIncome,
+  createIncome,
+  updateIncome,
+  deleteIncome,
 } from '../../lib/finance/db'
 import {
   deriveBillStatus,
@@ -24,6 +28,11 @@ import {
   advanceNextDueDate,
 } from '../../lib/finance/bills'
 import { formatPence } from '../../lib/finance/transactions'
+import {
+  incomeMonthlyEquivalent,
+  monthlyIncomeTotal,
+  INCOME_FREQUENCY_LABELS,
+} from '../../lib/finance/income'
 import CadencePanel from './CadencePanel'
 
 function addDays(isoDate, n) {
@@ -49,6 +58,16 @@ const BILL_BLANK = {
   description_pattern: '',
   notes:               '',
   is_active:           true,
+}
+
+const INCOME_BLANK = { source: '', amount_str: '', frequency: 'monthly' }
+
+function validateIncomeForm(formData) {
+  const errors = {}
+  if (!formData.source.trim()) errors.source = 'Source is required.'
+  const amt = parseFloat(formData.amount_str)
+  if (!formData.amount_str.trim() || isNaN(amt) || amt <= 0) errors.amount_str = 'Enter a positive amount.'
+  return { ok: Object.keys(errors).length === 0, errors }
 }
 
 function BillForm({ formData, setFormData, formErrors, accounts, categories, hideAccount = false }) {
@@ -182,6 +201,12 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
   const [retroactiveConfirming, setRetroactiveConfirming] = useState(false)
   const [retroactiveRunning,    setRetroactiveRunning   ] = useState(false)
   const [retroactiveResult,     setRetroactiveResult    ] = useState(null)
+  const [incomeRows,            setIncomeRows            ] = useState([])
+  const [incomeAddOpen,         setIncomeAddOpen         ] = useState(false)
+  const [editingIncomeId,       setEditingIncomeId       ] = useState(null)
+  const [incomeForm,            setIncomeForm            ] = useState(INCOME_BLANK)
+  const [incomeFormErrors,      setIncomeFormErrors      ] = useState({})
+  const [incomeDeleteConfirming, setIncomeDeleteConfirming] = useState(false)
 
   useEffect(() => {
     setAdding(false)
@@ -193,6 +218,11 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     setRetroactiveConfirming(false)
     setRetroactiveRunning(false)
     setRetroactiveResult(null)
+    setIncomeAddOpen(false)
+    setEditingIncomeId(null)
+    setIncomeForm(INCOME_BLANK)
+    setIncomeFormErrors({})
+    setIncomeDeleteConfirming(false)
     setLoading(true)
     setError(null)
     Promise.all([
@@ -200,12 +230,14 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
       loadCategories(),
       loadBills(false, accountId),
       loadAllBillPayments(),
+      loadIncome(),
     ])
-      .then(([accs, cats, b, p]) => {
+      .then(([accs, cats, b, p, inc]) => {
         setAccounts(accs)
         setCategories(cats)
         setBills(b)
         setAllPayments(p)
+        setIncomeRows(inc)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -236,10 +268,10 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
   }, [pendingPreFill, accountId, onPreFillConsumed])
 
   async function reload() {
-    // Reloads bills and payments only — accounts/categories don't change from bill operations.
-    const [b, p] = await Promise.all([loadBills(showInactive, accountId), loadAllBillPayments()])
+    const [b, p, inc] = await Promise.all([loadBills(showInactive, accountId), loadAllBillPayments(), loadIncome()])
     setBills(b)
     setAllPayments(p)
+    setIncomeRows(inc)
   }
 
   // ── Add ────────────────────────────────────────────────────────────────────
@@ -462,18 +494,116 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     }
   }
 
+  // ── Income ────────────────────────────────────────────────────────────────────
+
+  function handleIncomeAddOpen() {
+    setIncomeAddOpen(true)
+    setEditingIncomeId(null)
+    setIncomeForm(INCOME_BLANK)
+    setIncomeFormErrors({})
+  }
+
+  function handleIncomeAddCancel() {
+    setIncomeAddOpen(false)
+    setIncomeForm(INCOME_BLANK)
+    setIncomeFormErrors({})
+  }
+
+  async function handleIncomeAddSave() {
+    const result = validateIncomeForm(incomeForm)
+    if (!result.ok) { setIncomeFormErrors(result.errors); return }
+    setSaving(true)
+    try {
+      await createIncome({
+        source:       incomeForm.source.trim(),
+        amount_pence: Math.round(parseFloat(incomeForm.amount_str) * 100),
+        frequency:    incomeForm.frequency,
+      })
+      setIncomeAddOpen(false)
+      setIncomeForm(INCOME_BLANK)
+      await reload()
+    } catch (e) {
+      setIncomeFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleIncomeEditOpen(row) {
+    setEditingIncomeId(row.id)
+    setIncomeAddOpen(false)
+    setIncomeForm({
+      source:     row.source,
+      amount_str: (Number(row.amount_pence) / 100).toFixed(2),
+      frequency:  row.frequency,
+    })
+    setIncomeFormErrors({})
+    setIncomeDeleteConfirming(false)
+  }
+
+  function handleIncomeEditCancel() {
+    setEditingIncomeId(null)
+    setIncomeForm(INCOME_BLANK)
+    setIncomeFormErrors({})
+    setIncomeDeleteConfirming(false)
+  }
+
+  async function handleIncomeEditSave() {
+    const result = validateIncomeForm(incomeForm)
+    if (!result.ok) { setIncomeFormErrors(result.errors); return }
+    setSaving(true)
+    try {
+      await updateIncome(editingIncomeId, {
+        source:       incomeForm.source.trim(),
+        amount_pence: Math.round(parseFloat(incomeForm.amount_str) * 100),
+        frequency:    incomeForm.frequency,
+      })
+      setEditingIncomeId(null)
+      setIncomeForm(INCOME_BLANK)
+      await reload()
+    } catch (e) {
+      setIncomeFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleIncomeDeleteClick() {
+    if (!incomeDeleteConfirming) {
+      setIncomeDeleteConfirming(true)
+      setTimeout(() => setIncomeDeleteConfirming(false), 5000)
+      return
+    }
+    handleIncomeDeleteConfirm()
+  }
+
+  async function handleIncomeDeleteConfirm() {
+    setSaving(true)
+    try {
+      await deleteIncome(editingIncomeId)
+      setEditingIncomeId(null)
+      setIncomeDeleteConfirming(false)
+      setIncomeForm(INCOME_BLANK)
+      await reload()
+    } catch (e) {
+      setIncomeFormErrors({ _form: e?.message || 'Failed to delete.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // ── Loading / error states ─────────────────────────────────────────────────
 
   if (loading) return (
     <div className="fb-page">
-      {!accountId && <div className="fb-header"><h2 className="fb-title">Bills</h2></div>}
+      {!accountId && <div className="fb-header"><h2 className="fb-title">Cashflow</h2></div>}
       <p className="fb-loading">Loading…</p>
     </div>
   )
 
   if (error) return (
     <div className="fb-page">
-      {!accountId && <div className="fb-header"><h2 className="fb-title">Bills</h2></div>}
+      {!accountId && <div className="fb-header"><h2 className="fb-title">Cashflow</h2></div>}
       <p className="fb-empty">{error}</p>
     </div>
   )
@@ -486,7 +616,8 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
 
   const activeBills   = bills.filter(b => b.is_active)
   const monthlyByBill = activeBills.map(b => ({ ...b, _monthly: billMonthlyEquivalent(b) }))
-  const totalMonthly  = monthlyByBill.reduce((sum, b) => sum + b._monthly, 0)
+  const totalMonthly       = monthlyByBill.reduce((sum, b) => sum + b._monthly, 0)
+  const totalMonthlyIncome = monthlyIncomeTotal(incomeRows)
 
   const byAccount = {}
   for (const b of monthlyByBill) {
@@ -646,12 +777,67 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     </div>
   ) : null
 
+  const incomeFormBody = (
+    <div className="bm-add-form">
+      {incomeFormErrors._form && <p className="fa-add-error">{incomeFormErrors._form}</p>}
+      <div className="form-row">
+        <label>Source</label>
+        <input
+          type="text"
+          value={incomeForm.source}
+          placeholder="e.g. Salary, Freelance"
+          onChange={e => setIncomeForm(p => ({ ...p, source: e.target.value }))}
+        />
+        {incomeFormErrors.source && <p className="fa-add-error">{incomeFormErrors.source}</p>}
+      </div>
+      <div className="form-row">
+        <label>Amount (£)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={incomeForm.amount_str}
+          placeholder="0.00"
+          onChange={e => setIncomeForm(p => ({ ...p, amount_str: e.target.value }))}
+        />
+        {incomeFormErrors.amount_str && <p className="fa-add-error">{incomeFormErrors.amount_str}</p>}
+      </div>
+      <div className="form-row">
+        <label>Frequency</label>
+        <select
+          value={incomeForm.frequency}
+          onChange={e => setIncomeForm(p => ({ ...p, frequency: e.target.value }))}
+        >
+          {Object.entries(INCOME_FREQUENCY_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+
+  const incomeEditBody = (
+    <>
+      {incomeFormBody}
+      <div className="fb-edit-danger-zone">
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={handleIncomeDeleteClick}
+          disabled={saving}
+        >
+          {incomeDeleteConfirming ? 'Click again to confirm delete' : 'Delete income source'}
+        </button>
+      </div>
+    </>
+  )
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="fb-page">
       <div className="fb-header">
-        {!accountId && <h2 className="fb-title">Bills</h2>}
+        {!accountId && <h2 className="fb-title">Cashflow</h2>}
         <div className="fb-header-actions">
           <button
             type="button"
@@ -681,6 +867,97 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
         onConfirm={handleAddSave}
         onCancel={handleAddCancel}
       />
+
+      {!accountId && (
+        <section className="fb-income-section">
+          <div className="fb-income-header">
+            <h3 className="fb-income-title">Income</h3>
+            <button
+              type="button"
+              className={`fb-add-btn${incomeAddOpen ? ' fb-add-btn--active' : ''}`}
+              onClick={handleIncomeAddOpen}
+              disabled={incomeAddOpen}
+            >
+              Add income
+            </button>
+          </div>
+
+          <CadencePanel
+            open={incomeAddOpen}
+            title="Add income source"
+            body={incomeFormBody}
+            confirmLabel={saving ? 'Saving…' : 'Add income'}
+            confirmClass="btn-primary"
+            confirmDisabled={saving}
+            onConfirm={handleIncomeAddSave}
+            onCancel={handleIncomeAddCancel}
+          />
+
+          {incomeRows.length === 0 ? (
+            <p className="fb-section-empty">No income sources added yet.</p>
+          ) : (
+            <>
+              <table className="fb-bill-table">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Frequency</th>
+                    <th className="fb-bill-amount-col">Amount</th>
+                    <th className="fb-bill-amount-col">Per month</th>
+                    <th className="fb-bill-action-col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incomeRows.map(row => {
+                    const isEditingRow = editingIncomeId === row.id
+                    return (
+                      <Fragment key={row.id}>
+                        <tr className={isEditingRow ? 'fb-bill-row--editing' : undefined}>
+                          <td className="fb-bill-name">{row.source}</td>
+                          <td>{INCOME_FREQUENCY_LABELS[row.frequency] ?? row.frequency}</td>
+                          <td className="fb-bill-amount">{formatPence(row.amount_pence)}</td>
+                          <td className="fb-bill-amount">{row.frequency === 'one-off' ? '—' : formatPence(incomeMonthlyEquivalent(row))}</td>
+                          <td className="fb-bill-action-cell">
+                            <button
+                              type="button"
+                              className="fb-bill-edit-btn"
+                              onClick={() => isEditingRow ? handleIncomeEditCancel() : handleIncomeEditOpen(row)}
+                            >
+                              {isEditingRow ? 'Cancel' : 'Edit'}
+                            </button>
+                          </td>
+                        </tr>
+                        {isEditingRow && (
+                          <tr className="fb-bill-panel-row">
+                            <td colSpan={5}>
+                              <CadencePanel
+                                open={true}
+                                title="Edit income source"
+                                body={incomeEditBody}
+                                confirmLabel={saving ? 'Saving…' : 'Save'}
+                                confirmClass="btn-primary"
+                                confirmDisabled={saving}
+                                onConfirm={handleIncomeEditSave}
+                                onCancel={handleIncomeEditCancel}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {totalMonthlyIncome > 0 && (
+                <div className="fb-report-headline" style={{ marginTop: 'var(--space-3)' }}>
+                  <span className="fb-report-label">Total income per month</span>
+                  <span className="fb-report-total">{formatPence(totalMonthlyIncome)}</span>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       {!accountId && totalMonthly > 0 && (
         <section className="fb-report">
