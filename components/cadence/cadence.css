@@ -7865,6 +7865,13 @@ html::-webkit-scrollbar-track { background: transparent; }
   margin: 0;
 }
 
+[data-cadence] .fb-report-total--income {
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .fb-report-total--income {
+  color: var(--moss);
+}
+
 /* ── ass-suggestions — Recurring pattern suggestions (Spending tab) ─────────── */
 
 [data-cadence] .ass-recurring-description {

@@ -951,7 +951,7 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
               {totalMonthlyIncome > 0 && (
                 <div className="fb-report-headline" style={{ marginTop: 'var(--space-3)' }}>
                   <span className="fb-report-label">Total income per month</span>
-                  <span className="fb-report-total">{formatPence(totalMonthlyIncome)}</span>
+                  <span className="fb-report-total fb-report-total--income">{formatPence(totalMonthlyIncome)}</span>
                 </div>
               )}
             </>
