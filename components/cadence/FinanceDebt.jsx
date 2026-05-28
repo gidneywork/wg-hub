@@ -144,6 +144,28 @@ export default function FinanceDebt() {
       .finally(() => setLoading(false))
   }, [])
 
+  // useMemo must be above early returns — Rules of Hooks (React #310)
+  const simMemo = useMemo(() => {
+    const wd         = buildWorkingDebts(accounts, transactions, statementDocs, debtRows)
+    const startTotal = wd.reduce((s, d) => s + (d.balancePence ?? 0), 0)
+    const minTotal   = wd.reduce((s, d) => s + (d.minPaymentPence ?? 0), 0)
+    const parsedBudget = budgetStr.trim() && !isNaN(parseFloat(budgetStr))
+      ? Math.round(parseFloat(budgetStr) * 100)
+      : null
+    const budgetP = parsedBudget != null ? parsedBudget : minTotal
+    const a = simulateStrategy(wd, budgetP, 'avalanche')
+    const s = simulateStrategy(wd, budgetP, 'snowball')
+    return {
+      workingDebts:       wd,
+      minimumsTotalPence: minTotal,
+      budgetPence:        budgetP,
+      avalanche:          a,
+      snowball:           s,
+      startTotal,
+      chartData:          buildComparisonChartData(a, s, startTotal),
+    }
+  }, [accounts, transactions, statementDocs, debtRows, budgetStr])
+
   async function reload() {
     const rows = await loadDebts()
     setDebtRows(rows)
@@ -358,27 +380,6 @@ export default function FinanceDebt() {
   if (pageError) return <div className="fdt-page"><p className="fdt-empty">{pageError}</p></div>
 
   // ── Computed data ──────────────────────────────────────────────────────────
-
-  const simMemo = useMemo(() => {
-    const wd         = buildWorkingDebts(accounts, transactions, statementDocs, debtRows)
-    const startTotal = wd.reduce((s, d) => s + (d.balancePence ?? 0), 0)
-    const minTotal   = wd.reduce((s, d) => s + (d.minPaymentPence ?? 0), 0)
-    const parsedBudget = budgetStr.trim() && !isNaN(parseFloat(budgetStr))
-      ? Math.round(parseFloat(budgetStr) * 100)
-      : null
-    const budgetP = parsedBudget != null ? parsedBudget : minTotal
-    const a = simulateStrategy(wd, budgetP, 'avalanche')
-    const s = simulateStrategy(wd, budgetP, 'snowball')
-    return {
-      workingDebts:       wd,
-      minimumsTotalPence: minTotal,
-      budgetPence:        budgetP,
-      avalanche:          a,
-      snowball:           s,
-      startTotal,
-      chartData:          buildComparisonChartData(a, s, startTotal),
-    }
-  }, [accounts, transactions, statementDocs, debtRows, budgetStr])
 
   const { workingDebts, minimumsTotalPence, budgetPence, avalanche, snowball, startTotal, chartData } = simMemo
 
