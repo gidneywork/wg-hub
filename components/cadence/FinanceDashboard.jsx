@@ -8,6 +8,7 @@ import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
   loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome,
+  loadFinanceSetting, saveFinanceSetting,
 } from '../../lib/finance/db'
 import { formatPence } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
@@ -156,6 +157,8 @@ export default function FinanceDashboard({ onViewChange }) {
   const [properties,         setProperties         ] = useState([])
   const [debtRows,           setDebtRows           ] = useState([])
   const [incomeRows,         setIncomeRows         ] = useState([])
+  const [budgetRatio,        setBudgetRatio        ] = useState(0.5)
+  const [ratioSaving,        setRatioSaving        ] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -165,8 +168,9 @@ export default function FinanceDashboard({ onViewChange }) {
       loadBills(false), loadAllBillPayments(),
       loadCategories(), loadNetWorthSnapshots(),
       loadProperties(), loadDebts(), loadIncome(),
+      loadFinanceSetting('budget_debt_ratio'),
     ])
-      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts, inc]) => {
+      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts, inc, savedRatio]) => {
         const dpResults   = await Promise.all(accs.map(a => loadDismissedPatterns(a.id)))
         const dpByAccount = {}
         accs.forEach((a, i) => { dpByAccount[a.id] = dpResults[i].map(d => d.merchant_clean) })
@@ -184,6 +188,23 @@ export default function FinanceDashboard({ onViewChange }) {
         if (accs.length > 0) {
           const { netWorth } = computeNetWorth(accs, txs, docs, props, debts)
           ensureTodaysSnapshot(netWorth).catch(e => console.error('snapshot:', e))
+        }
+        // Load saved ratio and refresh the strategy-budget cache against current data.
+        // The ratio is the durable source of truth; budget_strategy_pence is a derived cache.
+        // Only refresh if a ratio has been saved (don't write on first-ever visit).
+        if (savedRatio !== null) {
+          const parsedRatio   = Math.min(1, Math.max(0, parseFloat(savedRatio) || 0))
+          setBudgetRatio(parsedRatio)
+          const freshIncome   = monthlyIncomeTotal(inc || [])
+          const freshBills    = computeMonthlyBillsTotal(b || [])
+          const freshCommit   = computeMonthlyDebtCommitments(debts || [])
+          const freshPool     = Math.max(0, freshIncome - freshBills - freshCommit)
+          const freshDebtEx   = Math.round(parsedRatio * freshPool)
+          const freshRevMins  = (debts || [])
+            .filter(r => r.debt_type === 'revolving' && r.include_in_strategy !== false)
+            .reduce((s, r) => s + (Number(r.min_payment_pence) || 0), 0)
+          saveFinanceSetting('budget_strategy_pence', String(freshRevMins + freshDebtEx))
+            .catch(e => console.error('saveFinanceSetting budget_strategy_pence:', e))
         }
       })
       .catch(e => setPageError(e.message))
@@ -206,6 +227,35 @@ export default function FinanceDashboard({ onViewChange }) {
   const monthlyNet             = monthlyIncome - monthlyBills
   const incomeBreakdown        = computeIncomeBreakdown(incomeRows)
   const billsBreakdown         = computeMonthlyBillsByType(bills)
+
+  // Budget allocation slider
+  const pool             = Math.max(0, monthlyIncome - monthlyBills - monthlyDebtCommitments)
+  const poolIsZero       = pool === 0
+  const debtExtra        = Math.round(budgetRatio * pool)
+  const lifestyleSplit   = pool - debtExtra
+  // Revolving minimums — must match simulateStrategy's minimumsTotalPence exactly:
+  // sum of min_payment_pence for revolving debts included in strategy (loan/mortgage is null in working debts → 0)
+  const revolvingMinimums = debtRows
+    .filter(r => r.debt_type === 'revolving' && r.include_in_strategy !== false)
+    .reduce((s, r) => s + (Number(r.min_payment_pence) || 0), 0)
+  const strategyBudgetPence = revolvingMinimums + debtExtra
+
+  function handleRatioChange(e) {
+    setBudgetRatio(Number(e.target.value) / 100)
+  }
+
+  function handleRatioSettle(e) {
+    const ratio       = Number(e.target.value) / 100
+    const debtEx      = Math.round(ratio * pool)
+    const stratBudget = revolvingMinimums + debtEx
+    setRatioSaving(true)
+    Promise.all([
+      saveFinanceSetting('budget_debt_ratio', ratio.toFixed(4)),
+      saveFinanceSetting('budget_strategy_pence', String(stratBudget)),
+    ])
+      .catch(e => console.error('saveFinanceSetting:', e))
+      .finally(() => setRatioSaving(false))
+  }
 
   const billsWithStatus  = bills.map(b => ({ ...b, _status: deriveBillStatus(b, billPayments, today) }))
   const suggestionCounts = accounts.map(acc => {
@@ -341,6 +391,36 @@ export default function FinanceDashboard({ onViewChange }) {
             <span className="fd-report-wealth-value fd-report-wealth-value--negative">{formatPence(debt)}</span>
           </div>
         </div>
+      </section>
+
+      <section className="fd-section">
+        <h2 className="fd-section-title">Budget allocation</h2>
+
+        {poolIsZero ? (
+          <p className="fdb-no-surplus">No discretionary surplus to allocate. Your committed outgoings meet or exceed your income.</p>
+        ) : (
+          <>
+            <p className="fdb-pool-label">Discretionary surplus: {formatPence(pool)}/month — after bills and debt commitments</p>
+
+            <div className="fdb-slider-row">
+              <span className="fdb-split-label">{formatPence(debtExtra)} to debt</span>
+              <input
+                className="fdb-range"
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(budgetRatio * 100)}
+                onChange={handleRatioChange}
+                onPointerUp={handleRatioSettle}
+                aria-label="Allocation to debt repayment"
+              />
+              <span className="fdb-split-label fdb-split-label--right">{formatPence(lifestyleSplit)} to lifestyle</span>
+            </div>
+
+            <p className="fdb-save-status">{ratioSaving ? 'Saving…' : ''}</p>
+          </>
+        )}
       </section>
 
       <section className="fd-section">

@@ -8399,6 +8399,88 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--clay);
 }
 
+/* ── FC-058 c5.5 — Budget allocation slider ──────────────────────────────────── */
+
+[data-cadence] .fdb-pool-label {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  margin-bottom: var(--space-4);
+}
+
+[data-cadence] .fdb-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+[data-cadence] .fdb-split-label {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  min-width: 11ch;
+}
+
+[data-cadence] .fdb-split-label--right {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+[data-cadence] .fdb-range {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+[data-cadence] .fdb-range:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+[data-cadence] .fdb-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+  border: 2px solid var(--border-strong);
+}
+
+[data-cadence] .fdb-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+  border: 2px solid var(--border-strong);
+  box-sizing: border-box;
+}
+
+[data-cadence] .fdb-range:disabled::-webkit-slider-thumb { cursor: not-allowed; }
+[data-cadence] .fdb-range:disabled::-moz-range-thumb     { cursor: not-allowed; }
+
+[data-cadence] .fdb-save-status {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  min-height: 1.4em;
+}
+
+[data-cadence] .fdb-no-surplus {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-quiet);
+}
+
 /* ── FC-041 c1 — Debt tool ───────────────────────────────────────────────────── */
 
 [data-cadence] .fdt-page {

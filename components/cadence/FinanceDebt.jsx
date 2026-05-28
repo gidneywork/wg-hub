@@ -4,6 +4,7 @@ import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadDebts, createDebt, updateDebt, deleteDebt,
   loadProperties, createProperty, updateProperty, deleteProperty,
+  loadFinanceSetting,
 } from '../../lib/finance/db'
 import { computeAccountBalance } from '../../lib/finance/accounts'
 import {
@@ -193,6 +194,18 @@ export default function FinanceDebt() {
       chartData:          buildComparisonChartData(a, s, startTotal),
     }
   }, [accounts, transactions, statementDocs, debtRows, budgetStr])
+
+  // Load the slider-derived strategy budget from the Dashboard on mount.
+  // Falls back to minTotal (existing behaviour) if no setting has been saved yet.
+  useEffect(() => {
+    loadFinanceSetting('budget_strategy_pence')
+      .then(val => {
+        if (val === null) return
+        const pence = parseInt(val, 10)
+        if (!isNaN(pence) && pence > 0) setBudgetStr((pence / 100).toFixed(2))
+      })
+      .catch(e => console.error('loadFinanceSetting budget_strategy_pence:', e))
+  }, [])
 
   async function reload() {
     const [rows, props] = await Promise.all([loadDebts(), loadProperties()])
@@ -1458,7 +1471,7 @@ export default function FinanceDebt() {
           </div>
         </div>
         <p className="fdt-budget-helper">
-          Defaults to your minimum payments ({formatPence(minimumsTotalPence)}). Increase it to see faster payoff.
+          Set by your budget allocation — adjust here for a one-off projection. Minimum payments: {formatPence(minimumsTotalPence)}.
         </p>
 
         {eligibleDebts.length === 0 ? (
