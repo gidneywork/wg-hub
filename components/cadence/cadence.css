@@ -7348,6 +7348,31 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .ast-clear-btn:hover { color: var(--text); border-color: var(--border-strong); }
 
+[data-cadence] .ast-uncat-toggle {
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+[data-cadence] .ast-uncat-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+[data-cadence] .ast-uncat-toggle--active {
+  border-color: var(--moss);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] [data-cadence] .ast-uncat-toggle--active {
+  color: var(--moss);
+}
+
 [data-cadence] .ast-table {
   width: 100%;
   border-collapse: collapse;

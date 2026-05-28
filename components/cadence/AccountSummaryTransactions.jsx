@@ -32,11 +32,12 @@ export default function AccountSummaryTransactions({ accountId }) {
   const [loading,      setLoading]      = useState(true)
   const [pageError,    setPageError]    = useState(null)
 
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [typeFilter,     setTypeFilter]     = useState('')
-  const [dateFrom,       setDateFrom]       = useState('')
-  const [dateTo,         setDateTo]         = useState('')
-  const [currentPage,    setCurrentPage]    = useState(1)
+  const [categoryFilter,    setCategoryFilter]    = useState('')
+  const [typeFilter,        setTypeFilter]        = useState('')
+  const [dateFrom,          setDateFrom]          = useState('')
+  const [dateTo,            setDateTo]            = useState('')
+  const [currentPage,       setCurrentPage]       = useState(1)
+  const [uncategorisedOnly, setUncategorisedOnly] = useState(false)
 
   const [editId,            setEditId           ] = useState(null)
   const [editForm,          setEditForm         ] = useState(TX_BLANK)
@@ -62,13 +63,14 @@ export default function AccountSummaryTransactions({ accountId }) {
 
   // ── Filter helpers ─────────────────────────────────────────────────────────
 
-  const hasActiveFilter = categoryFilter || typeFilter || dateFrom || dateTo
+  const hasActiveFilter = categoryFilter || typeFilter || dateFrom || dateTo || uncategorisedOnly
 
   function clearFilters() {
     setCategoryFilter('')
     setTypeFilter('')
     setDateFrom('')
     setDateTo('')
+    setUncategorisedOnly(false)
     setCurrentPage(1)
   }
 
@@ -192,10 +194,12 @@ export default function AccountSummaryTransactions({ accountId }) {
     if (dateTo   && tx.tx_date > dateTo)   return false
     return true
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const uncategorisedCount = filtered.filter(tx => tx.category_id === null).length
+  const displayedFiltered  = uncategorisedOnly ? filtered.filter(tx => tx.category_id === null) : filtered
+  const totalPages = Math.max(1, Math.ceil(displayedFiltered.length / PAGE_SIZE))
   const safePage   = Math.min(currentPage, totalPages)
   const startIdx   = (safePage - 1) * PAGE_SIZE
-  const visibleTxs = filtered.slice(startIdx, startIdx + PAGE_SIZE)
+  const visibleTxs = displayedFiltered.slice(startIdx, startIdx + PAGE_SIZE)
 
   return (
     <div className="ast-page">
@@ -250,6 +254,16 @@ export default function AccountSummaryTransactions({ accountId }) {
           />
         </div>
 
+        <div className="ast-filter-group">
+          <button
+            type="button"
+            className={`ast-uncat-toggle${uncategorisedOnly ? ' ast-uncat-toggle--active' : ''}`}
+            onClick={() => { setUncategorisedOnly(p => !p); setCurrentPage(1) }}
+          >
+            Uncategorised only{uncategorisedCount > 0 ? ` (${uncategorisedCount})` : ''}
+          </button>
+        </div>
+
         {hasActiveFilter && (
           <button type="button" className="ast-clear-btn" onClick={clearFilters}>
             Clear filters
@@ -260,10 +274,15 @@ export default function AccountSummaryTransactions({ accountId }) {
       {/* ── Table / empty states ─────────────────────────────────────────────── */}
       {transactions.length === 0 ? (
         <p className="ast-empty">No transactions yet. Upload a statement to see activity on this account.</p>
-      ) : filtered.length === 0 ? (
+      ) : displayedFiltered.length === 0 ? (
         <div className="ast-empty">
-          <p>No transactions match the current filters.</p>
-          <button type="button" className="ast-clear-btn" onClick={clearFilters}>Clear filters</button>
+          {uncategorisedOnly
+            ? <p>All transactions categorised.</p>
+            : <>
+                <p>No transactions match the current filters.</p>
+                <button type="button" className="ast-clear-btn" onClick={clearFilters}>Clear filters</button>
+              </>
+          }
         </div>
       ) : (
         <>
