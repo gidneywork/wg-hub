@@ -8368,3 +8368,150 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-size: var(--type-caption);
   color: var(--text-quiet);
 }
+
+/* ── FC-041 c1.5b additions ──────────────────────────────────────────────── */
+
+/* Three-button header group */
+
+[data-cadence] .fdt-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Section divider row (Loans & mortgages label) */
+
+[data-cadence] .fdt-section-row > td {
+  padding: var(--space-4) 0 var(--space-2);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-quiet);
+  border-bottom: none;
+}
+
+/* Loan/mortgage data row — clickable */
+
+[data-cadence] .fdt-loan-row { cursor: pointer; }
+
+[data-cadence] .fdt-loan-row:hover td { background: var(--bg-elevated); }
+
+[data-cadence] .fdt-loan-row:focus-visible {
+  outline: 2px solid var(--sand);
+  outline-offset: -2px;
+}
+
+/* Excluded revolving row — greyed */
+
+[data-cadence] .fdt-excluded-row td { opacity: 0.55; }
+
+/* Type badges — loan, mortgage, excluded */
+
+[data-cadence] .fdt-source-badge--loan,
+[data-cadence] .fdt-source-badge--mortgage {
+  background: transparent;
+  color: var(--text-quiet);
+  border: 1px solid var(--border);
+}
+
+[data-cadence] .fdt-source-badge--excluded {
+  background: transparent;
+  color: var(--text-quiet);
+  font-style: italic;
+}
+
+/* Drawer row */
+
+[data-cadence] .fdt-drawer-row > td {
+  padding: 0 0 var(--space-4) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Drawer container */
+
+[data-cadence] .fdt-drawer {
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Drawer lines */
+
+[data-cadence] .fdt-drawer-line {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+[data-cadence] .fdt-drawer-line strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Infeasible / never-clears — factual callout, not an error */
+
+[data-cadence] .fdt-drawer-infeasible {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border);
+  color: var(--text-quiet);
+}
+
+/* Excluded-from-strategy note */
+
+[data-cadence] .fdt-drawer-muted {
+  color: var(--text-quiet);
+  font-style: italic;
+}
+
+/* Suggested payment in table cell — asterisk via pseudo */
+
+[data-cadence] .fdt-suggested {
+  color: var(--text-muted);
+}
+
+[data-cadence] .fdt-suggested::after {
+  content: '*';
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* Arrears signpost — neutral, informational */
+
+[data-cadence] .fdt-signpost {
+  font-family: var(--sans);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+}
+
+/* include-in-strategy toggle */
+
+[data-cadence] .fdt-toggle-row { align-items: center; }
+
+[data-cadence] .fdt-toggle {
+  background: var(--border);
+  border: none;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  cursor: pointer;
+  min-width: 40px;
+  transition: background 0.15s ease-out, color 0.15s ease-out;
+}
+
+[data-cadence] .fdt-toggle--on {
+  background: var(--sand);
+  color: var(--text);
+}
+
+[data-cadence] .fdt-toggle:hover { background: var(--bg-elevated); }
+
+[data-cadence] .fdt-toggle--on:hover { background: var(--sand-deep, var(--sand)); }
