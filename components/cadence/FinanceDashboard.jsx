@@ -19,8 +19,9 @@ import {
 import {
   computeNetWorth, computeMonthlyBillsTotal, computeThisMonthSpending,
   computeMonthlyCashflow, computeHealthAlerts, computeActionItems,
+  computeMonthlyBillsByType, computeMonthlyDebtCommitments,
 } from '../../lib/finance/dashboard'
-import { monthlyIncomeTotal } from '../../lib/finance/income'
+import { monthlyIncomeTotal, computeIncomeBreakdown } from '../../lib/finance/income'
 
 // Chart constants — hex values because CSS vars don't resolve in SVG fill attributes.
 // Light-theme values; dark chart theming is future work (matches c5 precedent).
@@ -201,6 +202,11 @@ export default function FinanceDashboard({ onViewChange }) {
   const cashflow                   = computeMonthlyCashflow(transactions)
   const lastMonthNet               = cashflow.length > 0 ? cashflow[cashflow.length - 1].netPence : null
 
+  const monthlyDebtCommitments = computeMonthlyDebtCommitments(debtRows)
+  const monthlyNet             = monthlyIncome - monthlyBills
+  const incomeBreakdown        = computeIncomeBreakdown(incomeRows)
+  const billsBreakdown         = computeMonthlyBillsByType(bills)
+
   const billsWithStatus  = bills.map(b => ({ ...b, _status: deriveBillStatus(b, billPayments, today) }))
   const suggestionCounts = accounts.map(acc => {
     const accTxs    = transactions.filter(tx => tx.account_id === acc.id)
@@ -269,6 +275,73 @@ export default function FinanceDashboard({ onViewChange }) {
           sub="recurring only"
         />
       </div>
+
+      <section className="fd-section">
+        <h2 className="fd-section-title">Monthly summary</h2>
+
+        <div className="fd-report-grid">
+          <div className="fd-report-panel">
+            <p className="fd-report-panel-title">Money in</p>
+            <p className="fd-report-panel-total fd-report-panel-total--positive">
+              {monthlyIncome > 0 ? formatPence(monthlyIncome) : '—'}
+            </p>
+            {incomeBreakdown.length > 0 && (
+              <ul className="fd-report-breakdown">
+                {incomeBreakdown.map(row => (
+                  <li key={row.source} className="fd-report-breakdown-row">
+                    <span className="fd-report-breakdown-label">{row.source}</span>
+                    <span className="fd-report-breakdown-amount">{formatPence(row.monthly)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="fd-report-panel">
+            <p className="fd-report-panel-title">Money out</p>
+            <p className="fd-report-panel-total">
+              {monthlyBills > 0 ? formatPence(monthlyBills) : '—'}
+            </p>
+            {billsBreakdown.length > 0 && (
+              <ul className="fd-report-breakdown">
+                {billsBreakdown.map(row => (
+                  <li key={row.type} className="fd-report-breakdown-row">
+                    <span className="fd-report-breakdown-label">{row.label}</span>
+                    <span className="fd-report-breakdown-amount">{formatPence(row.monthly)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {monthlyDebtCommitments > 0 && (
+              <p className="fd-report-debt-context">
+                <span className="fd-report-debt-note">
+                  Debt commitments: {formatPence(monthlyDebtCommitments)} — not included above, see Holdings
+                </span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className={`fd-report-net${monthlyNet >= 0 ? ' fd-report-net--surplus' : ' fd-report-net--deficit'}`}>
+          <span className="fd-report-net-label">{monthlyNet >= 0 ? 'Monthly surplus' : 'Monthly deficit'}</span>
+          <span className="fd-report-net-value">{formatPence(Math.abs(monthlyNet))}</span>
+        </div>
+
+        <div className="fd-report-wealth">
+          <div className="fd-report-wealth-row">
+            <span className="fd-report-wealth-label">Net worth</span>
+            <span className={`fd-report-wealth-value${netWorth < 0 ? ' fd-report-wealth-value--negative' : ''}`}>{formatPence(netWorth)}</span>
+          </div>
+          <div className="fd-report-wealth-row">
+            <span className="fd-report-wealth-label">Total assets</span>
+            <span className="fd-report-wealth-value">{formatPence(assets)}</span>
+          </div>
+          <div className="fd-report-wealth-row">
+            <span className="fd-report-wealth-label">Total debt</span>
+            <span className="fd-report-wealth-value fd-report-wealth-value--negative">{formatPence(debt)}</span>
+          </div>
+        </div>
+      </section>
 
       <section className="fd-section">
         <h2 className="fd-section-title">Health</h2>
