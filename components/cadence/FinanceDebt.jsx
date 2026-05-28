@@ -3,6 +3,7 @@ import { Fragment, useState, useEffect, useMemo } from 'react'
 import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadDebts, createDebt, updateDebt, deleteDebt,
+  loadProperties, createProperty, updateProperty, deleteProperty,
 } from '../../lib/finance/db'
 import { computeAccountBalance } from '../../lib/finance/accounts'
 import {
@@ -19,13 +20,22 @@ const DEBT_BLANK = {
   name:                    '',
   balance_str:             '',
   apr_str:                 '',
+  rate_type:               'apr',
   min_payment_str:         '',
   term_months_str:         '',
   monthly_payment_str:     '',
   arrears_str:             '',
   fixed_period_months_str: '',
   revert_apr_str:          '',
+  mortgage_property_id:    '',
   include_in_strategy:     true,
+}
+
+const PROPERTY_BLANK = {
+  name:             '',
+  value_str:        '',
+  valuation_date_str: '',
+  mortgage_debt_id: '',
 }
 
 function parsePoundsToMaybePence(str) {
@@ -111,6 +121,18 @@ function validateDebtForm(formData, debtType, isManual) {
   return { ok: Object.keys(errors).length === 0, errors }
 }
 
+function validatePropertyForm(form) {
+  const errors = {}
+  if (!form.name.trim()) errors.name = 'Name is required.'
+  if (!form.value_str.trim()) {
+    errors.value_str = 'Value is required.'
+  } else {
+    const n = parseFloat(form.value_str)
+    if (isNaN(n) || n <= 0) errors.value_str = 'Enter a positive number.'
+  }
+  return { ok: Object.keys(errors).length === 0, errors }
+}
+
 export default function FinanceDebt() {
   const [loading,          setLoading         ] = useState(true)
   const [pageError,        setPageError       ] = useState(null)
@@ -127,18 +149,24 @@ export default function FinanceDebt() {
   const [formErrors,       setFormErrors      ] = useState({})
   const [deleteConfirming, setDeleteConfirming] = useState(false)
   const [budgetStr,        setBudgetStr        ] = useState('')
+  const [properties,       setProperties       ] = useState([])
+  const [propAddOpen,      setPropAddOpen       ] = useState(false)
+  const [editingPropId,    setEditingPropId     ] = useState(null)
+  const [propForm,         setPropForm          ] = useState(PROPERTY_BLANK)
+  const [propFormErrors,   setPropFormErrors    ] = useState({})
 
   useEffect(() => {
     setLoading(true)
     setPageError(null)
     Promise.all([
-      loadAccounts(), loadAllTransactions(), loadStatementDocuments(), loadDebts(),
+      loadAccounts(), loadAllTransactions(), loadStatementDocuments(), loadDebts(), loadProperties(),
     ])
-      .then(([accs, txs, docs, rows]) => {
+      .then(([accs, txs, docs, rows, props]) => {
         setAccounts(accs)
         setTransactions(txs)
         setStatementDocs(docs)
         setDebtRows(rows)
+        setProperties(props)
       })
       .catch(e => setPageError(e.message))
       .finally(() => setLoading(false))
@@ -167,8 +195,9 @@ export default function FinanceDebt() {
   }, [accounts, transactions, statementDocs, debtRows, budgetStr])
 
   async function reload() {
-    const rows = await loadDebts()
+    const [rows, props] = await Promise.all([loadDebts(), loadProperties()])
     setDebtRows(rows)
+    setProperties(props)
   }
 
   // ── Add ────────────────────────────────────────────────────────────────────
@@ -200,21 +229,24 @@ export default function FinanceDebt() {
           name:                formData.name.trim(),
           balance_pence:       parsePoundsToMaybePence(formData.balance_str),
           apr_bps:             formData.apr_str.trim() ? percentToBps(formData.apr_str) : null,
+          rate_type:           formData.rate_type,
           min_payment_pence:   parsePoundsToMaybePence(formData.min_payment_str),
           include_in_strategy: formData.include_in_strategy,
         })
       } else {
+        const isFlat = formData.rate_type === 'flat'
         await createDebt({
           account_id:            null,
           debt_type:             addType,
           name:                  formData.name.trim(),
           balance_pence:         parsePoundsToMaybePence(formData.balance_str),
           apr_bps:               formData.apr_str.trim() ? percentToBps(formData.apr_str) : null,
+          rate_type:             formData.rate_type,
           term_months:           parseInt(formData.term_months_str, 10),
-          monthly_payment_pence: formData.monthly_payment_str.trim() ? parsePoundsToMaybePence(formData.monthly_payment_str) : null,
+          monthly_payment_pence: !isFlat && formData.monthly_payment_str.trim() ? parsePoundsToMaybePence(formData.monthly_payment_str) : null,
           arrears_pence:         formData.arrears_str.trim() ? parsePoundsToMaybePence(formData.arrears_str) : null,
-          fixed_period_months:   formData.fixed_period_months_str.trim() ? parseInt(formData.fixed_period_months_str, 10) : null,
-          revert_apr_bps:        formData.revert_apr_str.trim() ? percentToBps(formData.revert_apr_str) : null,
+          fixed_period_months:   !isFlat && formData.fixed_period_months_str.trim() ? parseInt(formData.fixed_period_months_str, 10) : null,
+          revert_apr_bps:        !isFlat && formData.revert_apr_str.trim() ? percentToBps(formData.revert_apr_str) : null,
           include_in_strategy:   formData.include_in_strategy,
         })
       }
@@ -241,6 +273,7 @@ export default function FinanceDebt() {
       name:                debt.name,
       balance_str:         penceToStr(debt.balancePence),
       apr_str:             bpsToPercent(debt.aprBps),
+      rate_type:           rowData?.rate_type ?? 'apr',
       min_payment_str:     penceToStr(debt.minPaymentPence),
       include_in_strategy: rowData?.include_in_strategy ?? true,
     })
@@ -258,11 +291,13 @@ export default function FinanceDebt() {
       name:                    row.name,
       balance_str:             penceToStr(row.balance_pence),
       apr_str:                 bpsToPercent(row.apr_bps),
+      rate_type:               row.rate_type ?? 'apr',
       term_months_str:         row.term_months != null ? String(row.term_months) : '',
       monthly_payment_str:     penceToStr(row.monthly_payment_pence),
       arrears_str:             penceToStr(row.arrears_pence),
       fixed_period_months_str: row.fixed_period_months != null ? String(row.fixed_period_months) : '',
       revert_apr_str:          bpsToPercent(row.revert_apr_bps),
+      mortgage_property_id:    row.property_id ?? '',
       include_in_strategy:     row.include_in_strategy ?? true,
     })
     setFormErrors({})
@@ -288,6 +323,7 @@ export default function FinanceDebt() {
       if (debt.kind === 'linked') {
         await updateDebt(debt.debtRowId, {
           apr_bps: aprBps, min_payment_pence: minPaymentPence,
+          rate_type:           formData.rate_type,
           include_in_strategy: formData.include_in_strategy,
         })
       } else if (debt.kind === 'auto-unlinked') {
@@ -298,6 +334,7 @@ export default function FinanceDebt() {
           apr_bps:             aprBps,
           min_payment_pence:   minPaymentPence,
           debt_type:           'revolving',
+          rate_type:           formData.rate_type,
           include_in_strategy: formData.include_in_strategy,
         })
       } else {
@@ -306,6 +343,7 @@ export default function FinanceDebt() {
           balance_pence:       parsePoundsToMaybePence(formData.balance_str),
           apr_bps:             aprBps,
           min_payment_pence:   minPaymentPence,
+          rate_type:           formData.rate_type,
           include_in_strategy: formData.include_in_strategy,
         })
       }
@@ -325,15 +363,24 @@ export default function FinanceDebt() {
     if (!ok) { setFormErrors(errors); return }
     setSaving(true)
     try {
+      // Clear-then-set property link to satisfy the 1:1 partial unique index.
+      const newPropId = formData.mortgage_property_id || null
+      if (newPropId) {
+        const prev = debtRows.find(d => d.property_id === newPropId && d.id !== row.id)
+        if (prev) await updateDebt(prev.id, { property_id: null })
+      }
+      const isFlat = formData.rate_type === 'flat'
       await updateDebt(row.id, {
         name:                  formData.name.trim(),
         balance_pence:         parsePoundsToMaybePence(formData.balance_str),
         apr_bps:               formData.apr_str.trim() ? percentToBps(formData.apr_str) : null,
+        rate_type:             formData.rate_type,
         term_months:           parseInt(formData.term_months_str, 10),
-        monthly_payment_pence: formData.monthly_payment_str.trim() ? parsePoundsToMaybePence(formData.monthly_payment_str) : null,
+        monthly_payment_pence: !isFlat && formData.monthly_payment_str.trim() ? parsePoundsToMaybePence(formData.monthly_payment_str) : null,
         arrears_pence:         formData.arrears_str.trim() ? parsePoundsToMaybePence(formData.arrears_str) : null,
-        fixed_period_months:   formData.fixed_period_months_str.trim() ? parseInt(formData.fixed_period_months_str, 10) : null,
-        revert_apr_bps:        formData.revert_apr_str.trim() ? percentToBps(formData.revert_apr_str) : null,
+        fixed_period_months:   !isFlat && formData.fixed_period_months_str.trim() ? parseInt(formData.fixed_period_months_str, 10) : null,
+        revert_apr_bps:        !isFlat && formData.revert_apr_str.trim() ? percentToBps(formData.revert_apr_str) : null,
+        property_id:           newPropId,
         include_in_strategy:   formData.include_in_strategy,
       })
       setEditingKey(null)
@@ -369,6 +416,105 @@ export default function FinanceDebt() {
       await reload()
     } catch (e) {
       setFormErrors({ _form: e?.message || 'Failed to delete.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Property CRUD ──────────────────────────────────────────────────────────
+
+  function openPropEdit(prop) {
+    const currentLinked = debtRows.find(d => d.property_id === prop.id)
+    setEditingPropId(prop.id)
+    setPropForm({
+      ...PROPERTY_BLANK,
+      name:               prop.name,
+      value_str:          penceToStr(prop.value_pence),
+      valuation_date_str: prop.valuation_date ?? '',
+      mortgage_debt_id:   currentLinked?.id ?? '',
+    })
+    setPropFormErrors({})
+    setDeleteConfirming(false)
+  }
+
+  function closePropEdit() {
+    setEditingPropId(null)
+    setPropForm(PROPERTY_BLANK)
+    setPropFormErrors({})
+    setDeleteConfirming(false)
+  }
+
+  async function handlePropertyAddSave() {
+    const { ok, errors } = validatePropertyForm(propForm)
+    if (!ok) { setPropFormErrors(errors); return }
+    setSaving(true)
+    try {
+      const newProp = await createProperty({
+        name:           propForm.name.trim(),
+        value_pence:    parsePoundsToMaybePence(propForm.value_str),
+        valuation_date: propForm.valuation_date_str.trim() || null,
+      })
+      // Link chosen mortgage — newProp.id is brand new so no clear step needed.
+      if (propForm.mortgage_debt_id) {
+        await updateDebt(propForm.mortgage_debt_id, { property_id: newProp.id })
+      }
+      setPropAddOpen(false)
+      setPropForm(PROPERTY_BLANK)
+      await reload()
+    } catch (e) {
+      setPropFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePropertyEditSave(prop) {
+    const { ok, errors } = validatePropertyForm(propForm)
+    if (!ok) { setPropFormErrors(errors); return }
+    setSaving(true)
+    try {
+      await updateProperty(prop.id, {
+        name:           propForm.name.trim(),
+        value_pence:    parsePoundsToMaybePence(propForm.value_str),
+        valuation_date: propForm.valuation_date_str.trim() || null,
+      })
+      const currentLinked = debtRows.find(d => d.property_id === prop.id)
+      const newDebtId     = propForm.mortgage_debt_id || null
+      if (newDebtId && newDebtId !== (currentLinked?.id ?? '')) {
+        // Clear-then-set: remove old link first, then set new one.
+        if (currentLinked) await updateDebt(currentLinked.id, { property_id: null })
+        await updateDebt(newDebtId, { property_id: prop.id })
+      } else if (!newDebtId && currentLinked) {
+        await updateDebt(currentLinked.id, { property_id: null })
+      }
+      closePropEdit()
+      await reload()
+    } catch (e) {
+      setPropFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handlePropertyDeleteClick(id) {
+    if (!deleteConfirming) {
+      setDeleteConfirming(true)
+      setTimeout(() => setDeleteConfirming(false), 5000)
+      return
+    }
+    handlePropertyDeleteConfirm(id)
+  }
+
+  async function handlePropertyDeleteConfirm(id) {
+    setSaving(true)
+    try {
+      await deleteProperty(id)
+      setEditingPropId(null)
+      setDeleteConfirming(false)
+      setPropForm(PROPERTY_BLANK)
+      await reload()
+    } catch (e) {
+      setPropFormErrors({ _form: e?.message || 'Failed to delete.' })
     } finally {
       setSaving(false)
     }
@@ -447,7 +593,15 @@ export default function FinanceDebt() {
         {formErrors.balance_str && <p className="fa-add-error">{formErrors.balance_str}</p>}
       </div>
       <div className="form-row">
-        <label>APR % <span className="form-optional">(optional)</span></label>
+        <label>Rate type</label>
+        <select className="fdt-picker" value={formData.rate_type}
+          onChange={e => setFormData(p => ({ ...p, rate_type: e.target.value }))}>
+          <option value="apr">APR (nominal)</option>
+          <option value="ear">EAR (effective)</option>
+        </select>
+      </div>
+      <div className="form-row">
+        <label>{formData.rate_type === 'ear' ? 'EAR %' : 'APR %'} <span className="form-optional">(optional)</span></label>
         <input type="number" step="0.01" min="0" value={formData.apr_str} placeholder="e.g. 22.9"
           onChange={e => setFormData(p => ({ ...p, apr_str: e.target.value }))} />
         {formErrors.apr_str && <p className="fa-add-error">{formErrors.apr_str}</p>}
@@ -478,7 +632,22 @@ export default function FinanceDebt() {
         {formErrors.balance_str && <p className="fa-add-error">{formErrors.balance_str}</p>}
       </div>
       <div className="form-row">
-        <label>APR % <span className="form-optional">(optional)</span></label>
+        <label>Rate type</label>
+        <select className="fdt-picker" value={formData.rate_type}
+          onChange={e => setFormData(p => ({
+            ...p, rate_type: e.target.value,
+            ...(e.target.value === 'flat' ? { monthly_payment_str: '', fixed_period_months_str: '', revert_apr_str: '' } : {}),
+          }))}>
+          <option value="apr">APR (nominal)</option>
+          <option value="ear">EAR (effective)</option>
+          <option value="flat">Flat rate</option>
+        </select>
+      </div>
+      <div className="form-row">
+        <label>
+          {formData.rate_type === 'flat' ? 'Flat rate %' : formData.rate_type === 'ear' ? 'EAR %' : 'APR %'}
+          {' '}<span className="form-optional">(optional)</span>
+        </label>
         <input type="number" step="0.01" min="0" max="100" value={formData.apr_str} placeholder="e.g. 4.5"
           onChange={e => setFormData(p => ({ ...p, apr_str: e.target.value }))} />
         {formErrors.apr_str && <p className="fa-add-error">{formErrors.apr_str}</p>}
@@ -489,30 +658,38 @@ export default function FinanceDebt() {
           onChange={e => setFormData(p => ({ ...p, term_months_str: e.target.value }))} />
         {formErrors.term_months_str && <p className="fa-add-error">{formErrors.term_months_str}</p>}
       </div>
-      <div className="form-row">
-        <label>Monthly payment (£) <span className="form-optional">(optional)</span></label>
-        <input type="number" step="0.01" min="0" value={formData.monthly_payment_str} placeholder="0.00"
-          onChange={e => setFormData(p => ({ ...p, monthly_payment_str: e.target.value }))} />
-        {formErrors.monthly_payment_str && <p className="fa-add-error">{formErrors.monthly_payment_str}</p>}
-      </div>
+      {formData.rate_type !== 'flat' ? (
+        <div className="form-row">
+          <label>Monthly payment (£) <span className="form-optional">(optional)</span></label>
+          <input type="number" step="0.01" min="0" value={formData.monthly_payment_str} placeholder="0.00"
+            onChange={e => setFormData(p => ({ ...p, monthly_payment_str: e.target.value }))} />
+          {formErrors.monthly_payment_str && <p className="fa-add-error">{formErrors.monthly_payment_str}</p>}
+        </div>
+      ) : (
+        <p className="fdt-flat-note">Monthly payment auto-calculated from principal, rate, and term.</p>
+      )}
       <div className="form-row">
         <label>Arrears (£) <span className="form-optional">(optional)</span></label>
         <input type="number" step="0.01" min="0" value={formData.arrears_str} placeholder="0.00"
           onChange={e => setFormData(p => ({ ...p, arrears_str: e.target.value }))} />
         {formErrors.arrears_str && <p className="fa-add-error">{formErrors.arrears_str}</p>}
       </div>
-      <div className="form-row">
-        <label>Fixed period (months) <span className="form-optional">(optional)</span></label>
-        <input type="number" step="1" min="1" value={formData.fixed_period_months_str} placeholder="e.g. 24"
-          onChange={e => setFormData(p => ({ ...p, fixed_period_months_str: e.target.value }))} />
-        {formErrors.fixed_period_months_str && <p className="fa-add-error">{formErrors.fixed_period_months_str}</p>}
-      </div>
-      <div className="form-row">
-        <label>Revert APR % <span className="form-optional">(optional)</span></label>
-        <input type="number" step="0.01" min="0" max="100" value={formData.revert_apr_str} placeholder="e.g. 7.5"
-          onChange={e => setFormData(p => ({ ...p, revert_apr_str: e.target.value }))} />
-        {formErrors.revert_apr_str && <p className="fa-add-error">{formErrors.revert_apr_str}</p>}
-      </div>
+      {formData.rate_type !== 'flat' && (
+        <>
+          <div className="form-row">
+            <label>Fixed period (months) <span className="form-optional">(optional)</span></label>
+            <input type="number" step="1" min="1" value={formData.fixed_period_months_str} placeholder="e.g. 24"
+              onChange={e => setFormData(p => ({ ...p, fixed_period_months_str: e.target.value }))} />
+            {formErrors.fixed_period_months_str && <p className="fa-add-error">{formErrors.fixed_period_months_str}</p>}
+          </div>
+          <div className="form-row">
+            <label>Revert {formData.rate_type === 'ear' ? 'EAR' : 'APR'} % <span className="form-optional">(optional)</span></label>
+            <input type="number" step="0.01" min="0" max="100" value={formData.revert_apr_str} placeholder="e.g. 7.5"
+              onChange={e => setFormData(p => ({ ...p, revert_apr_str: e.target.value }))} />
+            {formErrors.revert_apr_str && <p className="fa-add-error">{formErrors.revert_apr_str}</p>}
+          </div>
+        </>
+      )}
       {includeToggle}
     </div>
   )
@@ -556,7 +733,16 @@ export default function FinanceDebt() {
         )}
 
         <div className="form-row">
-          <label>APR % <span className="form-optional">(optional)</span></label>
+          <label>Rate type</label>
+          <select className="fdt-picker" value={formData.rate_type}
+            onChange={e => setFormData(p => ({ ...p, rate_type: e.target.value }))}>
+            <option value="apr">APR (nominal)</option>
+            <option value="ear">EAR (effective)</option>
+          </select>
+        </div>
+
+        <div className="form-row">
+          <label>{formData.rate_type === 'ear' ? 'EAR %' : 'APR %'} <span className="form-optional">(optional)</span></label>
           <input type="number" step="0.01" min="0" value={formData.apr_str} placeholder="e.g. 22.9"
             onChange={e => setFormData(p => ({ ...p, apr_str: e.target.value }))} />
           {formErrors.apr_str && <p className="fa-add-error">{formErrors.apr_str}</p>}
@@ -585,6 +771,7 @@ export default function FinanceDebt() {
   }
 
   function loanEditBody(row) {
+    const isFlat = formData.rate_type === 'flat'
     return (
       <div className="bm-add-form">
         {formErrors._form && <p className="fa-add-error">{formErrors._form}</p>}
@@ -601,7 +788,22 @@ export default function FinanceDebt() {
           {formErrors.balance_str && <p className="fa-add-error">{formErrors.balance_str}</p>}
         </div>
         <div className="form-row">
-          <label>APR % <span className="form-optional">(optional)</span></label>
+          <label>Rate type</label>
+          <select className="fdt-picker" value={formData.rate_type}
+            onChange={e => setFormData(p => ({
+              ...p, rate_type: e.target.value,
+              ...(e.target.value === 'flat' ? { monthly_payment_str: '', fixed_period_months_str: '', revert_apr_str: '' } : {}),
+            }))}>
+            <option value="apr">APR (nominal)</option>
+            <option value="ear">EAR (effective)</option>
+            <option value="flat">Flat rate</option>
+          </select>
+        </div>
+        <div className="form-row">
+          <label>
+            {isFlat ? 'Flat rate %' : formData.rate_type === 'ear' ? 'EAR %' : 'APR %'}
+            {' '}<span className="form-optional">(optional)</span>
+          </label>
           <input type="number" step="0.01" min="0" max="100" value={formData.apr_str} placeholder="e.g. 4.5"
             onChange={e => setFormData(p => ({ ...p, apr_str: e.target.value }))} />
           {formErrors.apr_str && <p className="fa-add-error">{formErrors.apr_str}</p>}
@@ -612,30 +814,50 @@ export default function FinanceDebt() {
             onChange={e => setFormData(p => ({ ...p, term_months_str: e.target.value }))} />
           {formErrors.term_months_str && <p className="fa-add-error">{formErrors.term_months_str}</p>}
         </div>
-        <div className="form-row">
-          <label>Monthly payment (£) <span className="form-optional">(optional)</span></label>
-          <input type="number" step="0.01" min="0" value={formData.monthly_payment_str} placeholder="0.00"
-            onChange={e => setFormData(p => ({ ...p, monthly_payment_str: e.target.value }))} />
-          {formErrors.monthly_payment_str && <p className="fa-add-error">{formErrors.monthly_payment_str}</p>}
-        </div>
+        {!isFlat ? (
+          <div className="form-row">
+            <label>Monthly payment (£) <span className="form-optional">(optional)</span></label>
+            <input type="number" step="0.01" min="0" value={formData.monthly_payment_str} placeholder="0.00"
+              onChange={e => setFormData(p => ({ ...p, monthly_payment_str: e.target.value }))} />
+            {formErrors.monthly_payment_str && <p className="fa-add-error">{formErrors.monthly_payment_str}</p>}
+          </div>
+        ) : (
+          <p className="fdt-flat-note">Monthly payment auto-calculated from principal, rate, and term.</p>
+        )}
         <div className="form-row">
           <label>Arrears (£) <span className="form-optional">(optional)</span></label>
           <input type="number" step="0.01" min="0" value={formData.arrears_str} placeholder="0.00"
             onChange={e => setFormData(p => ({ ...p, arrears_str: e.target.value }))} />
           {formErrors.arrears_str && <p className="fa-add-error">{formErrors.arrears_str}</p>}
         </div>
-        <div className="form-row">
-          <label>Fixed period (months) <span className="form-optional">(optional)</span></label>
-          <input type="number" step="1" min="1" value={formData.fixed_period_months_str} placeholder="e.g. 24"
-            onChange={e => setFormData(p => ({ ...p, fixed_period_months_str: e.target.value }))} />
-          {formErrors.fixed_period_months_str && <p className="fa-add-error">{formErrors.fixed_period_months_str}</p>}
-        </div>
-        <div className="form-row">
-          <label>Revert APR % <span className="form-optional">(optional)</span></label>
-          <input type="number" step="0.01" min="0" max="100" value={formData.revert_apr_str} placeholder="e.g. 7.5"
-            onChange={e => setFormData(p => ({ ...p, revert_apr_str: e.target.value }))} />
-          {formErrors.revert_apr_str && <p className="fa-add-error">{formErrors.revert_apr_str}</p>}
-        </div>
+        {!isFlat && (
+          <>
+            <div className="form-row">
+              <label>Fixed period (months) <span className="form-optional">(optional)</span></label>
+              <input type="number" step="1" min="1" value={formData.fixed_period_months_str} placeholder="e.g. 24"
+                onChange={e => setFormData(p => ({ ...p, fixed_period_months_str: e.target.value }))} />
+              {formErrors.fixed_period_months_str && <p className="fa-add-error">{formErrors.fixed_period_months_str}</p>}
+            </div>
+            <div className="form-row">
+              <label>Revert {formData.rate_type === 'ear' ? 'EAR' : 'APR'} % <span className="form-optional">(optional)</span></label>
+              <input type="number" step="0.01" min="0" max="100" value={formData.revert_apr_str} placeholder="e.g. 7.5"
+                onChange={e => setFormData(p => ({ ...p, revert_apr_str: e.target.value }))} />
+              {formErrors.revert_apr_str && <p className="fa-add-error">{formErrors.revert_apr_str}</p>}
+            </div>
+          </>
+        )}
+        {row.debt_type === 'mortgage' && (
+          <div className="form-row">
+            <label>Linked property <span className="form-optional">(optional)</span></label>
+            <select className="fdt-picker" value={formData.mortgage_property_id}
+              onChange={e => setFormData(p => ({ ...p, mortgage_property_id: e.target.value }))}>
+              <option value="">— none —</option>
+              {properties.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         {includeToggle}
         <div className="fdt-danger-zone">
           <button type="button" className="fdt-danger-btn"
@@ -648,30 +870,119 @@ export default function FinanceDebt() {
     )
   }
 
+  // ── Property form bodies ───────────────────────────────────────────────────
+
+  const propertyAddBody = (
+    <div className="bm-add-form">
+      {propFormErrors._form && <p className="fa-add-error">{propFormErrors._form}</p>}
+      <div className="form-row">
+        <label>Name</label>
+        <input type="text" value={propForm.name}
+          onChange={e => setPropForm(p => ({ ...p, name: e.target.value }))} />
+        {propFormErrors.name && <p className="fa-add-error">{propFormErrors.name}</p>}
+      </div>
+      <div className="form-row">
+        <label>Value (£)</label>
+        <input type="number" step="0.01" min="0" value={propForm.value_str} placeholder="0.00"
+          onChange={e => setPropForm(p => ({ ...p, value_str: e.target.value }))} />
+        {propFormErrors.value_str && <p className="fa-add-error">{propFormErrors.value_str}</p>}
+      </div>
+      <div className="form-row">
+        <label>Valuation date <span className="form-optional">(optional)</span></label>
+        <input type="date" value={propForm.valuation_date_str}
+          onChange={e => setPropForm(p => ({ ...p, valuation_date_str: e.target.value }))} />
+      </div>
+      <div className="form-row">
+        <label>Secured mortgage <span className="form-optional">(optional)</span></label>
+        <select className="fdt-picker" value={propForm.mortgage_debt_id}
+          onChange={e => setPropForm(p => ({ ...p, mortgage_debt_id: e.target.value }))}>
+          <option value="">— none —</option>
+          {loanRows.map(row => {
+            const linkedProp = row.property_id ? properties.find(p => p.id === row.property_id) : null
+            const label = linkedProp ? `${row.name} — linked to ${linkedProp.name}` : row.name
+            return <option key={row.id} value={row.id}>{label}</option>
+          })}
+        </select>
+      </div>
+    </div>
+  )
+
+  function propertyEditBody(prop) {
+    return (
+      <div className="bm-add-form">
+        {propFormErrors._form && <p className="fa-add-error">{propFormErrors._form}</p>}
+        <div className="form-row">
+          <label>Name</label>
+          <input type="text" value={propForm.name}
+            onChange={e => setPropForm(p => ({ ...p, name: e.target.value }))} />
+          {propFormErrors.name && <p className="fa-add-error">{propFormErrors.name}</p>}
+        </div>
+        <div className="form-row">
+          <label>Value (£)</label>
+          <input type="number" step="0.01" min="0" value={propForm.value_str} placeholder="0.00"
+            onChange={e => setPropForm(p => ({ ...p, value_str: e.target.value }))} />
+          {propFormErrors.value_str && <p className="fa-add-error">{propFormErrors.value_str}</p>}
+        </div>
+        <div className="form-row">
+          <label>Valuation date <span className="form-optional">(optional)</span></label>
+          <input type="date" value={propForm.valuation_date_str}
+            onChange={e => setPropForm(p => ({ ...p, valuation_date_str: e.target.value }))} />
+        </div>
+        <div className="form-row">
+          <label>Secured mortgage <span className="form-optional">(optional)</span></label>
+          <select className="fdt-picker" value={propForm.mortgage_debt_id}
+            onChange={e => setPropForm(p => ({ ...p, mortgage_debt_id: e.target.value }))}>
+            <option value="">— none —</option>
+            {loanRows.map(row => {
+              const linkedProp = row.property_id && row.property_id !== prop.id
+                ? properties.find(p => p.id === row.property_id)
+                : null
+              const label = linkedProp ? `${row.name} — linked to ${linkedProp.name}` : row.name
+              return <option key={row.id} value={row.id}>{label}</option>
+            })}
+          </select>
+        </div>
+        <div className="fdt-danger-zone">
+          <button type="button" className="fdt-danger-btn"
+            onClick={() => handlePropertyDeleteClick(prop.id)} disabled={saving}>
+            {deleteConfirming ? 'Click again to confirm' : 'Delete property'}
+          </button>
+          {deleteConfirming && <span className="fdt-danger-confirm">This cannot be undone.</span>}
+        </div>
+      </div>
+    )
+  }
+
   // ── Loan/mortgage amortisation drawer ─────────────────────────────────────
 
   function renderLoanDrawer(row) {
+    const rateType   = row.rate_type ?? 'apr'
+    const isFlatRate = rateType === 'flat'
     const principal  = row.balance_pence != null ? Number(row.balance_pence) : 0
     const aprBps     = row.apr_bps ?? 0
     const termMonths = row.term_months ?? 0
-    const hasPayment = row.monthly_payment_pence != null
+    const hasPayment = !isFlatRate && row.monthly_payment_pence != null
     const effectiveP = hasPayment
       ? Number(row.monthly_payment_pence)
-      : computeAmortisationPayment(principal, aprBps, termMonths)
+      : computeAmortisationPayment(principal, aprBps, termMonths, rateType)
     const arrears    = row.arrears_pence != null ? Number(row.arrears_pence) : 0
 
     const proj = projectAmortisation(
       principal, aprBps, termMonths, effectiveP,
       row.fixed_period_months ?? null,
       row.revert_apr_bps ?? null,
+      600,
+      rateType,
     )
 
     return (
       <div className="fdt-drawer">
         <div className="fdt-drawer-line">
-          {hasPayment
-            ? <>Monthly payment: <strong>{formatPence(effectiveP)}</strong></>
-            : <>Suggested payment: <strong>{formatPence(effectiveP)}</strong>{' — enter your actual payment when editing to refine the projection'}</>
+          {isFlatRate
+            ? <>Monthly payment: <strong>{formatPence(effectiveP)}</strong>{' — flat rate, auto-calculated'}</>
+            : hasPayment
+              ? <>Monthly payment: <strong>{formatPence(effectiveP)}</strong></>
+              : <>Suggested payment: <strong>{formatPence(effectiveP)}</strong>{' — enter your actual payment when editing to refine the projection'}</>
           }
         </div>
 
@@ -691,7 +1002,7 @@ export default function FinanceDebt() {
 
         {proj.revertMonth != null && proj.recalculatedPaymentPence != null && (
           <div className="fdt-drawer-line">
-            Rate reverts to <strong>{formatApr(row.revert_apr_bps)}</strong> after <strong>{formatMonths(row.fixed_period_months)}</strong> — payment rises to <strong>{formatPence(proj.recalculatedPaymentPence)}</strong>
+            Rate reverts to <strong>{formatApr(row.revert_apr_bps, rateType)}</strong> after <strong>{formatMonths(row.fixed_period_months)}</strong> — payment rises to <strong>{formatPence(proj.recalculatedPaymentPence)}</strong>
           </div>
         )}
 
@@ -779,7 +1090,7 @@ export default function FinanceDebt() {
       <p className="fdt-intro">
         Your financial position — what you own and what you owe. Cadence auto-detects
         accounts with a negative balance; set an APR to enable paydown projections.
-        Loans and mortgages can be added separately. Property and other assets will follow.
+        Loans and mortgages can be added separately.
       </p>
 
       <CadencePanel
@@ -793,6 +1104,93 @@ export default function FinanceDebt() {
         onCancel={handleAddCancel}
       />
 
+      <div className="fdt-assets-section">
+        <div className="fdt-section-header">
+          Assets
+          <button type="button" className="btn btn-ghost fdt-add-btn"
+            onClick={() => { setPropAddOpen(true); setEditingPropId(null) }}
+            disabled={propAddOpen}>
+            + Add property
+          </button>
+        </div>
+
+        <CadencePanel
+          open={propAddOpen}
+          title="Add property"
+          body={propertyAddBody}
+          confirmLabel={saving ? 'Saving…' : 'Add property'}
+          confirmClass="btn-primary"
+          confirmDisabled={saving}
+          onConfirm={handlePropertyAddSave}
+          onCancel={() => { setPropAddOpen(false); setPropForm(PROPERTY_BLANK); setPropFormErrors({}) }}
+        />
+
+        {properties.length === 0 ? (
+          <p className="fdt-section-empty">No properties added yet.</p>
+        ) : (
+          <table className="fdt-asset-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th className="fdt-col-value">Value</th>
+                <th className="fdt-col-date">Valuation date</th>
+                <th className="fdt-col-mortgage">Mortgage</th>
+                <th className="fdt-col-equity">Equity</th>
+                <th className="fdt-col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {properties.map(prop => {
+                const linkedDebt    = debtRows.find(d => d.property_id === prop.id) ?? null
+                const mortgageBal   = linkedDebt?.balance_pence != null ? Number(linkedDebt.balance_pence) : null
+                const equity        = mortgageBal != null ? prop.value_pence - mortgageBal : prop.value_pence
+                const isNegEquity   = equity < 0
+                const isEditingProp = editingPropId === prop.id
+                return (
+                  <Fragment key={prop.id}>
+                    <tr>
+                      <td>{prop.name}</td>
+                      <td className="fdt-col-value">{formatPence(prop.value_pence)}</td>
+                      <td className="fdt-col-date">{prop.valuation_date ?? '—'}</td>
+                      <td className="fdt-col-mortgage">{linkedDebt ? linkedDebt.name : '—'}</td>
+                      <td className={`fdt-col-equity${isNegEquity ? ' fdt-equity--negative' : ''}`}>
+                        {formatPence(equity)}
+                      </td>
+                      <td className="fdt-col-actions">
+                        <button type="button"
+                          className={`fdt-edit-btn${isEditingProp ? ' fdt-edit-btn--active' : ''}`}
+                          onClick={() => isEditingProp ? closePropEdit() : openPropEdit(prop)}>
+                          {isEditingProp ? 'Close' : 'Edit'}
+                        </button>
+                      </td>
+                    </tr>
+                    {isEditingProp && (
+                      <tr className="fdt-panel-row">
+                        <td colSpan={6}>
+                          <CadencePanel
+                            open
+                            title="Edit property"
+                            body={propertyEditBody(prop)}
+                            confirmLabel={saving ? 'Saving…' : 'Save'}
+                            confirmClass="btn-primary"
+                            confirmDisabled={saving}
+                            onConfirm={() => handlePropertyEditSave(prop)}
+                            onCancel={closePropEdit}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="fdt-debts-section">
+        <div className="fdt-section-header">Debts</div>
+
       {!hasAnyDebt ? (
         <p className="fdt-empty">
           No debts tracked. Add a manual debt or connect an account with a negative balance.
@@ -801,7 +1199,7 @@ export default function FinanceDebt() {
         <table className="fdt-table">
           <thead>
             <tr>
-              <th>Debt</th>
+              <th>Name</th>
               <th className="fdt-col-balance">Balance</th>
               <th className="fdt-col-apr">APR</th>
               <th className="fdt-col-min">Payment</th>
@@ -836,7 +1234,7 @@ export default function FinanceDebt() {
                           onClick={() => isEditing ? handleEditCancel() : handleEditOpen(debt)}>
                           Set APR →
                         </button>
-                      ) : formatApr(debt.aprBps)}
+                      ) : formatApr(debt.aprBps, debt.rateType)}
                     </td>
                     <td className="fdt-col-min">
                       {debt.minPaymentPence != null ? formatPence(debt.minPaymentPence) : '—'}
@@ -942,10 +1340,12 @@ export default function FinanceDebt() {
             {loanRows.map(row => {
               const isEditing  = editingKey === row.id
               const isExpanded = expandedKey === row.id && !isEditing
-              const principal  = row.balance_pence != null ? Number(row.balance_pence) : 0
-              const hasPayment = row.monthly_payment_pence != null
-              const suggestedP = (row.apr_bps != null && row.term_months)
-                ? computeAmortisationPayment(principal, row.apr_bps, row.term_months)
+              const rowRateType = row.rate_type ?? 'apr'
+              const isFlatRow   = rowRateType === 'flat'
+              const principal   = row.balance_pence != null ? Number(row.balance_pence) : 0
+              const hasPayment  = !isFlatRow && row.monthly_payment_pence != null
+              const suggestedP  = (row.apr_bps != null && row.term_months)
+                ? computeAmortisationPayment(principal, row.apr_bps, row.term_months, rowRateType)
                 : null
 
               return (
@@ -980,7 +1380,7 @@ export default function FinanceDebt() {
                       </span>
                     </td>
                     <td className="fdt-col-balance">{principal ? formatPence(principal) : '—'}</td>
-                    <td className="fdt-col-apr">{formatApr(row.apr_bps)}</td>
+                    <td className="fdt-col-apr">{formatApr(row.apr_bps, rowRateType)}</td>
                     <td className="fdt-col-min">
                       {hasPayment
                         ? formatPence(Number(row.monthly_payment_pence))
@@ -1032,6 +1432,8 @@ export default function FinanceDebt() {
           </tbody>
         </table>
       )}
+
+      </div>{/* end fdt-debts-section */}
 
       <section className="fdt-strategy">
         <h2 className="fd-section-title">Strategy comparison</h2>

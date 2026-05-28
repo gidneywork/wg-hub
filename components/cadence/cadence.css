@@ -8550,3 +8550,36 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .fdt-chart-tooltip { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: var(--space-3) var(--space-4); font-family: var(--sans); font-size: var(--type-caption); }
 [data-cadence] .fdt-chart-tooltip-month { font-family: var(--mono); font-size: 10px; color: var(--text-quiet); margin-bottom: var(--space-1); }
 [data-cadence] .fdt-chart-tooltip-row { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--text-muted); }
+
+/* ── FC-058 c2 — Assets section & rate types ────────────────────────────── */
+
+/* Section headers (Assets / Debts) */
+[data-cadence] .fdt-assets-section,
+[data-cadence] .fdt-debts-section { margin-top: var(--space-6); }
+[data-cadence] .fdt-section-header { display: flex; align-items: center; justify-content: space-between; font-family: var(--sans); font-size: var(--type-caption); font-weight: 600; color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-3); }
+
+/* Empty state for a section (no properties yet) */
+[data-cadence] .fdt-section-empty { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-2) 0 var(--space-4); }
+
+/* Properties asset table */
+[data-cadence] .fdt-asset-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: var(--type-caption); }
+[data-cadence] .fdt-asset-table th { text-align: left; font-weight: 500; color: var(--text-quiet); padding: var(--space-1) var(--space-3) var(--space-1) 0; border-bottom: 1px solid var(--border-soft); }
+[data-cadence] .fdt-asset-table td { padding: var(--space-3) var(--space-3) var(--space-3) 0; border-bottom: 1px solid var(--border-soft); vertical-align: top; font-variant-numeric: tabular-nums; }
+[data-cadence] .fdt-asset-table tr:last-child td { border-bottom: none; }
+
+/* Asset table column widths */
+[data-cadence] .fdt-col-value    { width: 110px; text-align: right; }
+[data-cadence] .fdt-col-date     { width: 110px; }
+[data-cadence] .fdt-col-mortgage { min-width: 120px; }
+[data-cadence] .fdt-col-equity   { width: 110px; text-align: right; font-weight: 500; }
+
+/* Negative equity — clay-deep per brand token (sentiment-negative, not destructive) */
+[data-cadence] .fdt-equity--negative { color: var(--clay-deep); }
+
+/* Select element picker (rate type, property, mortgage) */
+[data-cadence] .fdt-picker { display: block; width: 100%; padding: 6px var(--space-3); font-family: var(--sans); font-size: var(--type-body); color: var(--text); background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='%238A867D' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right var(--space-3) center; background-size: 14px; padding-right: calc(var(--space-3) + 20px); cursor: pointer; }
+[data-cadence] .fdt-picker:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+[data-theme="dark"] [data-cadence] .fdt-picker { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='%236F6B62' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); }
+
+/* Flat-rate informational note in forms */
+[data-cadence] .fdt-flat-note { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-1) 0 var(--space-3); padding: var(--space-2) var(--space-3); background: var(--bg-elevated); border-left: 3px solid var(--border); border-radius: 2px; }
