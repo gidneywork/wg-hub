@@ -226,13 +226,23 @@ export default function CadenceBiomarkers() {
                 const calendarStatus = fmtCalendarStatus(status, nextDue, isQualitative)
 
                 const subSummary = subMarkerMap
-                  ? Object.entries(subMarkerMap).map(([k, sub]) => {
+                  ? Object.entries(subMarkerMap).map(([k, sub], i) => {
                       const r = keyResults.find(x => x.sub_marker_key === k)
-                      const val = r && r.value != null
-                        ? `${Number(r.value).toLocaleString('en-GB', { maximumFractionDigits: 2 })} ${sub.unit}`
-                        : '(no data)'
-                      return `${sub.name}: ${val}`
-                    }).join(' · ')
+                      const hasValue = r && r.value != null
+                      return (
+                        <span key={k} className="bm-sub-segment">
+                          {i > 0 && <span className="bm-sub-divider"> · </span>}
+                          <span className="bm-sub-label">{sub.name}: </span>
+                          {hasValue ? (
+                            <span className="bm-sub-value">
+                              {Number(r.value).toLocaleString('en-GB', { maximumFractionDigits: 2 })} {sub.unit}
+                            </span>
+                          ) : (
+                            <span className="bm-sub-empty">(no data)</span>
+                          )}
+                        </span>
+                      )
+                    })
                   : null
 
                 return (

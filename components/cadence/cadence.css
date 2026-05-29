@@ -5719,10 +5719,13 @@ html::-webkit-scrollbar-track { background: transparent; }
   padding: 0 20px 10px;
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   line-height: 1.5;
 }
+[data-cadence] .bm-sub-label   { color: var(--text-muted); }
+[data-cadence] .bm-sub-value   { color: var(--text); font-weight: 500; }
+[data-cadence] .bm-sub-empty   { color: var(--text-muted); }
+[data-cadence] .bm-sub-divider { color: var(--text-muted); }
 
 /* ── Calorie target mode pill ──────────────────────────────────────── */
 [data-cadence] .cal-pill {
