@@ -9055,3 +9055,34 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-top: 1px solid var(--border-soft);
   padding: var(--space-4) var(--space-5);
 }
+
+/* ── FC-042 c2 — Savings goals ─────────────────────────────────────────── */
+
+[data-cadence] .fdt-goals-section { margin-top: var(--space-5); }
+[data-cadence] .fdt-goals-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+[data-cadence] .fdt-goals-label { font-family: var(--sans); font-size: var(--type-caption); font-weight: 600; color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.06em; }
+[data-cadence] .fdt-goals-empty { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-2) 0 var(--space-4); }
+
+[data-cadence] .fdt-goal-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+[data-cadence] .fdt-goal-card { padding: var(--space-3) var(--space-4); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+
+[data-cadence] .fdt-goal-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-2); }
+[data-cadence] .fdt-goal-name { font-family: var(--sans); font-size: var(--type-body); font-weight: 500; color: var(--text); }
+[data-cadence] .fdt-goal-numbers { font-family: var(--mono); font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+[data-cadence] .fdt-goal-bar { height: 5px; background: var(--border-soft); border-radius: 3px; overflow: hidden; margin-bottom: var(--space-2); }
+[data-cadence] .fdt-goal-bar-fill { height: 100%; background: var(--moss-deep); border-radius: 3px; transition: width 600ms var(--ease); }
+[data-theme="dark"] [data-cadence] .fdt-goal-bar-fill { background: var(--moss); }
+
+[data-cadence] .fdt-goal-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+[data-cadence] .fdt-goal-caption { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); }
+
+[data-cadence] .fdt-goal-orphan { font-family: var(--sans); font-size: var(--type-caption); color: var(--clay-deep); margin: 0 0 var(--space-2); }
+[data-theme="dark"] [data-cadence] .fdt-goal-orphan { color: var(--clay); }
+
+[data-cadence] .fdt-panel-inline { margin-top: var(--space-3); border-top: 1px solid var(--border-soft); padding-top: var(--space-3); }
+
+[data-cadence] .fdt-goal-source-group { display: flex; flex-direction: column; gap: var(--space-2); }
+[data-cadence] .fdt-goal-source-option { display: flex; align-items: center; gap: var(--space-2); font-family: var(--sans); font-size: var(--type-body); color: var(--text); cursor: pointer; }
+[data-cadence] .fdt-goal-source-option--disabled { color: var(--text-quiet); cursor: not-allowed; }
+[data-cadence] .fdt-goal-source-note { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-1) 0 0; font-style: italic; }

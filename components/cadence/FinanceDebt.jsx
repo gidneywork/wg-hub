@@ -4,6 +4,7 @@ import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadDebts, createDebt, updateDebt, deleteDebt,
   loadProperties, createProperty, updateProperty, deleteProperty,
+  loadSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
   loadFinanceSetting,
 } from '../../lib/finance/db'
 import { computeAccountBalance, getBankLabel } from '../../lib/finance/accounts'
@@ -37,6 +38,15 @@ const PROPERTY_BLANK = {
   value_str:        '',
   valuation_date_str: '',
   mortgage_debt_id: '',
+}
+
+const GOAL_BLANK = {
+  name:        '',
+  target_str:  '',
+  source:      'linked',
+  account_id:  '',
+  current_str: '0',
+  notes:       '',
 }
 
 function parsePoundsToMaybePence(str) {
@@ -134,6 +144,19 @@ function validatePropertyForm(form) {
   return { ok: Object.keys(errors).length === 0, errors }
 }
 
+function validateGoalForm(form) {
+  const errors = {}
+  if (!form.name.trim()) errors.name = 'Name is required.'
+  const t = parsePoundsToMaybePence(form.target_str)
+  if (t == null || t <= 0) errors.target_str = 'Enter a positive target.'
+  if (form.source === 'linked' && !form.account_id) errors.account_id = 'Select an account.'
+  if (form.source === 'freeFloating') {
+    const c = parsePoundsToMaybePence(form.current_str)
+    if (c == null || c < 0) errors.current_str = 'Enter 0 or a positive amount.'
+  }
+  return { ok: Object.keys(errors).length === 0, errors }
+}
+
 export default function FinanceDebt() {
   const [loading,          setLoading         ] = useState(true)
   const [pageError,        setPageError       ] = useState(null)
@@ -154,20 +177,29 @@ export default function FinanceDebt() {
   const [propAddOpen,      setPropAddOpen       ] = useState(false)
   const [editingPropId,    setEditingPropId     ] = useState(null)
   const [propForm,         setPropForm          ] = useState(PROPERTY_BLANK)
-  const [propFormErrors,   setPropFormErrors    ] = useState({})
+  const [propFormErrors,        setPropFormErrors        ] = useState({})
+
+  const [savingsGoals,          setSavingsGoals          ] = useState([])
+  const [goalAddOpen,           setGoalAddOpen           ] = useState(false)
+  const [editingGoalId,         setEditingGoalId         ] = useState(null)
+  const [goalForm,              setGoalForm              ] = useState(GOAL_BLANK)
+  const [goalFormErrors,        setGoalFormErrors        ] = useState({})
+  const [goalSaving,            setGoalSaving            ] = useState(false)
+  const [goalDeleteConfirming,  setGoalDeleteConfirming  ] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     setPageError(null)
     Promise.all([
-      loadAccounts(), loadAllTransactions(), loadStatementDocuments(), loadDebts(), loadProperties(),
+      loadAccounts(), loadAllTransactions(), loadStatementDocuments(), loadDebts(), loadProperties(), loadSavingsGoals(),
     ])
-      .then(([accs, txs, docs, rows, props]) => {
+      .then(([accs, txs, docs, rows, props, goals]) => {
         setAccounts(accs)
         setTransactions(txs)
         setStatementDocs(docs)
         setDebtRows(rows)
         setProperties(props)
+        setSavingsGoals(goals)
       })
       .catch(e => setPageError(e.message))
       .finally(() => setLoading(false))
@@ -208,9 +240,10 @@ export default function FinanceDebt() {
   }, [])
 
   async function reload() {
-    const [rows, props] = await Promise.all([loadDebts(), loadProperties()])
+    const [rows, props, goals] = await Promise.all([loadDebts(), loadProperties(), loadSavingsGoals()])
     setDebtRows(rows)
     setProperties(props)
+    setSavingsGoals(goals)
   }
 
   // ── Add ────────────────────────────────────────────────────────────────────
@@ -533,6 +566,94 @@ export default function FinanceDebt() {
     }
   }
 
+  // ── Goal CRUD ─────────────────────────────────────────────────────────────
+
+  function openGoalEdit(goal) {
+    setEditingGoalId(goal.id)
+    setGoalForm({
+      ...GOAL_BLANK,
+      name:        goal.name,
+      target_str:  penceToStr(goal.target_pence),
+      source:      goal.account_id ? 'linked' : 'freeFloating',
+      account_id:  goal.account_id ?? '',
+      current_str: goal.current_pence != null ? penceToStr(goal.current_pence) : '0',
+      notes:       goal.notes ?? '',
+    })
+    setGoalFormErrors({})
+    setGoalDeleteConfirming(false)
+  }
+
+  function closeGoalEdit() {
+    setEditingGoalId(null)
+    setGoalForm(GOAL_BLANK)
+    setGoalFormErrors({})
+    setGoalDeleteConfirming(false)
+  }
+
+  async function handleGoalAddSave() {
+    const { ok, errors } = validateGoalForm(goalForm)
+    if (!ok) { setGoalFormErrors(errors); return }
+    setGoalSaving(true)
+    try {
+      await createSavingsGoal({
+        name:          goalForm.name.trim(),
+        target_pence:  parsePoundsToMaybePence(goalForm.target_str),
+        account_id:    goalForm.source === 'linked' ? goalForm.account_id : null,
+        current_pence: goalForm.source === 'freeFloating'
+          ? parsePoundsToMaybePence(goalForm.current_str)
+          : null,
+        notes: goalForm.notes.trim() || null,
+      })
+      setGoalAddOpen(false)
+      setGoalForm(GOAL_BLANK)
+      setGoalFormErrors({})
+      const goals = await loadSavingsGoals()
+      setSavingsGoals(goals)
+    } catch (e) {
+      setGoalFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setGoalSaving(false)
+    }
+  }
+
+  async function handleGoalEditSave(goal) {
+    const { ok, errors } = validateGoalForm(goalForm)
+    if (!ok) { setGoalFormErrors(errors); return }
+    setGoalSaving(true)
+    try {
+      await updateSavingsGoal(goal.id, {
+        name:          goalForm.name.trim(),
+        target_pence:  parsePoundsToMaybePence(goalForm.target_str),
+        account_id:    goalForm.source === 'linked' ? goalForm.account_id : null,
+        current_pence: goalForm.source === 'freeFloating'
+          ? parsePoundsToMaybePence(goalForm.current_str)
+          : null,
+        notes: goalForm.notes.trim() || null,
+      })
+      closeGoalEdit()
+      const goals = await loadSavingsGoals()
+      setSavingsGoals(goals)
+    } catch (e) {
+      setGoalFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setGoalSaving(false)
+    }
+  }
+
+  async function handleGoalDeleteConfirm(id) {
+    setGoalSaving(true)
+    try {
+      await deleteSavingsGoal(id)
+      closeGoalEdit()
+      const goals = await loadSavingsGoals()
+      setSavingsGoals(goals)
+    } catch (e) {
+      setGoalFormErrors({ _form: e?.message || 'Failed to delete.' })
+    } finally {
+      setGoalSaving(false)
+    }
+  }
+
   // ── Loading / error ────────────────────────────────────────────────────────
 
   if (loading)   return <div className="fdt-page"><p className="fdt-empty">Loading…</p></div>
@@ -570,7 +691,8 @@ export default function FinanceDebt() {
 
   const loanRows       = debtRows.filter(r => r.debt_type === 'loan' || r.debt_type === 'mortgage')
   const hasAnyDebt     = revolvingIncluded.length > 0 || revolvingExcluded.length > 0 || loanRows.length > 0
-  const savingsAccounts = accounts.filter(a => a.account_type === 'savings')
+  const savingsAccounts  = accounts.filter(a => a.account_type === 'savings')
+  const showGoalsSection = savingsGoals.length > 0 || savingsAccounts.length > 0
 
   // ── Shared form element ────────────────────────────────────────────────────
 
@@ -967,6 +1089,156 @@ export default function FinanceDebt() {
     )
   }
 
+  // ── Goal form bodies ───────────────────────────────────────────────────────
+
+  const linkedAccountIds       = savingsGoals
+    .filter(g => g.account_id != null && g.id !== editingGoalId)
+    .map(g => g.account_id)
+  const eligibleSavingsAccounts = savingsAccounts.filter(a => !linkedAccountIds.includes(a.id))
+  const linkedPickerDisabled    = eligibleSavingsAccounts.length === 0
+
+  function goalFormBody() {
+    return (
+      <div className="bm-add-form">
+        {goalFormErrors._form && <p className="fa-add-error">{goalFormErrors._form}</p>}
+        <div className="form-row">
+          <label>Name</label>
+          <input type="text" value={goalForm.name}
+            onChange={e => setGoalForm(p => ({ ...p, name: e.target.value }))} />
+          {goalFormErrors.name && <p className="fa-add-error">{goalFormErrors.name}</p>}
+        </div>
+        <div className="form-row">
+          <label>Target (£)</label>
+          <input type="number" step="0.01" min="0.01" value={goalForm.target_str} placeholder="0.00"
+            onChange={e => setGoalForm(p => ({ ...p, target_str: e.target.value }))} />
+          {goalFormErrors.target_str && <p className="fa-add-error">{goalFormErrors.target_str}</p>}
+        </div>
+        <div className="form-row">
+          <label>Source</label>
+          <div className="fdt-goal-source-group">
+            <label className={`fdt-goal-source-option${linkedPickerDisabled ? ' fdt-goal-source-option--disabled' : ''}`}>
+              <input type="radio" name="goal-source" value="linked"
+                checked={goalForm.source === 'linked'}
+                disabled={linkedPickerDisabled}
+                onChange={() => setGoalForm(p => ({ ...p, source: 'linked', current_str: '0' }))} />
+              Linked to a savings account
+            </label>
+            <label className="fdt-goal-source-option">
+              <input type="radio" name="goal-source" value="freeFloating"
+                checked={goalForm.source === 'freeFloating'}
+                onChange={() => setGoalForm(p => ({ ...p, source: 'freeFloating', account_id: '' }))} />
+              Free-floating (manually tracked)
+            </label>
+          </div>
+          {linkedPickerDisabled && (
+            <p className="fdt-goal-source-note">No unlinked savings accounts available — mark one in Accounts or use a free-floating goal.</p>
+          )}
+        </div>
+        {goalForm.source === 'linked' && (
+          <div className="form-row">
+            <label>Account</label>
+            <select className="fdt-picker" value={goalForm.account_id}
+              onChange={e => setGoalForm(p => ({ ...p, account_id: e.target.value }))}>
+              <option value="">— select —</option>
+              {eligibleSavingsAccounts.map(a =>
+                <option key={a.id} value={a.id}>{a.name} · {getBankLabel(a)}</option>
+              )}
+            </select>
+            {goalFormErrors.account_id && <p className="fa-add-error">{goalFormErrors.account_id}</p>}
+          </div>
+        )}
+        {goalForm.source === 'freeFloating' && (
+          <div className="form-row">
+            <label>Starting amount (£)</label>
+            <input type="number" step="0.01" min="0" value={goalForm.current_str} placeholder="0.00"
+              onChange={e => setGoalForm(p => ({ ...p, current_str: e.target.value }))} />
+            {goalFormErrors.current_str && <p className="fa-add-error">{goalFormErrors.current_str}</p>}
+          </div>
+        )}
+        <div className="form-row">
+          <label>Notes <span className="form-optional">(optional)</span></label>
+          <textarea rows={2} value={goalForm.notes}
+            onChange={e => setGoalForm(p => ({ ...p, notes: e.target.value }))} />
+        </div>
+      </div>
+    )
+  }
+
+  function goalEditFormBody(goal) {
+    return (
+      <div className="bm-add-form">
+        {goalFormErrors._form && <p className="fa-add-error">{goalFormErrors._form}</p>}
+        <div className="form-row">
+          <label>Name</label>
+          <input type="text" value={goalForm.name}
+            onChange={e => setGoalForm(p => ({ ...p, name: e.target.value }))} />
+          {goalFormErrors.name && <p className="fa-add-error">{goalFormErrors.name}</p>}
+        </div>
+        <div className="form-row">
+          <label>Target (£)</label>
+          <input type="number" step="0.01" min="0.01" value={goalForm.target_str} placeholder="0.00"
+            onChange={e => setGoalForm(p => ({ ...p, target_str: e.target.value }))} />
+          {goalFormErrors.target_str && <p className="fa-add-error">{goalFormErrors.target_str}</p>}
+        </div>
+        <div className="form-row">
+          <label>Source</label>
+          <div className="fdt-goal-source-group">
+            <label className={`fdt-goal-source-option${linkedPickerDisabled ? ' fdt-goal-source-option--disabled' : ''}`}>
+              <input type="radio" name="goal-source-edit" value="linked"
+                checked={goalForm.source === 'linked'}
+                disabled={linkedPickerDisabled}
+                onChange={() => setGoalForm(p => ({ ...p, source: 'linked', current_str: '0' }))} />
+              Linked to a savings account
+            </label>
+            <label className="fdt-goal-source-option">
+              <input type="radio" name="goal-source-edit" value="freeFloating"
+                checked={goalForm.source === 'freeFloating'}
+                onChange={() => setGoalForm(p => ({ ...p, source: 'freeFloating', account_id: '' }))} />
+              Free-floating (manually tracked)
+            </label>
+          </div>
+          {linkedPickerDisabled && (
+            <p className="fdt-goal-source-note">No unlinked savings accounts available — mark one in Accounts or use a free-floating goal.</p>
+          )}
+        </div>
+        {goalForm.source === 'linked' && (
+          <div className="form-row">
+            <label>Account</label>
+            <select className="fdt-picker" value={goalForm.account_id}
+              onChange={e => setGoalForm(p => ({ ...p, account_id: e.target.value }))}>
+              <option value="">— select —</option>
+              {eligibleSavingsAccounts.map(a =>
+                <option key={a.id} value={a.id}>{a.name} · {getBankLabel(a)}</option>
+              )}
+            </select>
+            {goalFormErrors.account_id && <p className="fa-add-error">{goalFormErrors.account_id}</p>}
+          </div>
+        )}
+        {goalForm.source === 'freeFloating' && (
+          <div className="form-row">
+            <label>Current amount (£)</label>
+            <input type="number" step="0.01" min="0" value={goalForm.current_str} placeholder="0.00"
+              onChange={e => setGoalForm(p => ({ ...p, current_str: e.target.value }))} />
+            {goalFormErrors.current_str && <p className="fa-add-error">{goalFormErrors.current_str}</p>}
+          </div>
+        )}
+        <div className="form-row">
+          <label>Notes <span className="form-optional">(optional)</span></label>
+          <textarea rows={2} value={goalForm.notes}
+            onChange={e => setGoalForm(p => ({ ...p, notes: e.target.value }))} />
+        </div>
+        <div className="fdt-danger-zone">
+          <button type="button" className="fdt-danger-btn"
+            onClick={() => goalDeleteConfirming ? handleGoalDeleteConfirm(goal.id) : setGoalDeleteConfirming(true)}
+            disabled={goalSaving}>
+            {goalDeleteConfirming ? 'Click again to confirm' : 'Delete goal'}
+          </button>
+          {goalDeleteConfirming && <span className="fdt-danger-confirm">This cannot be undone.</span>}
+        </div>
+      </div>
+    )
+  }
+
   // ── Loan/mortgage amortisation drawer ─────────────────────────────────────
 
   function renderLoanDrawer(row) {
@@ -1229,6 +1501,103 @@ export default function FinanceDebt() {
               })}
             </tbody>
           </table>
+        )}
+
+        {showGoalsSection && (
+          <div className="fdt-goals-section">
+            <div className="fdt-goals-header">
+              <span className="fdt-goals-label">Goals</span>
+              <button type="button" className="btn btn-ghost fdt-add-btn"
+                onClick={() => { setGoalAddOpen(true); setGoalFormErrors({}) }}
+                disabled={goalAddOpen}>
+                + Add goal
+              </button>
+            </div>
+
+            <CadencePanel
+              open={goalAddOpen}
+              title="Add goal"
+              body={goalFormBody()}
+              confirmLabel={goalSaving ? 'Saving…' : 'Add goal'}
+              confirmClass="btn-primary"
+              confirmDisabled={goalSaving}
+              onConfirm={handleGoalAddSave}
+              onCancel={() => { setGoalAddOpen(false); setGoalForm(GOAL_BLANK); setGoalFormErrors({}) }}
+            />
+
+            {savingsGoals.length === 0 ? (
+              <p className="fdt-goals-empty">No goals yet. Add one to track progress toward what matters.</p>
+            ) : (
+              <ul className="fdt-goal-list">
+                {savingsGoals.map(goal => {
+                  const linkedAcc      = goal.account_id
+                    ? savingsAccounts.find(a => a.id === goal.account_id) ?? null
+                    : null
+                  const isOrphan       = goal.account_id === null && goal.current_pence === null
+                  const rawCurrent     = linkedAcc
+                    ? computeAccountBalance(linkedAcc, transactions.filter(tx => tx.account_id === linkedAcc.id), statementDocs)
+                    : (goal.current_pence ?? 0)
+                  const displayCurrent = Math.max(0, rawCurrent)
+                  const pct            = goal.target_pence > 0
+                    ? Math.min(100, Math.round((displayCurrent / goal.target_pence) * 100))
+                    : 0
+                  const goalReached    = rawCurrent >= goal.target_pence
+                  const isEditing      = editingGoalId === goal.id
+
+                  return (
+                    <li key={goal.id} className="fdt-goal-card">
+                      {isOrphan && (
+                        <p className="fdt-goal-orphan">Account removed — set a starting amount or delete this goal.</p>
+                      )}
+                      <div className="fdt-goal-row">
+                        <span className="fdt-goal-name">{goal.name}</span>
+                        <span className="fdt-goal-numbers">
+                          {isOrphan
+                            ? `— / ${formatPence(goal.target_pence)}`
+                            : goalReached
+                              ? `${formatPence(rawCurrent)} / ${formatPence(goal.target_pence)} — Goal reached`
+                              : `${formatPence(rawCurrent)} / ${formatPence(goal.target_pence)} — ${pct}%`
+                          }
+                        </span>
+                      </div>
+                      {!isOrphan && (
+                        <div className="fdt-goal-bar">
+                          <div className="fdt-goal-bar-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                      <div className="fdt-goal-meta">
+                        <span className="fdt-goal-caption">
+                          {linkedAcc
+                            ? `Linked to ${getBankLabel(linkedAcc)} · ${linkedAcc.name}`
+                            : isOrphan ? 'Free-floating (account removed)' : 'Free-floating'
+                          }
+                        </span>
+                        <button type="button"
+                          className={`fdt-edit-btn${isEditing ? ' fdt-edit-btn--active' : ''}`}
+                          onClick={() => isEditing ? closeGoalEdit() : openGoalEdit(goal)}>
+                          {isEditing ? 'Close' : 'Edit'}
+                        </button>
+                      </div>
+                      {isEditing && (
+                        <div className="fdt-panel-inline">
+                          <CadencePanel
+                            open
+                            title="Edit goal"
+                            body={goalEditFormBody(goal)}
+                            confirmLabel={goalSaving ? 'Saving…' : 'Save'}
+                            confirmClass="btn-primary"
+                            confirmDisabled={goalSaving}
+                            onConfirm={() => handleGoalEditSave(goal)}
+                            onCancel={closeGoalEdit}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 
