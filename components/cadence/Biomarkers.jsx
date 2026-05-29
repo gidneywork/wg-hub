@@ -11,12 +11,6 @@ const SECTIONS = [
   { key: 'one_time',  label: 'One-time'  },
 ]
 
-const PILL_LABELS = {
-  in_range:     'In range',
-  out_of_range: 'Out of range',
-  due:          'Due',
-}
-
 const PROVIDER_LABELS = {
   thriva:      'Thriva',
   medichecks:  'Medichecks',
@@ -25,28 +19,14 @@ const PROVIDER_LABELS = {
   other:       'Other',
 }
 
-function todayIso() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+function fmtCalendarStatus(status, nextDue, isQualitative) {
+  if (isQualitative) return null
+  if (status === 'no_data') return 'No data'
+  if (!nextDue) return null
+  return fmtDue(nextDue)
 }
 
-const ADD_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '', saving: false, error: null }
-
-function StatusPill({ status }) {
-  if (status === 'logged' || status === 'no_data' || status === 'due') return null
-  return <span className={`bm-pill bm-pill--${status}`}>{PILL_LABELS[status]}</span>
-}
-
-function DuePill({ status }) {
-  if (status !== 'due') return null
-  return <span className="bm-pill bm-pill--due">Due</span>
-}
-
-function NoDataBadge() {
-  return <span className="bm-pill bm-pill--no_data">No data</span>
-}
-
-function LatestValue({ def, latestResult }) {
+function LatestValue({ def, latestResult, isOutOfRange }) {
   if (!latestResult) return null
   if (def.target_direction === 'qualitative') {
     if (!latestResult.value_text) return null
@@ -55,7 +35,7 @@ function LatestValue({ def, latestResult }) {
   if (latestResult.value == null) return null
   const unit = def.unit ? ` ${def.unit}` : ''
   return (
-    <span className="bm-latest-value">
+    <span className={`bm-latest-value${isOutOfRange ? ' bm-latest-value--out' : ''}`}>
       {Number(latestResult.value).toLocaleString('en-GB', { maximumFractionDigits: 2 })}{unit}
     </span>
   )
@@ -161,8 +141,6 @@ export default function CadenceBiomarkers() {
   const [documents, setDocuments] = useState([])
   const [loading,   setLoading  ] = useState(true)
   const [expanded,  setExpanded ] = useState({})
-  const [addForm,   setAddForm  ] = useState(ADD_BLANK)
-  const [fastState, setFastState] = useState({})
 
   useEffect(() => {
     ;(async () => {
@@ -193,65 +171,6 @@ export default function CadenceBiomarkers() {
     defs.forEach(d => { if (map[d.section]) map[d.section].push(d) })
     return map
   }, [defs])
-
-  function getFast(key) {
-    return fastState[key] ?? { value: '', saving: false, error: null }
-  }
-
-  function handleMoreClick(key) {
-    setExpanded(p => ({ ...p, [key]: true }))
-    setAddForm({ ...ADD_BLANK, key, date: todayIso() })
-  }
-
-  async function handleFastSave(key) {
-    const raw = getFast(key).value.trim()
-    if (!raw) return
-    const num = Number(raw)
-    if (isNaN(num)) {
-      setFastState(p => ({ ...p, [key]: { ...getFast(key), error: 'Value must be a number.' } }))
-      return
-    }
-    setFastState(p => ({ ...p, [key]: { ...getFast(key), saving: true, error: null } }))
-    try {
-      await db.insertBiomarkerResult({
-        biomarker_key:      key,
-        sub_marker_key:     null,
-        measured_date:      todayIso(),
-        value:              num,
-        value_text:         null,
-        notes:              null,
-        source_document_id: null,
-      })
-      const r = await db.loadBiomarkerResults()
-      setResults(r)
-      setFastState(p => ({ ...p, [key]: { value: '', saving: false, error: null } }))
-    } catch (e) {
-      setFastState(p => ({ ...p, [key]: { ...getFast(key), saving: false, error: e?.message || 'Save failed — please try again.' } }))
-    }
-  }
-
-  async function handleSaveResult() {
-    setAddForm(p => ({ ...p, saving: true, error: null }))
-    try {
-      const formDef    = defs.find(d => d.key === addForm.key) ?? null
-      const formSubMap = formDef ? (SUB_MARKERS[formDef.key] ?? null) : null
-      const formQual   = formDef?.target_direction === 'qualitative'
-      await db.insertBiomarkerResult({
-        biomarker_key:      addForm.key,
-        sub_marker_key:     addForm.subKey  || null,
-        measured_date:      addForm.date,
-        value:              !(formQual && !formSubMap) && addForm.value !== '' ? addForm.value : null,
-        value_text:         formQual && !formSubMap ? addForm.valueText : null,
-        notes:              addForm.notes   || null,
-        source_document_id: addForm.docId   || null,
-      })
-      const r = await db.loadBiomarkerResults()
-      setResults(r)
-      setAddForm(ADD_BLANK)
-    } catch (e) {
-      setAddForm(p => ({ ...p, saving: false, error: e?.message || 'Save failed — please try again.' }))
-    }
-  }
 
   async function handleCadenceToggle(latestResult, months) {
     try {
@@ -297,28 +216,24 @@ export default function CadenceBiomarkers() {
             <div className="bm-section-eyebrow">{section.label}</div>
             <div className="bm-list">
               {sectionDefs.map(def => {
-                const keyResults    = resultsByKey[def.key] || []
-                const latestResult  = keyResults[0] || null
-                const status        = getStatus(def, latestResult)
-                const nextDue       = getNextDue(def, latestResult)
-                const isOpen        = !!expanded[def.key]
-                const isQualitative = def.target_direction === 'qualitative'
-                const isFormOpen    = addForm.key === def.key
-                const formSubMap    = SUB_MARKERS[def.key] ?? null
-                const fastDisabled  = !!formSubMap || isQualitative
-                const fastPlaceholder = formSubMap
-                  ? 'Choose sub-marker via More…'
-                  : isQualitative ? 'Use More… to enter a text result'
-                  : ''
-                const formValueReady = isQualitative && !formSubMap
-                  ? addForm.valueText.trim() !== ''
-                  : addForm.value.trim() !== ''
-                const saveDisabled = !addForm.date || !formValueReady || (!!formSubMap && !addForm.subKey)
+                const keyResults     = resultsByKey[def.key] || []
+                const latestResult   = keyResults[0] || null
+                const status         = getStatus(def, latestResult)
+                const nextDue        = getNextDue(def, latestResult)
+                const isOpen         = !!expanded[def.key]
+                const isQualitative  = def.target_direction === 'qualitative'
+                const subMarkerMap   = SUB_MARKERS[def.key] ?? null
+                const calendarStatus = fmtCalendarStatus(status, nextDue, isQualitative)
 
-                function handleToggle() {
-                  if (expanded[def.key] && addForm.key === def.key) setAddForm(ADD_BLANK)
-                  setExpanded(p => ({ ...p, [def.key]: !p[def.key] }))
-                }
+                const subSummary = subMarkerMap
+                  ? Object.entries(subMarkerMap).map(([k, sub]) => {
+                      const r = keyResults.find(x => x.sub_marker_key === k)
+                      const val = r && r.value != null
+                        ? `${Number(r.value).toLocaleString('en-GB', { maximumFractionDigits: 2 })} ${sub.unit}`
+                        : '(no data)'
+                      return `${sub.name}: ${val}`
+                    }).join(' · ')
+                  : null
 
                 return (
                   <div key={def.key} className={`bm-row${isOpen ? ' bm-row--open' : ''}`}>
@@ -326,65 +241,26 @@ export default function CadenceBiomarkers() {
                       className="bm-row-header"
                       role="button"
                       tabIndex={0}
-                      onClick={handleToggle}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle() } }}
+                      onClick={() => setExpanded(p => ({ ...p, [def.key]: !p[def.key] }))}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(p => ({ ...p, [def.key]: !p[def.key] })) } }}
                       aria-expanded={isOpen}
                     >
-                      <span className="bm-name">{def.name}</span>
-
-                      {section.key === 'quarterly' && (
-                        <div
-                          className="bm-fast-controls"
-                          onClick={e => e.stopPropagation()}
-                          onKeyDown={e => e.stopPropagation()}
-                        >
-                          <input
-                            className={`bm-fast-input${fastDisabled ? ' bm-fast-input--disabled' : ''}`}
-                            type="number"
-                            step="any"
-                            disabled={fastDisabled}
-                            placeholder={fastPlaceholder}
-                            value={getFast(def.key).value}
-                            onChange={e => setFastState(p => ({ ...p, [def.key]: { ...getFast(def.key), value: e.target.value } }))}
-                            onKeyDown={e => { if (e.key === 'Enter' && !fastDisabled) handleFastSave(def.key) }}
-                          />
-                          {!fastDisabled && <span className="bm-fast-unit">{def.unit}</span>}
-                          {!fastDisabled && (
-                            <button
-                              type="button"
-                              className="bm-fast-save"
-                              disabled={!getFast(def.key).value.trim() || getFast(def.key).saving}
-                              onClick={() => handleFastSave(def.key)}
-                            >
-                              {getFast(def.key).saving ? 'Saving…' : 'Save'}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="bm-more-link"
-                            onClick={() => handleMoreClick(def.key)}
-                          >
-                            More…
-                          </button>
-                        </div>
-                      )}
-
-                      <span className="bm-row-meta">
-                        <LatestValue def={def} latestResult={latestResult} />
-                        {status === 'no_data' ? (
-                          <NoDataBadge />
-                        ) : isQualitative ? null : (
-                          <>
-                            <StatusPill status={status} />
-                            <DuePill status={status} />
-                          </>
-                        )}
-                        {nextDue && status !== 'no_data' && !isQualitative && (
-                          <span className={`bm-due${status === 'due' ? ' bm-due--overdue' : ''}`}>
-                            {fmtDue(nextDue)}
+                      <div className="bm-row-left">
+                        <span className="bm-name">{def.name}</span>
+                        {calendarStatus && (
+                          <span className={`bm-calendar-pill${status === 'due' ? ' bm-calendar-pill--overdue' : ''}`}>
+                            {calendarStatus}
                           </span>
                         )}
-                      </span>
+                      </div>
+
+                      {!subMarkerMap && (
+                        <LatestValue
+                          def={def}
+                          latestResult={latestResult}
+                          isOutOfRange={status === 'out_of_range'}
+                        />
+                      )}
 
                       <svg
                         className={`bm-chevron${isOpen ? ' bm-chevron--open' : ''}`}
@@ -400,9 +276,7 @@ export default function CadenceBiomarkers() {
                       </svg>
                     </div>
 
-                    {getFast(def.key).error && (
-                      <p className="bm-fast-error">{getFast(def.key).error}</p>
-                    )}
+                    {subSummary && <p className="bm-sub-summary">{subSummary}</p>}
 
                     {isOpen && (
                       <div className="bm-row-body">
@@ -426,104 +300,6 @@ export default function CadenceBiomarkers() {
                           latestResult={latestResult}
                           onToggle={months => handleCadenceToggle(latestResult, months)}
                         />
-
-                        {isFormOpen ? (
-                          <div className="bm-inline-form">
-                            <div className="bm-add-form">
-                              {formSubMap && (
-                                <div className="form-row">
-                                  <label>Marker</label>
-                                  <select
-                                    value={addForm.subKey}
-                                    onChange={e => setAddForm(p => ({ ...p, subKey: e.target.value, value: '' }))}
-                                  >
-                                    <option value="">— select —</option>
-                                    {Object.entries(formSubMap).map(([k, sub]) => (
-                                      <option key={k} value={k}>{sub.name} ({sub.unit})</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                              <div className="form-row">
-                                <label>Date</label>
-                                <input
-                                  type="date"
-                                  value={addForm.date}
-                                  onChange={e => setAddForm(p => ({ ...p, date: e.target.value }))}
-                                />
-                              </div>
-                              {isQualitative && !formSubMap ? (
-                                <div className="form-row">
-                                  <label>Result summary</label>
-                                  <textarea
-                                    rows={2}
-                                    value={addForm.valueText}
-                                    onChange={e => setAddForm(p => ({ ...p, valueText: e.target.value }))}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="form-row">
-                                  <label>
-                                    Value
-                                    {formSubMap && addForm.subKey && formSubMap[addForm.subKey]
-                                      ? ` (${formSubMap[addForm.subKey].unit})`
-                                      : def.unit ? ` (${def.unit})` : ''}
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="any"
-                                    value={addForm.value}
-                                    onChange={e => setAddForm(p => ({ ...p, value: e.target.value }))}
-                                  />
-                                </div>
-                              )}
-                              <div className="form-row">
-                                <label>Notes <span className="form-optional">(optional)</span></label>
-                                <textarea
-                                  rows={2}
-                                  value={addForm.notes}
-                                  onChange={e => setAddForm(p => ({ ...p, notes: e.target.value }))}
-                                />
-                              </div>
-                              {documents.length > 0 && (
-                                <div className="form-row">
-                                  <label>Source document <span className="form-optional">(optional)</span></label>
-                                  <select
-                                    value={addForm.docId}
-                                    onChange={e => setAddForm(p => ({ ...p, docId: e.target.value }))}
-                                  >
-                                    <option value="">No document</option>
-                                    {documents.map(doc => (
-                                      <option key={doc.id} value={doc.id}>
-                                        {doc.file_name} · {doc.measured_date}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                            </div>
-                            {addForm.error && <p className="bm-inline-form-error">{addForm.error}</p>}
-                            <div className="bm-inline-form-actions">
-                              <button type="button" className="btn btn-ghost" onClick={() => setAddForm(ADD_BLANK)}>Cancel</button>
-                              <button
-                                type="button"
-                                className="btn btn-primary"
-                                disabled={saveDisabled || addForm.saving}
-                                onClick={handleSaveResult}
-                              >
-                                {addForm.saving ? 'Saving…' : 'Save result'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : section.key !== 'quarterly' ? (
-                          <button
-                            type="button"
-                            className="bm-add-btn"
-                            onClick={() => handleMoreClick(def.key)}
-                          >
-                            + Add result
-                          </button>
-                        ) : null}
                       </div>
                     )}
                   </div>

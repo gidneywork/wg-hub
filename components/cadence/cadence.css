@@ -5600,66 +5600,39 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .bm-row--open .bm-row-header { background: var(--bg-paper); }
 
 [data-cadence] .bm-name {
-  flex: 1;
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
 }
 
-[data-cadence] .bm-row-meta {
+[data-cadence] .bm-row-left {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 [data-cadence] .bm-latest-value {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
+[data-cadence] .bm-latest-value--out { color: var(--clay-deep); }
 
-[data-cadence] .bm-pill {
+[data-cadence] .bm-calendar-pill {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 3px;
-  white-space: nowrap;
-}
-[data-cadence] .bm-pill--in_range {
-  background: var(--moss-soft);
-  color: var(--moss-deep);
-}
-[data-theme="dark"] [data-cadence] .bm-pill--in_range { color: var(--moss); }
-[data-cadence] .bm-pill--out_of_range {
-  background: var(--clay-soft);
-  color: var(--clay-deep);
-}
-[data-cadence] .bm-pill--due {
-  background: none;
-  color: var(--sand);
-  padding-left: 0;
-  padding-right: 0;
-}
-[data-cadence] .bm-pill--no_data {
-  background: none;
-  color: var(--text-faint);
-  padding-left: 0;
-  padding-right: 0;
-}
-
-[data-cadence] .bm-due {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--text-faint);
   white-space: nowrap;
+  flex-shrink: 0;
 }
-[data-cadence] .bm-due--overdue { color: var(--sand); }
+[data-cadence] .bm-calendar-pill--overdue { color: var(--sand); }
 
 [data-cadence] .bm-chevron {
   width: 14px;
@@ -5741,9 +5714,14 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-top: 1px dashed var(--border);
 }
 
-@media (max-width: 680px) {
-  [data-cadence] .bm-row-meta { gap: 6px; }
-  [data-cadence] .bm-due { display: none; }
+/* ── Biomarkers: sub-marker summary line ────────────────────────────── */
+[data-cadence] .bm-sub-summary {
+  padding: 0 20px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
 }
 
 /* ── Calorie target mode pill ──────────────────────────────────────── */
@@ -5818,121 +5796,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-color: var(--border-strong);
   color: var(--text);
 }
-
-/* ── Biomarkers: add result button ─────────────────────────────────── */
-[data-cadence] .bm-add-btn {
-  display: block;
-  margin-top: 14px;
-  font-family: var(--mono);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-  transition: color 0.15s ease-out;
-}
-[data-cadence] .bm-add-btn:hover { color: var(--text); }
-
-/* ── Biomarkers: row-header fast-path controls ─────────────────────── */
-[data-cadence] .bm-fast-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-[data-cadence] .bm-fast-input {
-  width: 80px;
-  padding: 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  transition: border-color 0.15s ease-out;
-}
-[data-cadence] .bm-fast-input:focus {
-  outline: none;
-  border-color: var(--moss);
-}
-[data-cadence] .bm-fast-input--disabled,
-[data-cadence] .bm-fast-input:disabled {
-  width: 220px;
-  text-align: left;
-  color: var(--text-quiet);
-  cursor: not-allowed;
-  background: var(--bg-paper);
-}
-
-[data-cadence] .bm-fast-unit {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-[data-cadence] .bm-fast-save {
-  padding: 4px 8px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s ease-out, color 0.15s ease-out;
-}
-[data-cadence] .bm-fast-save:hover:not(:disabled) { border-color: var(--moss); color: var(--text); }
-[data-cadence] .bm-fast-save:disabled { opacity: 0.4; cursor: not-allowed; }
-
-[data-cadence] .bm-more-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.15s ease-out;
-}
-[data-cadence] .bm-more-link:hover { color: var(--text); }
-
-/* ── Biomarkers: fast-path inline error ──────────────────────────────── */
-[data-cadence] .bm-fast-error {
-  padding: 4px 20px;
-  font-size: 11px;
-  color: var(--clay);
-}
-
-/* ── Biomarkers: inline add result form ─────────────────────────────── */
-[data-cadence] .bm-inline-form {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-[data-cadence] .bm-inline-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-[data-cadence] .bm-inline-form-error {
-  font-size: 12px;
-  color: var(--clay);
-  margin-top: 8px;
-}
-[data-theme="dark"] [data-cadence] .bm-inline-form-error { color: var(--clay); }
 
 /* ── Biomarkers: add result form ────────────────────────────────────── */
 [data-cadence] .bm-add-form {
