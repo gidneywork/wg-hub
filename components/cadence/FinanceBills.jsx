@@ -16,6 +16,10 @@ import {
   createIncome,
   updateIncome,
   deleteIncome,
+  loadContributions,
+  createContribution,
+  updateContribution,
+  deleteContribution,
 } from '../../lib/finance/db'
 import {
   deriveBillStatus,
@@ -33,6 +37,11 @@ import {
   monthlyIncomeTotal,
   INCOME_FREQUENCY_LABELS,
 } from '../../lib/finance/income'
+import {
+  contributionMonthlyEquivalent,
+  monthlyContributionsTotal,
+  CONTRIBUTION_FREQUENCY_LABELS,
+} from '../../lib/finance/contributions'
 import CadencePanel from './CadencePanel'
 
 function addDays(isoDate, n) {
@@ -61,6 +70,16 @@ const BILL_BLANK = {
 }
 
 const INCOME_BLANK = { source: '', amount_str: '', frequency: 'monthly' }
+
+const CONTRIB_BLANK = { name: '', amount_str: '', frequency: 'monthly', savings_account_id: '', notes: '' }
+
+function validateContribForm(formData) {
+  const errors = {}
+  if (!formData.name.trim()) errors.name = 'Name is required.'
+  const amt = parseFloat(formData.amount_str)
+  if (!formData.amount_str.trim() || isNaN(amt) || amt <= 0) errors.amount_str = 'Enter a positive amount.'
+  return { ok: Object.keys(errors).length === 0, errors }
+}
 
 function validateIncomeForm(formData) {
   const errors = {}
@@ -207,6 +226,12 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
   const [incomeForm,            setIncomeForm            ] = useState(INCOME_BLANK)
   const [incomeFormErrors,      setIncomeFormErrors      ] = useState({})
   const [incomeDeleteConfirming, setIncomeDeleteConfirming] = useState(false)
+  const [contribRows,             setContribRows            ] = useState([])
+  const [contribAddOpen,          setContribAddOpen          ] = useState(false)
+  const [editingContribId,        setEditingContribId        ] = useState(null)
+  const [contribForm,             setContribForm             ] = useState(CONTRIB_BLANK)
+  const [contribFormErrors,       setContribFormErrors       ] = useState({})
+  const [contribDeleteConfirming, setContribDeleteConfirming ] = useState(false)
 
   useEffect(() => {
     setAdding(false)
@@ -223,6 +248,11 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     setIncomeForm(INCOME_BLANK)
     setIncomeFormErrors({})
     setIncomeDeleteConfirming(false)
+    setContribAddOpen(false)
+    setEditingContribId(null)
+    setContribForm(CONTRIB_BLANK)
+    setContribFormErrors({})
+    setContribDeleteConfirming(false)
     setLoading(true)
     setError(null)
     Promise.all([
@@ -231,13 +261,15 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
       loadBills(false, accountId),
       loadAllBillPayments(),
       loadIncome(),
+      loadContributions(),
     ])
-      .then(([accs, cats, b, p, inc]) => {
+      .then(([accs, cats, b, p, inc, contribs]) => {
         setAccounts(accs)
         setCategories(cats)
         setBills(b)
         setAllPayments(p)
         setIncomeRows(inc)
+        setContribRows(contribs)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -268,10 +300,11 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
   }, [pendingPreFill, accountId, onPreFillConsumed])
 
   async function reload() {
-    const [b, p, inc] = await Promise.all([loadBills(showInactive, accountId), loadAllBillPayments(), loadIncome()])
+    const [b, p, inc, contribs] = await Promise.all([loadBills(showInactive, accountId), loadAllBillPayments(), loadIncome(), loadContributions()])
     setBills(b)
     setAllPayments(p)
     setIncomeRows(inc)
+    setContribRows(contribs)
   }
 
   // ── Add ────────────────────────────────────────────────────────────────────
@@ -592,6 +625,110 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     }
   }
 
+  // ── Contributions ─────────────────────────────────────────────────────────
+
+  function handleContribAddOpen() {
+    setContribAddOpen(true)
+    setEditingContribId(null)
+    setContribForm(CONTRIB_BLANK)
+    setContribFormErrors({})
+  }
+
+  function handleContribAddCancel() {
+    setContribAddOpen(false)
+    setContribForm(CONTRIB_BLANK)
+    setContribFormErrors({})
+  }
+
+  async function handleContribAddSave() {
+    const result = validateContribForm(contribForm)
+    if (!result.ok) { setContribFormErrors(result.errors); return }
+    setSaving(true)
+    try {
+      await createContribution({
+        name:               contribForm.name.trim(),
+        amount_pence:       Math.round(parseFloat(contribForm.amount_str) * 100),
+        frequency:          contribForm.frequency,
+        savings_account_id: contribForm.savings_account_id || null,
+        notes:              contribForm.notes.trim() || null,
+      })
+      setContribAddOpen(false)
+      setContribForm(CONTRIB_BLANK)
+      await reload()
+    } catch (e) {
+      setContribFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleContribEditOpen(row) {
+    setEditingContribId(row.id)
+    setContribAddOpen(false)
+    setContribForm({
+      name:               row.name,
+      amount_str:         (Number(row.amount_pence) / 100).toFixed(2),
+      frequency:          row.frequency,
+      savings_account_id: row.savings_account_id ?? '',
+      notes:              row.notes ?? '',
+    })
+    setContribFormErrors({})
+    setContribDeleteConfirming(false)
+  }
+
+  function handleContribEditCancel() {
+    setEditingContribId(null)
+    setContribForm(CONTRIB_BLANK)
+    setContribFormErrors({})
+    setContribDeleteConfirming(false)
+  }
+
+  async function handleContribEditSave() {
+    const result = validateContribForm(contribForm)
+    if (!result.ok) { setContribFormErrors(result.errors); return }
+    setSaving(true)
+    try {
+      await updateContribution(editingContribId, {
+        name:               contribForm.name.trim(),
+        amount_pence:       Math.round(parseFloat(contribForm.amount_str) * 100),
+        frequency:          contribForm.frequency,
+        savings_account_id: contribForm.savings_account_id || null,
+        notes:              contribForm.notes.trim() || null,
+      })
+      setEditingContribId(null)
+      setContribForm(CONTRIB_BLANK)
+      await reload()
+    } catch (e) {
+      setContribFormErrors({ _form: e?.message || 'Failed to save.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleContribDeleteClick() {
+    if (!contribDeleteConfirming) {
+      setContribDeleteConfirming(true)
+      setTimeout(() => setContribDeleteConfirming(false), 5000)
+      return
+    }
+    handleContribDeleteConfirm()
+  }
+
+  async function handleContribDeleteConfirm() {
+    setSaving(true)
+    try {
+      await deleteContribution(editingContribId)
+      setEditingContribId(null)
+      setContribDeleteConfirming(false)
+      setContribForm(CONTRIB_BLANK)
+      await reload()
+    } catch (e) {
+      setContribFormErrors({ _form: e?.message || 'Failed to delete.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // ── Loading / error states ─────────────────────────────────────────────────
 
   if (loading) return (
@@ -613,6 +750,9 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
   const today = todayISO()
 
   // ── Monthly bills report (global view only) ────────────────────────────────
+
+  const savingsAccounts           = accounts.filter(a => a.account_type === 'savings')
+  const totalMonthlyContributions = monthlyContributionsTotal(contribRows)
 
   const activeBills   = bills.filter(b => b.is_active)
   const monthlyByBill = activeBills.map(b => ({ ...b, _monthly: billMonthlyEquivalent(b) }))
@@ -832,6 +972,75 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
     </>
   )
 
+  const contribFormBody = (
+    <div className="bm-add-form">
+      {contribFormErrors._form && <p className="fa-add-error">{contribFormErrors._form}</p>}
+      <div className="form-row">
+        <label>Name</label>
+        <input
+          type="text"
+          value={contribForm.name}
+          placeholder="e.g. ISA contribution"
+          onChange={e => setContribForm(p => ({ ...p, name: e.target.value }))}
+        />
+        {contribFormErrors.name && <p className="fa-add-error">{contribFormErrors.name}</p>}
+      </div>
+      <div className="form-row">
+        <label>Amount (£)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={contribForm.amount_str}
+          placeholder="0.00"
+          onChange={e => setContribForm(p => ({ ...p, amount_str: e.target.value }))}
+        />
+        {contribFormErrors.amount_str && <p className="fa-add-error">{contribFormErrors.amount_str}</p>}
+      </div>
+      <div className="form-row">
+        <label>Frequency</label>
+        <select
+          value={contribForm.frequency}
+          onChange={e => setContribForm(p => ({ ...p, frequency: e.target.value }))}
+        >
+          {Object.entries(CONTRIBUTION_FREQUENCY_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-row">
+        <label>Savings account <span className="form-optional">(optional)</span></label>
+        <select
+          value={contribForm.savings_account_id}
+          onChange={e => setContribForm(p => ({ ...p, savings_account_id: e.target.value }))}
+        >
+          <option value="">— none —</option>
+          {savingsAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </div>
+      <div className="form-row">
+        <label>Notes <span className="form-optional">(optional)</span></label>
+        <textarea rows={2} value={contribForm.notes} onChange={e => setContribForm(p => ({ ...p, notes: e.target.value }))} />
+      </div>
+    </div>
+  )
+
+  const contribEditBody = (
+    <>
+      {contribFormBody}
+      <div className="fb-edit-danger-zone">
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={handleContribDeleteClick}
+          disabled={saving}
+        >
+          {contribDeleteConfirming ? 'Click again to confirm delete' : 'Delete contribution'}
+        </button>
+      </div>
+    </>
+  )
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -952,6 +1161,101 @@ export default function FinanceBills({ accountId = null, pendingPreFill = null, 
                 <div className="fb-report-headline" style={{ marginTop: 'var(--space-3)' }}>
                   <span className="fb-report-label">Total income per month</span>
                   <span className="fb-report-total fb-report-total--income">{formatPence(totalMonthlyIncome)}</span>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {!accountId && (
+        <section className="fb-contrib-section">
+          <div className="fb-contrib-header">
+            <h3 className="fb-contrib-title">Savings contributions</h3>
+            <button
+              type="button"
+              className={`fb-add-btn${contribAddOpen ? ' fb-add-btn--active' : ''}`}
+              onClick={handleContribAddOpen}
+              disabled={contribAddOpen}
+            >
+              Add contribution
+            </button>
+          </div>
+
+          <CadencePanel
+            open={contribAddOpen}
+            title="Add savings contribution"
+            body={contribFormBody}
+            confirmLabel={saving ? 'Saving…' : 'Add contribution'}
+            confirmClass="btn-primary"
+            confirmDisabled={saving}
+            onConfirm={handleContribAddSave}
+            onCancel={handleContribAddCancel}
+          />
+
+          {contribRows.length === 0 ? (
+            <p className="fb-section-empty">No savings contributions added yet.</p>
+          ) : (
+            <>
+              <table className="fb-bill-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Frequency</th>
+                    <th className="fb-bill-amount-col">Amount</th>
+                    <th className="fb-bill-amount-col">Per month</th>
+                    <th className="fb-bill-action-col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contribRows.map(row => {
+                    const isEditingRow = editingContribId === row.id
+                    const destAcc = savingsAccounts.find(a => a.id === row.savings_account_id)
+                    return (
+                      <Fragment key={row.id}>
+                        <tr className={isEditingRow ? 'fb-bill-row--editing' : undefined}>
+                          <td className="fb-bill-name">
+                            {row.name}
+                            {destAcc && <span className="fb-contrib-dest"> → {destAcc.name}</span>}
+                          </td>
+                          <td>{CONTRIBUTION_FREQUENCY_LABELS[row.frequency] ?? row.frequency}</td>
+                          <td className="fb-bill-amount">{formatPence(row.amount_pence)}</td>
+                          <td className="fb-bill-amount">{row.frequency === 'one-off' ? '—' : formatPence(contributionMonthlyEquivalent(row))}</td>
+                          <td className="fb-bill-action-cell">
+                            <button
+                              type="button"
+                              className="fb-bill-edit-btn"
+                              onClick={() => isEditingRow ? handleContribEditCancel() : handleContribEditOpen(row)}
+                            >
+                              {isEditingRow ? 'Cancel' : 'Edit'}
+                            </button>
+                          </td>
+                        </tr>
+                        {isEditingRow && (
+                          <tr className="fb-bill-panel-row">
+                            <td colSpan={5}>
+                              <CadencePanel
+                                open={true}
+                                title="Edit savings contribution"
+                                body={contribEditBody}
+                                confirmLabel={saving ? 'Saving…' : 'Save'}
+                                confirmClass="btn-primary"
+                                confirmDisabled={saving}
+                                onConfirm={handleContribEditSave}
+                                onCancel={handleContribEditCancel}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {totalMonthlyContributions > 0 && (
+                <div className="fb-report-headline" style={{ marginTop: 'var(--space-3)' }}>
+                  <span className="fb-report-label">Total contributions per month</span>
+                  <span className="fb-report-total">{formatPence(totalMonthlyContributions)}</span>
                 </div>
               )}
             </>

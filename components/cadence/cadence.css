@@ -9086,3 +9086,30 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .fdt-goal-source-option { display: flex; align-items: center; gap: var(--space-2); font-family: var(--sans); font-size: var(--type-body); color: var(--text); cursor: pointer; }
 [data-cadence] .fdt-goal-source-option--disabled { color: var(--text-quiet); cursor: not-allowed; }
 [data-cadence] .fdt-goal-source-note { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-1) 0 0; font-style: italic; }
+
+/* ── fb-contrib — Savings contributions section (Cashflow page) ─────────── */
+
+[data-cadence] .fb-contrib-section {
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .fb-contrib-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+[data-cadence] .fb-contrib-title {
+  font-family: var(--sans);
+  font-size: var(--type-body);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+[data-cadence] .fb-contrib-dest {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+}

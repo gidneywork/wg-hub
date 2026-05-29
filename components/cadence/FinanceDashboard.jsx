@@ -7,7 +7,7 @@ import {
 import {
   loadAccounts, loadAllTransactions, loadStatementDocuments,
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
-  loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome,
+  loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome, loadContributions,
   loadFinanceSetting, saveFinanceSetting, recategoriseTransaction,
   insertCategoryRule, applyRuleToExistingTransactions,
 } from '../../lib/finance/db'
@@ -24,6 +24,7 @@ import {
   computeMonthlyBillsByType, computeMonthlyDebtCommitments,
 } from '../../lib/finance/dashboard'
 import { monthlyIncomeTotal, computeIncomeBreakdown } from '../../lib/finance/income'
+import { monthlyContributionsTotal } from '../../lib/finance/contributions'
 
 // Chart constants — hex values because CSS vars don't resolve in SVG fill attributes.
 // Light-theme values; dark chart theming is future work (matches c5 precedent).
@@ -163,6 +164,7 @@ export default function FinanceDashboard({ onViewChange }) {
   const [uncatExpanded,      setUncatExpanded      ] = useState(false)
   const [ruleToggleIds,      setRuleToggleIds      ] = useState(new Set())
   const [panelError,         setPanelError         ] = useState(null)
+  const [contributionRows,   setContributionRows   ] = useState([])
 
   useEffect(() => {
     setLoading(true)
@@ -171,10 +173,10 @@ export default function FinanceDashboard({ onViewChange }) {
       loadAccounts(), loadAllTransactions(), loadStatementDocuments(),
       loadBills(false), loadAllBillPayments(),
       loadCategories(), loadNetWorthSnapshots(),
-      loadProperties(), loadDebts(), loadIncome(),
+      loadProperties(), loadDebts(), loadIncome(), loadContributions(),
       loadFinanceSetting('budget_debt_ratio'),
     ])
-      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts, inc, savedRatio]) => {
+      .then(async ([accs, txs, docs, b, payments, cats, snaps, props, debts, inc, contribs, savedRatio]) => {
         const dpResults   = await Promise.all(accs.map(a => loadDismissedPatterns(a.id)))
         const dpByAccount = {}
         accs.forEach((a, i) => { dpByAccount[a.id] = dpResults[i].map(d => d.merchant_clean) })
@@ -189,6 +191,7 @@ export default function FinanceDashboard({ onViewChange }) {
         setProperties(props)
         setDebtRows(debts)
         setIncomeRows(inc)
+        setContributionRows(contribs)
         if (accs.length > 0) {
           const { netWorth } = computeNetWorth(accs, txs, docs, props, debts)
           ensureTodaysSnapshot(netWorth).catch(e => console.error('snapshot:', e))
@@ -202,7 +205,8 @@ export default function FinanceDashboard({ onViewChange }) {
           const freshIncome   = monthlyIncomeTotal(inc || [])
           const freshBills    = computeMonthlyBillsTotal(b || [])
           const freshCommit   = computeMonthlyDebtCommitments(debts || [])
-          const freshPool     = Math.max(0, freshIncome - freshBills - freshCommit)
+          const freshContrib  = monthlyContributionsTotal(contribs || [])
+          const freshPool     = Math.max(0, freshIncome - freshBills - freshCommit - freshContrib)
           const freshDebtEx   = Math.round(parsedRatio * freshPool)
           const freshRevMins  = (debts || [])
             .filter(r => r.debt_type === 'revolving' && r.include_in_strategy !== false)
@@ -227,10 +231,11 @@ export default function FinanceDashboard({ onViewChange }) {
   const cashflow                   = computeMonthlyCashflow(transactions)
   const lastMonthNet               = cashflow.length > 0 ? cashflow[cashflow.length - 1].netPence : null
 
-  const monthlyDebtCommitments = computeMonthlyDebtCommitments(debtRows)
-  const monthlyNet             = monthlyIncome - monthlyBills
-  const incomeBreakdown        = computeIncomeBreakdown(incomeRows)
-  const billsBreakdown         = computeMonthlyBillsByType(bills)
+  const monthlyDebtCommitments  = computeMonthlyDebtCommitments(debtRows)
+  const monthlyContributions    = monthlyContributionsTotal(contributionRows)
+  const monthlyNet              = monthlyIncome - monthlyBills - monthlyContributions
+  const incomeBreakdown         = computeIncomeBreakdown(incomeRows)
+  const billsBreakdown          = computeMonthlyBillsByType(bills)
 
   const allUncatTxs   = transactions.filter(t => t.category_id == null)
                                      .sort((a, b) => b.tx_date.localeCompare(a.tx_date))
@@ -251,7 +256,7 @@ export default function FinanceDashboard({ onViewChange }) {
   }
 
   // Budget allocation slider
-  const pool             = Math.max(0, monthlyIncome - monthlyBills - monthlyDebtCommitments)
+  const pool             = Math.max(0, monthlyIncome - monthlyBills - monthlyDebtCommitments - monthlyContributions)
   const poolIsZero       = pool === 0
   const debtExtra        = Math.round(budgetRatio * pool)
   const lifestyleSplit   = pool - debtExtra
@@ -420,9 +425,9 @@ export default function FinanceDashboard({ onViewChange }) {
           <div className="fd-report-panel">
             <p className="fd-report-panel-title">Money out</p>
             <p className="fd-report-panel-total">
-              {monthlyBills > 0 ? formatPence(monthlyBills) : '—'}
+              {(monthlyBills + monthlyContributions) > 0 ? formatPence(monthlyBills + monthlyContributions) : '—'}
             </p>
-            {billsBreakdown.length > 0 && (
+            {(billsBreakdown.length > 0 || monthlyContributions > 0) && (
               <ul className="fd-report-breakdown">
                 {billsBreakdown.map(row => (
                   <li key={row.type} className="fd-report-breakdown-row">
@@ -430,6 +435,12 @@ export default function FinanceDashboard({ onViewChange }) {
                     <span className="fd-report-breakdown-amount">{formatPence(row.monthly)}</span>
                   </li>
                 ))}
+                {monthlyContributions > 0 && (
+                  <li key="contributions" className="fd-report-breakdown-row">
+                    <span className="fd-report-breakdown-label">Savings contributions</span>
+                    <span className="fd-report-breakdown-amount">{formatPence(monthlyContributions)}</span>
+                  </li>
+                )}
               </ul>
             )}
             {monthlyDebtCommitments > 0 && (
@@ -470,7 +481,7 @@ export default function FinanceDashboard({ onViewChange }) {
           <p className="fdb-no-surplus">No discretionary surplus to allocate. Your committed outgoings meet or exceed your income.</p>
         ) : (
           <>
-            <p className="fdb-pool-label">Discretionary surplus: {formatPence(pool)}/month — after bills and debt commitments</p>
+            <p className="fdb-pool-label">Discretionary surplus: {formatPence(pool)}/month — after bills, savings contributions and debt commitments</p>
 
             <div className="fdb-slider-row">
               <span className="fdb-split-label">{formatPence(debtExtra)} to debt</span>
