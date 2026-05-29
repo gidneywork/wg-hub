@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { db } from '../../lib/db'
 import { supabase } from '../../lib/supabase'
 import { SUB_MARKERS, getStatus, getNextDue, fmtDue } from '../../lib/biomarkers'
-import CadenceDialog from './CadenceDialog'
-import { extractPdfLines } from '../../lib/thrivaParser'
 
 const SECTIONS = [
   { key: 'quarterly', label: 'Quarterly' },
@@ -32,8 +30,7 @@ function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-const DIALOG_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
-const DEBUG_BLANK  = { file: null, lines: null, parsing: false, error: null }
+const ADD_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '', saving: false, error: null }
 
 function StatusPill({ status }) {
   if (status === 'logged' || status === 'no_data' || status === 'due') return null
@@ -159,13 +156,13 @@ function CadenceToggle({ def, latestResult, onToggle }) {
 }
 
 export default function CadenceBiomarkers() {
-  const [defs,       setDefs      ] = useState([])
-  const [results,    setResults   ] = useState([])
-  const [documents,  setDocuments ] = useState([])
-  const [loading,    setLoading   ] = useState(true)
-  const [expanded,   setExpanded  ] = useState({})
-  const [addDialog,  setAddDialog ] = useState(DIALOG_BLANK)
-  const [debugParse, setDebugParse] = useState(DEBUG_BLANK)
+  const [defs,      setDefs     ] = useState([])
+  const [results,   setResults  ] = useState([])
+  const [documents, setDocuments] = useState([])
+  const [loading,   setLoading  ] = useState(true)
+  const [expanded,  setExpanded ] = useState({})
+  const [addForm,   setAddForm  ] = useState(ADD_BLANK)
+  const [fastState, setFastState] = useState({})
 
   useEffect(() => {
     ;(async () => {
@@ -197,32 +194,62 @@ export default function CadenceBiomarkers() {
     return map
   }, [defs])
 
-  // ── Add Result dialog state derivations ─────────────────────────────
-  const dialogDef         = defs.find(d => d.key === addDialog.key) ?? null
-  const dialogSubMap      = dialogDef ? (SUB_MARKERS[dialogDef.key] ?? null) : null
-  const dialogQualitative = dialogDef?.target_direction === 'qualitative'
-  const needsSubKey       = !!dialogSubMap
-  const valueReady        = dialogQualitative && !dialogSubMap
-    ? addDialog.valueText.trim() !== ''
-    : addDialog.value.trim() !== ''
-  const addConfirmDisabled = !addDialog.date || !valueReady || (needsSubKey && !addDialog.subKey)
+  function getFast(key) {
+    return fastState[key] ?? { value: '', saving: false, error: null }
+  }
 
-  async function handleAddResult() {
+  function handleMoreClick(key) {
+    setExpanded(p => ({ ...p, [key]: true }))
+    setAddForm({ ...ADD_BLANK, key, date: todayIso() })
+  }
+
+  async function handleFastSave(key) {
+    const raw = getFast(key).value.trim()
+    if (!raw) return
+    const num = Number(raw)
+    if (isNaN(num)) {
+      setFastState(p => ({ ...p, [key]: { ...getFast(key), error: 'Value must be a number.' } }))
+      return
+    }
+    setFastState(p => ({ ...p, [key]: { ...getFast(key), saving: true, error: null } }))
     try {
       await db.insertBiomarkerResult({
-        biomarker_key:      addDialog.key,
-        sub_marker_key:     addDialog.subKey || null,
-        measured_date:      addDialog.date,
-        value:              !(dialogQualitative && !dialogSubMap) && addDialog.value !== '' ? addDialog.value : null,
-        value_text:         dialogQualitative && !dialogSubMap ? addDialog.valueText : null,
-        notes:              addDialog.notes || null,
-        source_document_id: addDialog.docId || null,
+        biomarker_key:      key,
+        sub_marker_key:     null,
+        measured_date:      todayIso(),
+        value:              num,
+        value_text:         null,
+        notes:              null,
+        source_document_id: null,
       })
       const r = await db.loadBiomarkerResults()
       setResults(r)
-      setAddDialog(DIALOG_BLANK)
-    } catch {
-      // error already logged by db helper
+      setFastState(p => ({ ...p, [key]: { value: '', saving: false, error: null } }))
+    } catch (e) {
+      setFastState(p => ({ ...p, [key]: { ...getFast(key), saving: false, error: e?.message || 'Save failed — please try again.' } }))
+    }
+  }
+
+  async function handleSaveResult() {
+    setAddForm(p => ({ ...p, saving: true, error: null }))
+    try {
+      const formDef    = defs.find(d => d.key === addForm.key) ?? null
+      const formSubMap = formDef ? (SUB_MARKERS[formDef.key] ?? null) : null
+      const formQual   = formDef?.target_direction === 'qualitative'
+      await db.insertBiomarkerResult({
+        biomarker_key:      addForm.key,
+        sub_marker_key:     addForm.subKey  || null,
+        measured_date:      addForm.date,
+        value:              !(formQual && !formSubMap) && addForm.value !== '' ? addForm.value : null,
+        value_text:         formQual && !formSubMap ? addForm.valueText : null,
+        notes:              addForm.notes   || null,
+        source_document_id: addForm.docId   || null,
+      })
+      const r = await db.loadBiomarkerResults()
+      setResults(r)
+      setAddForm(ADD_BLANK)
+    } catch (e) {
+      setAddForm(p => ({ ...p, saving: false, error: e?.message || 'Save failed — please try again.' }))
     }
   }
 
@@ -236,101 +263,12 @@ export default function CadenceBiomarkers() {
     }
   }
 
-  // ── Debug parse handler (HE-001 c1 — replaced by real import in c2) ─
-  async function handleDebugParse() {
-    if (!debugParse.file) return
-    setDebugParse(p => ({ ...p, parsing: true, lines: null, error: null }))
-    try {
-      const lines = await extractPdfLines(debugParse.file)
-      setDebugParse(p => ({ ...p, parsing: false, lines }))
-    } catch (e) {
-      setDebugParse(p => ({ ...p, parsing: false, error: e?.message || 'Parse failed.' }))
-    }
-  }
-
   async function openDocument(doc) {
     const { data, error } = await supabase.storage
       .from('biomarker-documents')
       .createSignedUrl(doc.file_url, 3600)
     if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
   }
-
-  // ── Add Result dialog body ───────────────────────────────────────────
-  const addDialogBody = dialogDef ? (
-    <div className="bm-add-form">
-      {dialogSubMap && (
-        <div className="form-row">
-          <label>Marker</label>
-          <select
-            value={addDialog.subKey}
-            onChange={e => setAddDialog(p => ({ ...p, subKey: e.target.value, value: '' }))}
-          >
-            <option value="">— select —</option>
-            {Object.entries(dialogSubMap).map(([k, sub]) => (
-              <option key={k} value={k}>{sub.name} ({sub.unit})</option>
-            ))}
-          </select>
-        </div>
-      )}
-      <div className="form-row">
-        <label>Date</label>
-        <input
-          type="date"
-          value={addDialog.date}
-          onChange={e => setAddDialog(p => ({ ...p, date: e.target.value }))}
-        />
-      </div>
-      {dialogQualitative && !dialogSubMap ? (
-        <div className="form-row">
-          <label>Result summary</label>
-          <textarea
-            rows={2}
-            value={addDialog.valueText}
-            onChange={e => setAddDialog(p => ({ ...p, valueText: e.target.value }))}
-          />
-        </div>
-      ) : (
-        <div className="form-row">
-          <label>
-            Value
-            {dialogSubMap && addDialog.subKey && dialogSubMap[addDialog.subKey]
-              ? ` (${dialogSubMap[addDialog.subKey].unit})`
-              : dialogDef?.unit ? ` (${dialogDef.unit})` : ''}
-          </label>
-          <input
-            type="number"
-            step="any"
-            value={addDialog.value}
-            onChange={e => setAddDialog(p => ({ ...p, value: e.target.value }))}
-          />
-        </div>
-      )}
-      <div className="form-row">
-        <label>Notes <span className="form-optional">(optional)</span></label>
-        <textarea
-          rows={2}
-          value={addDialog.notes}
-          onChange={e => setAddDialog(p => ({ ...p, notes: e.target.value }))}
-        />
-      </div>
-      {documents.length > 0 && (
-        <div className="form-row">
-          <label>Source document <span className="form-optional">(optional)</span></label>
-          <select
-            value={addDialog.docId}
-            onChange={e => setAddDialog(p => ({ ...p, docId: e.target.value }))}
-          >
-            <option value="">No document</option>
-            {documents.map(doc => (
-              <option key={doc.id} value={doc.id}>
-                {doc.file_name} · {doc.measured_date}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-    </div>
-  ) : null
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
@@ -348,48 +286,8 @@ export default function CadenceBiomarkers() {
     <main>
       <header className="header r r-1">
         <h1 className="greeting">Biomarkers</h1>
-        <div className="bm-header-right">
-          <button
-            type="button"
-            className="bm-upload-btn"
-            onClick={() => setDebugParse(DEBUG_BLANK)}
-          >
-            Import Thriva PDF
-          </button>
-          <span className="stamp">{today}</span>
-        </div>
+        <span className="stamp">{today}</span>
       </header>
-
-      {/* HE-001 c1 debug section — replaced by real import UI in c2 */}
-      <div style={{ padding: '16px', background: '#111', border: '1px solid #444', borderRadius: 8, margin: '16px 0' }}>
-        <p style={{ color: '#aaa', marginBottom: 8 }}>PDF line extractor (debug — c2 will replace this)</p>
-        <input
-          type="file"
-          accept="application/pdf"
-          style={{ display: 'block', marginBottom: 8 }}
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) setDebugParse(p => ({ ...p, file, lines: null, error: null }))
-          }}
-        />
-        <button
-          type="button"
-          disabled={!debugParse.file || debugParse.parsing}
-          onClick={handleDebugParse}
-          style={{ marginBottom: 8 }}
-        >
-          {debugParse.parsing ? 'Parsing…' : 'Parse PDF (debug)'}
-        </button>
-        {debugParse.error && <p style={{ color: 'red' }}>{debugParse.error}</p>}
-        {debugParse.lines && (
-          <>
-            <p style={{ color: '#aaa' }}>{debugParse.lines.length} lines extracted — copy from below:</p>
-            <pre style={{ maxHeight: 400, overflow: 'auto', background: '#000', padding: 8, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-              {debugParse.lines.join('\n')}
-            </pre>
-          </>
-        )}
-      </div>
 
       {SECTIONS.map((section, si) => {
         const sectionDefs = defsBySection[section.key] || []
@@ -399,22 +297,78 @@ export default function CadenceBiomarkers() {
             <div className="bm-section-eyebrow">{section.label}</div>
             <div className="bm-list">
               {sectionDefs.map(def => {
-                const keyResults   = resultsByKey[def.key] || []
-                const latestResult = keyResults[0] || null
-                const status       = getStatus(def, latestResult)
-                const nextDue      = getNextDue(def, latestResult)
-                const isOpen       = !!expanded[def.key]
+                const keyResults    = resultsByKey[def.key] || []
+                const latestResult  = keyResults[0] || null
+                const status        = getStatus(def, latestResult)
+                const nextDue       = getNextDue(def, latestResult)
+                const isOpen        = !!expanded[def.key]
                 const isQualitative = def.target_direction === 'qualitative'
+                const isFormOpen    = addForm.key === def.key
+                const formSubMap    = SUB_MARKERS[def.key] ?? null
+                const fastDisabled  = !!formSubMap || isQualitative
+                const fastPlaceholder = formSubMap
+                  ? 'Choose sub-marker via More…'
+                  : isQualitative ? 'Use More… to enter a text result'
+                  : ''
+                const formValueReady = isQualitative && !formSubMap
+                  ? addForm.valueText.trim() !== ''
+                  : addForm.value.trim() !== ''
+                const saveDisabled = !addForm.date || !formValueReady || (!!formSubMap && !addForm.subKey)
+
+                function handleToggle() {
+                  if (expanded[def.key] && addForm.key === def.key) setAddForm(ADD_BLANK)
+                  setExpanded(p => ({ ...p, [def.key]: !p[def.key] }))
+                }
 
                 return (
                   <div key={def.key} className={`bm-row${isOpen ? ' bm-row--open' : ''}`}>
-                    <button
-                      type="button"
+                    <div
                       className="bm-row-header"
-                      onClick={() => setExpanded(p => ({ ...p, [def.key]: !p[def.key] }))}
+                      role="button"
+                      tabIndex={0}
+                      onClick={handleToggle}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle() } }}
                       aria-expanded={isOpen}
                     >
                       <span className="bm-name">{def.name}</span>
+
+                      {section.key === 'quarterly' && (
+                        <div
+                          className="bm-fast-controls"
+                          onClick={e => e.stopPropagation()}
+                          onKeyDown={e => e.stopPropagation()}
+                        >
+                          <input
+                            className={`bm-fast-input${fastDisabled ? ' bm-fast-input--disabled' : ''}`}
+                            type="number"
+                            step="any"
+                            disabled={fastDisabled}
+                            placeholder={fastPlaceholder}
+                            value={getFast(def.key).value}
+                            onChange={e => setFastState(p => ({ ...p, [def.key]: { ...getFast(def.key), value: e.target.value } }))}
+                            onKeyDown={e => { if (e.key === 'Enter' && !fastDisabled) handleFastSave(def.key) }}
+                          />
+                          {!fastDisabled && <span className="bm-fast-unit">{def.unit}</span>}
+                          {!fastDisabled && (
+                            <button
+                              type="button"
+                              className="bm-fast-save"
+                              disabled={!getFast(def.key).value.trim() || getFast(def.key).saving}
+                              onClick={() => handleFastSave(def.key)}
+                            >
+                              {getFast(def.key).saving ? 'Saving…' : 'Save'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="bm-more-link"
+                            onClick={() => handleMoreClick(def.key)}
+                          >
+                            More…
+                          </button>
+                        </div>
+                      )}
+
                       <span className="bm-row-meta">
                         <LatestValue def={def} latestResult={latestResult} />
                         {status === 'no_data' ? (
@@ -431,6 +385,7 @@ export default function CadenceBiomarkers() {
                           </span>
                         )}
                       </span>
+
                       <svg
                         className={`bm-chevron${isOpen ? ' bm-chevron--open' : ''}`}
                         viewBox="0 0 24 24"
@@ -443,7 +398,11 @@ export default function CadenceBiomarkers() {
                       >
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
-                    </button>
+                    </div>
+
+                    {getFast(def.key).error && (
+                      <p className="bm-fast-error">{getFast(def.key).error}</p>
+                    )}
 
                     {isOpen && (
                       <div className="bm-row-body">
@@ -467,13 +426,104 @@ export default function CadenceBiomarkers() {
                           latestResult={latestResult}
                           onToggle={months => handleCadenceToggle(latestResult, months)}
                         />
-                        <button
-                          type="button"
-                          className="bm-add-btn"
-                          onClick={() => setAddDialog({ ...DIALOG_BLANK, key: def.key, date: todayIso() })}
-                        >
-                          + Add result
-                        </button>
+
+                        {isFormOpen ? (
+                          <div className="bm-inline-form">
+                            <div className="bm-add-form">
+                              {formSubMap && (
+                                <div className="form-row">
+                                  <label>Marker</label>
+                                  <select
+                                    value={addForm.subKey}
+                                    onChange={e => setAddForm(p => ({ ...p, subKey: e.target.value, value: '' }))}
+                                  >
+                                    <option value="">— select —</option>
+                                    {Object.entries(formSubMap).map(([k, sub]) => (
+                                      <option key={k} value={k}>{sub.name} ({sub.unit})</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              <div className="form-row">
+                                <label>Date</label>
+                                <input
+                                  type="date"
+                                  value={addForm.date}
+                                  onChange={e => setAddForm(p => ({ ...p, date: e.target.value }))}
+                                />
+                              </div>
+                              {isQualitative && !formSubMap ? (
+                                <div className="form-row">
+                                  <label>Result summary</label>
+                                  <textarea
+                                    rows={2}
+                                    value={addForm.valueText}
+                                    onChange={e => setAddForm(p => ({ ...p, valueText: e.target.value }))}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="form-row">
+                                  <label>
+                                    Value
+                                    {formSubMap && addForm.subKey && formSubMap[addForm.subKey]
+                                      ? ` (${formSubMap[addForm.subKey].unit})`
+                                      : def.unit ? ` (${def.unit})` : ''}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    value={addForm.value}
+                                    onChange={e => setAddForm(p => ({ ...p, value: e.target.value }))}
+                                  />
+                                </div>
+                              )}
+                              <div className="form-row">
+                                <label>Notes <span className="form-optional">(optional)</span></label>
+                                <textarea
+                                  rows={2}
+                                  value={addForm.notes}
+                                  onChange={e => setAddForm(p => ({ ...p, notes: e.target.value }))}
+                                />
+                              </div>
+                              {documents.length > 0 && (
+                                <div className="form-row">
+                                  <label>Source document <span className="form-optional">(optional)</span></label>
+                                  <select
+                                    value={addForm.docId}
+                                    onChange={e => setAddForm(p => ({ ...p, docId: e.target.value }))}
+                                  >
+                                    <option value="">No document</option>
+                                    {documents.map(doc => (
+                                      <option key={doc.id} value={doc.id}>
+                                        {doc.file_name} · {doc.measured_date}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                            {addForm.error && <p className="bm-inline-form-error">{addForm.error}</p>}
+                            <div className="bm-inline-form-actions">
+                              <button type="button" className="btn btn-ghost" onClick={() => setAddForm(ADD_BLANK)}>Cancel</button>
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                disabled={saveDisabled || addForm.saving}
+                                onClick={handleSaveResult}
+                              >
+                                {addForm.saving ? 'Saving…' : 'Save result'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : section.key !== 'quarterly' ? (
+                          <button
+                            type="button"
+                            className="bm-add-btn"
+                            onClick={() => handleMoreClick(def.key)}
+                          >
+                            + Add result
+                          </button>
+                        ) : null}
                       </div>
                     )}
                   </div>
@@ -514,18 +564,6 @@ export default function CadenceBiomarkers() {
           )}
         </div>
       </div>
-
-      <CadenceDialog
-        open={addDialog.key !== null}
-        title={dialogDef ? `Add result — ${dialogDef.name}` : 'Add result'}
-        body={addDialogBody}
-        confirmLabel="Save"
-        confirmClass="btn-primary"
-        confirmDisabled={addConfirmDisabled}
-        onConfirm={handleAddResult}
-        onCancel={() => setAddDialog(DIALOG_BLANK)}
-      />
-
     </main>
   )
 }
