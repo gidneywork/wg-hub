@@ -8292,6 +8292,40 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 [data-theme="dark"] [data-cadence] .fd-uncat-more { color: var(--moss); }
 
+/* ── FC-059 c2 — Rule toggle + preview ───────────────────────────────────────── */
+
+[data-cadence] .fd-uncat-rule-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding-top: var(--space-1);
+  user-select: none;
+}
+
+[data-cadence] .fd-uncat-rule-preview {
+  grid-column: 1 / -1;
+  font-family: var(--sans);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  font-style: italic;
+  margin: 0;
+  padding-bottom: var(--space-1);
+}
+
+[data-cadence] .fd-uncat-panel-error {
+  font-family: var(--sans);
+  font-size: var(--type-body-sm);
+  color: var(--clay-deep);
+  margin: 0 0 var(--space-2);
+}
+
+[data-theme="dark"] [data-cadence] .fd-uncat-panel-error { color: var(--clay); }
+
 /* ── FC-046 c3 — Analytics chart blocks ─────────────────────────────────────── */
 
 [data-cadence] .fd-chart-block {

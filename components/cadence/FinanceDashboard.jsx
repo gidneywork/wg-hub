@@ -9,8 +9,9 @@ import {
   loadBills, loadAllBillPayments, loadDismissedPatterns, ensureTodaysSnapshot,
   loadCategories, loadNetWorthSnapshots, loadProperties, loadDebts, loadIncome,
   loadFinanceSetting, saveFinanceSetting, recategoriseTransaction,
+  insertCategoryRule, applyRuleToExistingTransactions,
 } from '../../lib/finance/db'
-import { formatPence } from '../../lib/finance/transactions'
+import { formatPence, applyRules } from '../../lib/finance/transactions'
 import { deriveBillStatus } from '../../lib/finance/bills'
 import {
   detectRecurringPatterns, CHART_PALETTE,
@@ -160,6 +161,8 @@ export default function FinanceDashboard({ onViewChange }) {
   const [budgetRatio,        setBudgetRatio        ] = useState(0.5)
   const [ratioSaving,        setRatioSaving        ] = useState(false)
   const [uncatExpanded,      setUncatExpanded      ] = useState(false)
+  const [ruleToggleIds,      setRuleToggleIds      ] = useState(new Set())
+  const [panelError,         setPanelError         ] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -234,6 +237,19 @@ export default function FinanceDashboard({ onViewChange }) {
   const uncatPanelTxs = allUncatTxs.slice(0, 20)
   const uncatHasMore  = allUncatTxs.length > 20
 
+  function ruleMatchValue(tx) {
+    return tx.merchant_clean?.trim() ? tx.merchant_clean.trim() : tx.description.trim()
+  }
+  function matchCount(tx) {
+    const matchField    = tx.merchant_clean?.trim() ? 'merchant_clean' : 'description'
+    const matchValue    = ruleMatchValue(tx)
+    const syntheticRule = { match_field: matchField, match_type: 'contains', match_value: matchValue, category_id: '__preview__' }
+    return allUncatTxs
+      .filter(other => other.id !== tx.id)
+      .filter(other => applyRules([syntheticRule], other.description, other.merchant_clean) !== null)
+      .length
+  }
+
   // Budget allocation slider
   const pool             = Math.max(0, monthlyIncome - monthlyBills - monthlyDebtCommitments)
   const poolIsZero       = pool === 0
@@ -248,6 +264,46 @@ export default function FinanceDashboard({ onViewChange }) {
 
   function handleRatioChange(e) {
     setBudgetRatio(Number(e.target.value) / 100)
+  }
+
+  async function handleCategoriseWithRule(tx, categoryId) {
+    const matchField       = tx.merchant_clean?.trim() ? 'merchant_clean' : 'description'
+    const matchValue       = tx.merchant_clean?.trim() ? tx.merchant_clean.trim() : tx.description.trim()
+    const syntheticRule    = { match_field: matchField, match_type: 'contains', match_value: matchValue, category_id: '__preview__' }
+    const matchingOtherIds = allUncatTxs
+      .filter(other => other.id !== tx.id)
+      .filter(other => applyRules([syntheticRule], other.description, other.merchant_clean) !== null)
+      .map(other => other.id)
+
+    try {
+      await recategoriseTransaction(tx.id, categoryId)
+      setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, category_id: categoryId } : t))
+    } catch (e) {
+      console.error('recategoriseTransaction:', e)
+      setPanelError('Could not save category. Please try again.')
+      return
+    }
+
+    try {
+      const insertedRule = await insertCategoryRule({
+        category_id: categoryId,
+        match_type:  'contains',
+        match_field: matchField,
+        match_value: matchValue,
+        priority:    100,
+      })
+      await applyRuleToExistingTransactions(insertedRule, null)
+      if (matchingOtherIds.length > 0) {
+        setTransactions(prev =>
+          prev.map(t => matchingOtherIds.includes(t.id) ? { ...t, category_id: categoryId } : t)
+        )
+      }
+    } catch (e) {
+      console.error('insertCategoryRule/applyRuleToExistingTransactions:', e)
+      setPanelError('Rule could not be created — your transaction was saved.')
+    }
+
+    setRuleToggleIds(prev => { const next = new Set(prev); next.delete(tx.id); return next })
   }
 
   function handleCategorise(txId, categoryId) {
@@ -464,15 +520,22 @@ export default function FinanceDashboard({ onViewChange }) {
                     <button
                       type="button"
                       className="fd-card-action"
-                      onClick={() => setUncatExpanded(v => !v)}
+                      onClick={() => {
+                        setUncatExpanded(v => !v)
+                        setPanelError(null)
+                        setRuleToggleIds(new Set())
+                      }}
                     >
                       {uncatExpanded ? 'Close' : 'Categorise'}
                     </button>
                   </div>
                   {uncatExpanded && (
                     <div className="fd-uncat-panel">
+                      {panelError && <p className="fd-uncat-panel-error">{panelError}</p>}
                       <ul className="fd-uncat-list">
-                        {uncatPanelTxs.map(tx => (
+                        {uncatPanelTxs.map(tx => {
+                          const n = ruleToggleIds.has(tx.id) ? matchCount(tx) : 0
+                          return (
                           <li key={tx.id} className="fd-uncat-row">
                             <span className="fd-uncat-date">{fmtDateShort(tx.tx_date)}</span>
                             <span className="fd-uncat-merchant">{tx.merchant_clean || tx.description}</span>
@@ -482,7 +545,9 @@ export default function FinanceDashboard({ onViewChange }) {
                               defaultValue=""
                               onChange={e => {
                                 if (!e.target.value) return
-                                handleCategorise(tx.id, e.target.value)
+                                ruleToggleIds.has(tx.id)
+                                  ? handleCategoriseWithRule(tx, e.target.value)
+                                  : handleCategorise(tx.id, e.target.value)
                               }}
                             >
                               <option value="" disabled>— choose —</option>
@@ -490,8 +555,28 @@ export default function FinanceDashboard({ onViewChange }) {
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                               ))}
                             </select>
+                            <label className="fd-uncat-rule-toggle">
+                              <input
+                                type="checkbox"
+                                checked={ruleToggleIds.has(tx.id)}
+                                onChange={e => setRuleToggleIds(prev => {
+                                  const next = new Set(prev)
+                                  e.target.checked ? next.add(tx.id) : next.delete(tx.id)
+                                  return next
+                                })}
+                              />
+                              Also create a rule for similar
+                            </label>
+                            {ruleToggleIds.has(tx.id) && (
+                              <p className="fd-uncat-rule-preview">
+                                {n > 0
+                                  ? `Will also categorise ${n} other matching transaction${n === 1 ? '' : 's'} using a rule for '${ruleMatchValue(tx)}'.`
+                                  : `Rule for '${ruleMatchValue(tx)}' — no other matches yet, but will apply to future transactions.`}
+                              </p>
+                            )}
                           </li>
-                        ))}
+                          )
+                        })}
                       </ul>
                       {uncatHasMore && item.action && (
                         <button
