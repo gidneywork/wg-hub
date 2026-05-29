@@ -5,6 +5,7 @@ import { db } from '../../lib/db'
 import { supabase } from '../../lib/supabase'
 import { SUB_MARKERS, getStatus, getNextDue, fmtDue } from '../../lib/biomarkers'
 import CadenceDialog from './CadenceDialog'
+import { extractPdfLines } from '../../lib/thrivaParser'
 
 const SECTIONS = [
   { key: 'quarterly', label: 'Quarterly' },
@@ -26,16 +27,13 @@ const PROVIDER_LABELS = {
   other:       'Other',
 }
 
-const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
-const MAX_FILE_BYTES = 10 * 1024 * 1024
-
 function todayIso() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-const DIALOG_BLANK  = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
-const UPLOAD_BLANK  = { open: false, file: null, date: '', provider: '', providerOther: '', notes: '', uploading: false, error: null }
+const DIALOG_BLANK = { key: null, subKey: '', date: '', value: '', valueText: '', notes: '', docId: '' }
+const DEBUG_BLANK  = { file: null, lines: null, parsing: false, error: null }
 
 function StatusPill({ status }) {
   if (status === 'logged' || status === 'no_data' || status === 'due') return null
@@ -161,13 +159,13 @@ function CadenceToggle({ def, latestResult, onToggle }) {
 }
 
 export default function CadenceBiomarkers() {
-  const [defs,         setDefs        ] = useState([])
-  const [results,      setResults     ] = useState([])
-  const [documents,    setDocuments   ] = useState([])
-  const [loading,      setLoading     ] = useState(true)
-  const [expanded,     setExpanded    ] = useState({})
-  const [addDialog,    setAddDialog   ] = useState(DIALOG_BLANK)
-  const [uploadDialog, setUploadDialog] = useState(UPLOAD_BLANK)
+  const [defs,       setDefs      ] = useState([])
+  const [results,    setResults   ] = useState([])
+  const [documents,  setDocuments ] = useState([])
+  const [loading,    setLoading   ] = useState(true)
+  const [expanded,   setExpanded  ] = useState({})
+  const [addDialog,  setAddDialog ] = useState(DIALOG_BLANK)
+  const [debugParse, setDebugParse] = useState(DEBUG_BLANK)
 
   useEffect(() => {
     ;(async () => {
@@ -238,38 +236,15 @@ export default function CadenceBiomarkers() {
     }
   }
 
-  // ── Upload dialog handlers ───────────────────────────────────────────
-  function handleFileChange(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!ALLOWED_MIME.includes(file.type)) {
-      setUploadDialog(p => ({ ...p, file: null, error: 'Unsupported file type. Use PDF, JPEG, PNG, or HEIC.' }))
-      e.target.value = ''
-      return
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      setUploadDialog(p => ({ ...p, file: null, error: 'File too large. Maximum 10 MB.' }))
-      e.target.value = ''
-      return
-    }
-    setUploadDialog(p => ({ ...p, file, error: null }))
-  }
-
-  async function handleUpload() {
-    setUploadDialog(p => ({ ...p, uploading: true, error: null }))
+  // ── Debug parse handler (HE-001 c1 — replaced by real import in c2) ─
+  async function handleDebugParse() {
+    if (!debugParse.file) return
+    setDebugParse(p => ({ ...p, parsing: true, lines: null, error: null }))
     try {
-      await db.insertBiomarkerDocument({
-        file:                uploadDialog.file,
-        measured_date:       uploadDialog.date,
-        provider:            uploadDialog.provider,
-        provider_other_text: uploadDialog.provider === 'other' ? uploadDialog.providerOther : null,
-        notes:               uploadDialog.notes || null,
-      })
-      const docs = await db.loadBiomarkerDocuments()
-      setDocuments(docs)
-      setUploadDialog(UPLOAD_BLANK)
+      const lines = await extractPdfLines(debugParse.file)
+      setDebugParse(p => ({ ...p, parsing: false, lines }))
     } catch (e) {
-      setUploadDialog(p => ({ ...p, uploading: false, error: e?.message || 'Upload failed. Please try again.' }))
+      setDebugParse(p => ({ ...p, parsing: false, error: e?.message || 'Parse failed.' }))
     }
   }
 
@@ -357,74 +332,6 @@ export default function CadenceBiomarkers() {
     </div>
   ) : null
 
-  // ── Upload Report dialog body ────────────────────────────────────────
-  const uploadDialogBody = (
-    <div className="bm-add-form">
-      {uploadDialog.error && (
-        <p className="bm-upload-error">{uploadDialog.error}</p>
-      )}
-      <div className="form-row">
-        <label>File <span className="form-optional">(PDF, JPEG, PNG, HEIC · max 10 MB)</span></label>
-        <label className="bm-file-picker">
-          <span>{uploadDialog.file ? uploadDialog.file.name : 'Choose file'}</span>
-          <input
-            type="file"
-            accept="application/pdf,image/jpeg,image/png,image/heic"
-            hidden
-            onChange={handleFileChange}
-          />
-        </label>
-      </div>
-      <div className="form-row">
-        <label>Date measured</label>
-        <input
-          type="date"
-          value={uploadDialog.date}
-          onChange={e => setUploadDialog(p => ({ ...p, date: e.target.value }))}
-        />
-      </div>
-      <div className="form-row">
-        <label>Provider</label>
-        <select
-          value={uploadDialog.provider}
-          onChange={e => setUploadDialog(p => ({ ...p, provider: e.target.value }))}
-        >
-          <option value="">— select —</option>
-          <option value="thriva">Thriva</option>
-          <option value="medichecks">Medichecks</option>
-          <option value="randox">Randox</option>
-          <option value="nhs">NHS</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      {uploadDialog.provider === 'other' && (
-        <div className="form-row">
-          <label>Provider name</label>
-          <input
-            type="text"
-            value={uploadDialog.providerOther}
-            onChange={e => setUploadDialog(p => ({ ...p, providerOther: e.target.value }))}
-          />
-        </div>
-      )}
-      <div className="form-row">
-        <label>Notes <span className="form-optional">(optional)</span></label>
-        <textarea
-          rows={2}
-          value={uploadDialog.notes}
-          onChange={e => setUploadDialog(p => ({ ...p, notes: e.target.value }))}
-        />
-      </div>
-    </div>
-  )
-
-  const uploadConfirmDisabled =
-    !uploadDialog.file
-    || !uploadDialog.date
-    || !uploadDialog.provider
-    || (uploadDialog.provider === 'other' && !uploadDialog.providerOther.trim())
-    || uploadDialog.uploading
-
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
   })
@@ -445,13 +352,44 @@ export default function CadenceBiomarkers() {
           <button
             type="button"
             className="bm-upload-btn"
-            onClick={() => setUploadDialog({ ...UPLOAD_BLANK, open: true })}
+            onClick={() => setDebugParse(DEBUG_BLANK)}
           >
-            Upload report
+            Import Thriva PDF
           </button>
           <span className="stamp">{today}</span>
         </div>
       </header>
+
+      {/* HE-001 c1 debug section — replaced by real import UI in c2 */}
+      <div style={{ padding: '16px', background: '#111', border: '1px solid #444', borderRadius: 8, margin: '16px 0' }}>
+        <p style={{ color: '#aaa', marginBottom: 8 }}>PDF line extractor (debug — c2 will replace this)</p>
+        <input
+          type="file"
+          accept="application/pdf"
+          style={{ display: 'block', marginBottom: 8 }}
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) setDebugParse(p => ({ ...p, file, lines: null, error: null }))
+          }}
+        />
+        <button
+          type="button"
+          disabled={!debugParse.file || debugParse.parsing}
+          onClick={handleDebugParse}
+          style={{ marginBottom: 8 }}
+        >
+          {debugParse.parsing ? 'Parsing…' : 'Parse PDF (debug)'}
+        </button>
+        {debugParse.error && <p style={{ color: 'red' }}>{debugParse.error}</p>}
+        {debugParse.lines && (
+          <>
+            <p style={{ color: '#aaa' }}>{debugParse.lines.length} lines extracted — copy from below:</p>
+            <pre style={{ maxHeight: 400, overflow: 'auto', background: '#000', padding: 8, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {debugParse.lines.join('\n')}
+            </pre>
+          </>
+        )}
+      </div>
 
       {SECTIONS.map((section, si) => {
         const sectionDefs = defsBySection[section.key] || []
@@ -588,16 +526,6 @@ export default function CadenceBiomarkers() {
         onCancel={() => setAddDialog(DIALOG_BLANK)}
       />
 
-      <CadenceDialog
-        open={uploadDialog.open}
-        title="Upload report"
-        body={uploadDialogBody}
-        confirmLabel={uploadDialog.uploading ? 'Uploading…' : 'Upload'}
-        confirmClass="btn-primary"
-        confirmDisabled={uploadConfirmDisabled}
-        onConfirm={handleUpload}
-        onCancel={() => setUploadDialog(UPLOAD_BLANK)}
-      />
     </main>
   )
 }
