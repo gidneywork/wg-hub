@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export default function CadenceDialog({
@@ -18,13 +18,17 @@ export default function CadenceDialog({
 }) {
   const [readyToRender, setReadyToRender] = useState(false)
 
+  // Synchronously reset readyToRender on every open change so a stale true
+  // value from a previous open never lets the backdrop appear before the
+  // triggering click has finished bubbling.
+  useLayoutEffect(() => {
+    setReadyToRender(false)
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    if (open) {
-      const id = setTimeout(() => setReadyToRender(true), 0)
-      return () => clearTimeout(id)
-    } else {
-      setReadyToRender(false)
-    }
+    if (!open) return
+    const id = setTimeout(() => setReadyToRender(true), 0)
+    return () => clearTimeout(id)
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
