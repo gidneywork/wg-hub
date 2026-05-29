@@ -6,7 +6,7 @@ import {
   loadProperties, createProperty, updateProperty, deleteProperty,
   loadFinanceSetting,
 } from '../../lib/finance/db'
-import { computeAccountBalance } from '../../lib/finance/accounts'
+import { computeAccountBalance, getBankLabel } from '../../lib/finance/accounts'
 import {
   buildWorkingDebts, simulateStrategy, buildComparisonChartData,
   bpsToPercent, percentToBps, formatApr,
@@ -568,8 +568,9 @@ export default function FinanceDebt() {
       }
     })
 
-  const loanRows   = debtRows.filter(r => r.debt_type === 'loan' || r.debt_type === 'mortgage')
-  const hasAnyDebt = revolvingIncluded.length > 0 || revolvingExcluded.length > 0 || loanRows.length > 0
+  const loanRows       = debtRows.filter(r => r.debt_type === 'loan' || r.debt_type === 'mortgage')
+  const hasAnyDebt     = revolvingIncluded.length > 0 || revolvingExcluded.length > 0 || loanRows.length > 0
+  const savingsAccounts = accounts.filter(a => a.account_type === 'savings')
 
   // ── Shared form element ────────────────────────────────────────────────────
 
@@ -1194,6 +1195,36 @@ export default function FinanceDebt() {
                       </tr>
                     )}
                   </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="fdt-savings-section">
+        <div className="fdt-section-header">Savings</div>
+        {savingsAccounts.length === 0 ? (
+          <p className="fdt-section-empty">No savings accounts yet. Mark one in Accounts to track it here.</p>
+        ) : (
+          <table className="fdt-savings-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th className="fdt-col-bank">Bank</th>
+                <th className="fdt-col-value">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {savingsAccounts.map(acc => {
+                const acTxs = transactions.filter(tx => tx.account_id === acc.id)
+                const bal   = computeAccountBalance(acc, acTxs, statementDocs)
+                return (
+                  <tr key={acc.id}>
+                    <td>{acc.name}</td>
+                    <td className="fdt-col-bank">{getBankLabel(acc)}</td>
+                    <td className="fdt-col-value">{bal != null ? formatPence(bal) : '—'}</td>
+                  </tr>
                 )
               })}
             </tbody>

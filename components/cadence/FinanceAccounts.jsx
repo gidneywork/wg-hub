@@ -5,6 +5,7 @@ import {
   loadStatementDocuments,
   loadAllTransactions,
   insertAccount,
+  updateAccount,
   insertStatementDocument,
   getStatementSignedUrl,
 } from '../../lib/finance/db'
@@ -56,6 +57,11 @@ export default function FinanceAccounts({ onViewChange }) {
 
   const [parsingDocId,   setParsingDocId  ] = useState(null)
   const [docParseErrors, setDocParseErrors] = useState({})
+
+  const [editingAccountId,  setEditingAccountId ] = useState(null)
+  const [accountEditType,   setAccountEditType  ] = useState('')
+  const [accountEditSaving, setAccountEditSaving] = useState(false)
+  const [accountEditError,  setAccountEditError ] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -190,6 +196,21 @@ export default function FinanceAccounts({ onViewChange }) {
       window.open(url, '_blank', 'noopener')
     } catch (e) {
       console.error('getStatementSignedUrl:', e)
+    }
+  }
+
+  async function handleAccountTypeSave() {
+    setAccountEditSaving(true)
+    setAccountEditError(null)
+    try {
+      await updateAccount(editingAccountId, { account_type: accountEditType })
+      const accs = await loadAccounts()
+      setAccounts(accs)
+      setEditingAccountId(null)
+    } catch (e) {
+      setAccountEditError(e?.message || 'Failed to save. Please try again.')
+    } finally {
+      setAccountEditSaving(false)
     }
   }
 
@@ -380,6 +401,7 @@ export default function FinanceAccounts({ onViewChange }) {
               ? getMostRecentImportedStatement(statementDocs, account.id)
               : null
 
+            const isEditingType = editingAccountId === account.id
             return (
               <li key={account.id} className="ac-card">
                 <button
@@ -404,6 +426,54 @@ export default function FinanceAccounts({ onViewChange }) {
                     )}
                   </div>
                 </button>
+                <div className="ac-card-footer">
+                  <button
+                    type="button"
+                    className={`ac-card-type-btn${isEditingType ? ' ac-card-type-btn--active' : ''}`}
+                    onClick={() => {
+                      if (isEditingType) {
+                        setEditingAccountId(null)
+                        setAccountEditError(null)
+                      } else {
+                        setEditingAccountId(account.id)
+                        setAccountEditType(account.account_type)
+                        setAccountEditError(null)
+                      }
+                    }}
+                  >
+                    {isEditingType ? 'Close' : 'Edit type'}
+                  </button>
+                </div>
+                {isEditingType && (
+                  <div className="ac-type-edit-panel">
+                    <CadencePanel
+                      open
+                      title="Account type"
+                      body={
+                        <div className="bm-add-form">
+                          {accountEditError && <p className="fa-add-error">{accountEditError}</p>}
+                          <div className="form-row">
+                            <label>Account type</label>
+                            <select
+                              value={accountEditType}
+                              onChange={e => setAccountEditType(e.target.value)}
+                            >
+                              <option value="current">Current</option>
+                              <option value="credit_card">Credit card</option>
+                              <option value="savings">Savings</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                        </div>
+                      }
+                      confirmLabel={accountEditSaving ? 'Saving…' : 'Save'}
+                      confirmClass="btn-primary"
+                      confirmDisabled={accountEditSaving || accountEditType === account.account_type}
+                      onConfirm={handleAccountTypeSave}
+                      onCancel={() => { setEditingAccountId(null); setAccountEditError(null) }}
+                    />
+                  </div>
+                )}
               </li>
             )
           })}

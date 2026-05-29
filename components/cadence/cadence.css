@@ -9013,3 +9013,45 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 /* Flat-rate informational note in forms */
 [data-cadence] .fdt-flat-note { font-family: var(--sans); font-size: var(--type-caption); color: var(--text-quiet); margin: var(--space-1) 0 var(--space-3); padding: var(--space-2) var(--space-3); background: var(--bg-elevated); border-left: 3px solid var(--border); border-radius: 2px; }
+
+/* ── FC-042 c1 — Savings section (Holdings) ────────────────────────────── */
+
+[data-cadence] .fdt-savings-section { margin-top: var(--space-6); }
+
+[data-cadence] .fdt-savings-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: var(--type-caption); }
+[data-cadence] .fdt-savings-table th { text-align: left; font-weight: 500; color: var(--text-quiet); padding: var(--space-1) var(--space-3) var(--space-1) 0; border-bottom: 1px solid var(--border-soft); }
+[data-cadence] .fdt-savings-table td { padding: var(--space-3) var(--space-3) var(--space-3) 0; border-bottom: 1px solid var(--border-soft); vertical-align: top; font-variant-numeric: tabular-nums; }
+[data-cadence] .fdt-savings-table tr:last-child td { border-bottom: none; }
+
+[data-cadence] .fdt-col-bank { min-width: 100px; }
+
+/* ── FC-042 c1 — Account type edit (Accounts page) ─────────────────────── */
+
+[data-cadence] .ac-card-footer {
+  border-top: 1px solid var(--border-soft);
+  padding: var(--space-2) var(--space-5);
+  display: flex;
+  justify-content: flex-end;
+}
+
+[data-cadence] .ac-card-type-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: var(--type-caption);
+  color: var(--text-quiet);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 2px;
+  transition: color var(--t-ui) var(--ease);
+}
+
+[data-cadence] .ac-card-type-btn:hover,
+[data-cadence] .ac-card-type-btn--active { color: var(--text-muted); }
+
+[data-cadence] .ac-type-edit-panel {
+  border-top: 1px solid var(--border-soft);
+  padding: var(--space-4) var(--space-5);
+}
