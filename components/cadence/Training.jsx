@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import './training.css'
-import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek } from '../../lib/plan'
+import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, sumWeekKm } from '../../lib/plan'
 
 const TYPE_LABEL = {
   run: 'Running', swim: 'Swimming', cycle: 'Cycling', hike: 'Hiking',
@@ -461,7 +461,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
     setEditing(false)
   }
 
-  const kmTarget     = parseFloat(settings?.weeklyKm?.value) || null
+  const weekKm       = sumWeekKm(currentWeek)
   const funcCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'functional')).length
   const gymTypes     = [...new Set(
     currentWeek.flatMap(d => d.sessions.filter(s => s.type === 'gym').map(s =>
@@ -502,10 +502,10 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         <div className="stat">
           <div className="label">Distance</div>
           <div className="value">
-            {kmTarget != null ? `~${kmTarget}` : '—'}
-            {kmTarget != null && <span className="unit">km</span>}
+            {weekKm != null ? (weekKm % 1 === 0 ? weekKm : weekKm.toFixed(1)) : '—'}
+            {weekKm != null && <span className="unit">km</span>}
           </div>
-          <div className="helper">weekly target</div>
+          <div className="helper">this week</div>
         </div>
         <div className="stat">
           <div className="label">Functional</div>
