@@ -677,15 +677,6 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   const [compare,   setCompare  ] = useState('target')
   const [smoothing, setSmoothing] = useState('raw')
 
-  // ── Scheduled sessions — 365-day window for adherence chart ────
-  const [adherenceSessions, setAdherenceSessions] = useState([])
-
-  useEffect(() => {
-    const end   = localIso(new Date())
-    const start = localIso((() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return d })())
-    db.listScheduledSessions(start, end).then(setAdherenceSessions).catch(console.error)
-  }, [])
-
   // ── User annotations (chart_annotations table) ──────────────────
   const [userAnnotations, setUserAnnotations] = useState([])
 
