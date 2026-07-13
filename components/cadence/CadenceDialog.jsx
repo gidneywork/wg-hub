@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 export default function CadenceDialog({
@@ -16,21 +16,13 @@ export default function CadenceDialog({
   onConfirm,
   onCancel,
 }) {
-  const [readyToRender, setReadyToRender] = useState(false)
-
-  // Synchronously reset readyToRender on every open change so a stale true
-  // value from a previous open never lets the backdrop appear before the
-  // triggering click has finished bubbling.
-  useLayoutEffect(() => {
-    setReadyToRender(false)
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!open) return
-    const id = setTimeout(() => setReadyToRender(true), 0)
-    return () => clearTimeout(id)
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Outside-dismiss fires on the backdrop's mousedown (below), NOT on click.
+  // This is what makes the dialog immune to the interaction that opened it: the
+  // opening mousedown landed on the trigger button BEFORE this backdrop existed,
+  // so the backdrop can never receive it. A genuine dismiss needs a fresh
+  // mousedown that lands on the backdrop. No timers, no mount-delay gate, no
+  // render-order race — the earlier setTimeout/readyToRender machinery guarded a
+  // race that cannot occur once dismissal is mousedown-based, so it is gone.
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (e.key === 'Escape') onCancel?.() }
@@ -38,20 +30,20 @@ export default function CadenceDialog({
     return () => document.removeEventListener('keydown', handler)
   }, [open, onCancel]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!open || !readyToRender || typeof document === 'undefined') return null
+  if (!open || typeof document === 'undefined') return null
 
   return createPortal(
     <div
       className="cadence-dialog-backdrop"
       data-cadence=""
-      onClick={onCancel}
+      onMouseDown={onCancel}
     >
       <div
         className={`cadence-dialog${dialogClass ? ` ${dialogClass}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cadence-dialog-title"
-        onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
       >
         <div className="cadence-dialog-title" id="cadence-dialog-title">{title}</div>
         {body && <div className="cadence-dialog-body">{body}</div>}
