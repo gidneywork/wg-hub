@@ -21,6 +21,8 @@ export default function WhoopConnectCard() {
   const [probing,       setProbing]       = useState(false)
   const [probe,         setProbe]         = useState(null)
   const [probeError,    setProbeError]    = useState(null)
+  const [backfilling,   setBackfilling]   = useState(false)
+  const [backfill,      setBackfill]      = useState(null)
 
   const loadConnection = async () => setConnection(await db.loadWhoopConnection())
   useEffect(() => { loadConnection() }, [])
@@ -56,6 +58,21 @@ export default function WhoopConnectCard() {
       setProbeError('Probe request failed')
     } finally {
       setProbing(false)
+    }
+  }
+
+  const handleBackfill = async () => {
+    setBackfilling(true)
+    setBackfill(null)
+    try {
+      const res  = await fetch('/api/whoop/backfill', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok || data.error) setBackfill({ error: data.error || `Backfill failed (${res.status})` })
+      else setBackfill(data)
+    } catch {
+      setBackfill({ error: 'Backfill request failed' })
+    } finally {
+      setBackfilling(false)
     }
   }
 
@@ -110,9 +127,12 @@ export default function WhoopConnectCard() {
             </div>
           </div>
           <div className="integration-info">
-            <p>Connected to the WHOOP API v2. Run the probe to pull raw JSON — nothing is written and nothing maps to Daily data yet.</p>
+            <p>Connected to the WHOOP API v2. Backfill pulls your full history into whoop_data. The probe returns raw JSON for inspection and writes nothing.</p>
             <div className="strava-actions">
-              <button type="button" className="btn btn-primary" onClick={handleProbe} disabled={probing}>
+              <button type="button" className="btn btn-primary" onClick={handleBackfill} disabled={backfilling}>
+                {backfilling ? 'Backfilling…' : 'Backfill from WHOOP'}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={handleProbe} disabled={probing}>
                 {probing ? 'Running probe…' : 'Run probe'}
               </button>
               {probe ? (
@@ -127,6 +147,20 @@ export default function WhoopConnectCard() {
                 <span className="upload-result error">Probe failed — {probeError}</span>
               ) : null}
             </div>
+
+            {backfill ? (
+              backfill.error ? (
+                <div className="whoop-probe-counts">Backfill failed — {backfill.error}</div>
+              ) : (
+                <div className="whoop-probe-counts">
+                  Backfilled {backfill.upserted} dates
+                  {backfill.dateRange ? ` (${backfill.dateRange[0]} … ${backfill.dateRange[1]})` : ''}
+                  {' · fetched '}{backfill.fetched?.recoveries} recovery / {backfill.fetched?.sleeps} sleep / {backfill.fetched?.cycles} cycle
+                  {backfill.skippedNoSleep ? ` · ${backfill.skippedNoSleep} recovery skipped (no sleep)` : ''}
+                  {backfill.skippedNap ? ` · ${backfill.skippedNap} nap skipped` : ''}
+                </div>
+              )
+            ) : null}
 
             {probe ? (
               <div className="whoop-probe">
