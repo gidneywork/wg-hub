@@ -1,5 +1,8 @@
 import './globals.css'
 import '../design/cadence-tokens.css'
+// CadenceDialog portals into <body>, outside the component tree — its styles
+// must load globally, not via a component's CSS chunk. See cadence-dialog.css.
+import '../components/cadence/cadence-dialog.css'
 
 export const metadata = {
   title: 'Cadence — Dashboard',

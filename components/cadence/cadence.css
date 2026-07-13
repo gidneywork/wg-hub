@@ -4258,55 +4258,9 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 /* ─── CadenceDialog ─────────────────────────────────────────────────── */
-.cadence-dialog-backdrop[data-cadence] {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: cadenceDialogFade 140ms var(--ease);
-}
-[data-cadence] .cadence-dialog {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 28px 32px;
-  max-width: 400px;
-  width: calc(100vw - 48px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
-  animation: cadenceDialogSlide 140ms var(--ease);
-}
-[data-cadence] .cadence-dialog-title {
-  font-family: var(--serif);
-  font-size: var(--type-18);
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-[data-cadence] .cadence-dialog-body {
-  font-size: var(--type-13);
-  color: var(--text-muted);
-  margin-bottom: 22px;
-  line-height: 1.5;
-}
-[data-cadence] .cadence-dialog-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-[data-cadence] .cadence-dialog-actions-left  { display: flex; align-items: center; }
-[data-cadence] .cadence-dialog-actions-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-@keyframes cadenceDialogFade {
-  from { opacity: 0 }
-  to   { opacity: 1 }
-}
-@keyframes cadenceDialogSlide {
-  from { opacity: 0; transform: translateY(-6px) }
-  to   { opacity: 1; transform: translateY(0) }
-}
+/* CadenceDialog rules moved to the global components/cadence/cadence-dialog.css
+ * (imported in app/layout.js). The dialog portals into <body>, outside this
+ * component-scoped stylesheet's reach — see that file's header. */
 
 /* ─── CadencePanel ─────────────────────────────────────────────────── */
 [data-cadence] .cadence-panel {
@@ -4340,36 +4294,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   to   { opacity: 1; transform: translateY(0) }
 }
 
-/* Edit form — inside CadenceDialog body */
-[data-cadence] .cadence-dialog .edit-form { display: flex; flex-direction: column; gap: var(--space-3); }
-[data-cadence] .cadence-dialog .edit-label {
-  display: block;
-  font-family: var(--mono);
-  font-size: var(--type-meta);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-meta);
-  color: var(--text-muted);
-  margin-bottom: var(--space-1);
-}
-[data-cadence] .cadence-dialog .edit-input,
-[data-cadence] .cadence-dialog .edit-select,
-[data-cadence] .cadence-dialog .edit-textarea {
-  width: 100%;
-  padding: 9px 12px;
-  background: var(--bg-paper);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-family: var(--sans);
-  font-size: var(--type-13);
-  color: var(--text);
-  outline: none;
-  transition: border-color var(--t-ui) var(--ease);
-}
-[data-cadence] .cadence-dialog .edit-input:focus,
-[data-cadence] .cadence-dialog .edit-select:focus,
-[data-cadence] .cadence-dialog .edit-textarea:focus { border-color: var(--moss); }
-[data-cadence] .cadence-dialog .edit-input::placeholder,
-[data-cadence] .cadence-dialog .edit-textarea::placeholder { color: var(--text-faint); }
+/* Edit-form-in-dialog rules moved to global cadence-dialog.css (see above). */
 [data-cadence] .cadence-dialog .edit-textarea { resize: vertical; }
 [data-cadence] .cadence-dialog .edit-select {
   appearance: none;
