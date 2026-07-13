@@ -1341,6 +1341,195 @@ function WeekStrip({ weekStart, today, sessions, holidaysByDate, onEmptyDay, onS
   )
 }
 
+// ── Year calendar ──────────────────────────────────────────────────────────────
+
+const MINI_DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Monday-first
+
+// Weeks (Mon-first) of a month; each cell is { iso, day } or null padding.
+function monthMatrix(year, month) {
+  const firstDow     = (new Date(year, month, 1).getDay() + 6) % 7 // Mon=0
+  const daysInMonth  = new Date(year, month + 1, 0).getDate()
+  const cells = []
+  for (let i = 0; i < firstDow; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    cells.push({ iso, day: d })
+  }
+  while (cells.length % 7 !== 0) cells.push(null)
+  const weeks = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+  return weeks
+}
+
+function MiniMonth({ year, month, today, eventsByDate, holidaysByDate, selectedDate, onSelectDay }) {
+  const weeks     = monthMatrix(year, month)
+  const monthName = new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'long' })
+
+  return (
+    <div className="mini-month">
+      <div className="mini-month-name">{monthName}</div>
+      <div className="mini-week mini-week-head">
+        {MINI_DOW.map((w, i) => <span key={i} className="mini-dow">{w}</span>)}
+      </div>
+      {weeks.map((week, wi) => (
+        <div key={wi} className="mini-week">
+          {week.map((cell, ci) => {
+            if (!cell) return <span key={ci} className="mini-day empty" />
+            const hasEvent  = (eventsByDate[cell.iso] || []).length > 0
+            const isHoliday = (holidaysByDate[cell.iso] || []).length > 0
+            const cls = ['mini-day',
+              cell.iso === today && 'today',
+              ci >= 5 && 'weekend',
+              isHoliday && 'holiday',
+              cell.iso === selectedDate && 'selected',
+            ].filter(Boolean).join(' ')
+            return (
+              <button key={ci} type="button" className={cls} onClick={() => onSelectDay(cell.iso)}>
+                <span className="mini-day-num">{cell.day}</span>
+                <span className="mini-day-dots">
+                  {hasEvent && <span className="mini-dot event" />}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function YearCalendar({ holidaysByDate }) {
+  const [year,         setYear        ] = useState(() => new Date().getFullYear())
+  const [events,       setEvents      ] = useState([])
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [eventForm,    setEventForm   ] = useState(null) // { date, event }
+
+  const today = localIso()
+
+  const refreshEvents = useCallback(async () => {
+    setEvents(await db.loadEventsInRange(`${year}-01-01`, `${year}-12-31`))
+  }, [year])
+
+  useEffect(() => { refreshEvents() }, [refreshEvents])
+
+  // Expand each event across the days it covers within this year.
+  const eventsByDate = useMemo(() => {
+    const map = {}
+    const yStr = String(year)
+    events.forEach(ev => {
+      const end = new Date(ev.end_date + 'T00:00:00')
+      for (let d = new Date(ev.start_date + 'T00:00:00'); d <= end; d.setDate(d.getDate() + 1)) {
+        const iso = localIso(d)
+        if (iso.slice(0, 4) === yStr) (map[iso] ||= []).push(ev)
+      }
+    })
+    return map
+  }, [events, year])
+
+  async function handleSaveEvent(fields) {
+    try {
+      if (eventForm?.event) await db.updateEvent(eventForm.event.id, fields)
+      else                  await db.createEvent(fields)
+      setEventForm(null)
+      await refreshEvents()
+    } catch (e) {
+      console.error('save event failed:', e)
+    }
+  }
+
+  async function handleDeleteEvent(id) {
+    try {
+      await db.deleteEvent(id)
+      setEventForm(null)
+      await refreshEvents()
+    } catch (e) {
+      console.error('delete event failed:', e)
+    }
+  }
+
+  function selectDay(iso) {
+    setEventForm(null)
+    setSelectedDate(prev => prev === iso ? null : iso)
+  }
+
+  const selEvents   = selectedDate ? (eventsByDate[selectedDate] || []) : []
+  const selHolidays = selectedDate ? (holidaysByDate[selectedDate] || []) : []
+  const detailDate  = selectedDate
+    ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
+  return (
+    <section className="planner-year r r-5">
+      <div className="planner-year-head">
+        <div className="planner-year-nav">
+          <button type="button" className="planner-nav-btn" onClick={() => setYear(y => y - 1)} aria-label="Previous year">‹</button>
+          <span className="planner-year-label">{year}</span>
+          <button type="button" className="planner-nav-btn" onClick={() => setYear(y => y + 1)} aria-label="Next year">›</button>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={() => setYear(new Date().getFullYear())}>This year</button>
+      </div>
+
+      <div className="planner-year-grid">
+        {Array.from({ length: 12 }, (_, m) => (
+          <MiniMonth
+            key={m}
+            year={year}
+            month={m}
+            today={today}
+            eventsByDate={eventsByDate}
+            holidaysByDate={holidaysByDate}
+            selectedDate={selectedDate}
+            onSelectDay={selectDay}
+          />
+        ))}
+      </div>
+
+      {selectedDate && (
+        <div className="planner-year-detail">
+          <div className="planner-year-detail-head">
+            <span className="planner-year-detail-date">{detailDate}</span>
+            <button
+              type="button"
+              className="planner-close-btn"
+              onClick={() => { setSelectedDate(null); setEventForm(null) }}
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          {selHolidays.map((title, i) => (
+            <div key={`h${i}`} className="cal-holiday">{title}</div>
+          ))}
+
+          {selEvents.map(ev => (
+            <button key={ev.id} type="button" className="cal-event" onClick={() => setEventForm({ date: selectedDate, event: ev })}>
+              {!ev.all_day && ev.start_time && <span className="cal-event-time">{ev.start_time.slice(0, 5)}</span>}
+              <span className="cal-event-title">{ev.title}</span>
+            </button>
+          ))}
+
+          {eventForm ? (
+            <EventForm
+              date={eventForm.date}
+              initial={eventForm.event}
+              onSave={handleSaveEvent}
+              onDelete={handleDeleteEvent}
+              onCancel={() => setEventForm(null)}
+            />
+          ) : (
+            <button type="button" className="year-add" onClick={() => setEventForm({ date: selectedDate, event: null })}>
+              + add event
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 // ── Planner (root) ─────────────────────────────────────────────────────────────
 
 export default function Planner({ logs, saveLog }) {
@@ -1464,6 +1653,9 @@ export default function Planner({ logs, saveLog }) {
 
       {/* r-4 — to-dos */}
       <TodosSection weekStart={weekStart} today={today} />
+
+      {/* r-5 — year calendar */}
+      <YearCalendar holidaysByDate={holidaysByDate} />
 
       {/* Schedule modal */}
       {scheduleModalDate && (
