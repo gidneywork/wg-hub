@@ -377,6 +377,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const [expanded,  setExpanded]  = useState(() => new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']))
   const [localPlan, setLocalPlan] = useState(plan)
   const [saveFlash, setSaveFlash] = useState(false)
+  const [monthOffset, setMonthOffset] = useState(0) // months from the current month
 
   useEffect(() => { setLocalPlan(plan) }, [plan])
 
@@ -472,11 +473,13 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const yogaCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'yoga')).length
   const sessionTotal = currentWeek.reduce((n, day) => n + day.sessions.length, 0)
 
-  // Month calendar — current month, read-only, cells coloured by the same
+  // Month calendar — navigable month, read-only, cells coloured by the same
   // session-type pips as the weekly plan (pipClass gives 't-run' → 'run').
-  const curYear  = today.getFullYear()
-  const curMonth = today.getMonth()
-  const monthTodayIso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const calBase   = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1)
+  const calYear   = calBase.getFullYear()
+  const calMonth  = calBase.getMonth()
+  const monthLabel = calBase.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  const monthTodayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const monthCell = (iso) => {
     const d = new Date(iso + 'T00:00:00')
     const week = getCurrentWeek(plan, d)
@@ -652,9 +655,14 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         <section className="section training-month r r-4">
           <div className="section-head">
             <h2>Calendar</h2>
+            <div className="training-month-nav">
+              <button type="button" className="planner-nav-btn" onClick={() => setMonthOffset(o => o - 1)} aria-label="Previous month">‹</button>
+              <span className="training-month-label">{monthLabel}</span>
+              <button type="button" className="planner-nav-btn" onClick={() => setMonthOffset(o => o + 1)} aria-label="Next month">›</button>
+            </div>
           </div>
           <div className="training-month-grid">
-            <MonthGrid year={curYear} month={curMonth} today={monthTodayIso} getCell={monthCell} />
+            <MonthGrid year={calYear} month={calMonth} today={monthTodayIso} getCell={monthCell} />
           </div>
         </section>
       )}
