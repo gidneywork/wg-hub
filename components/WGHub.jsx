@@ -22,6 +22,7 @@ import CadenceTraining from './cadence/Training'
 import CadenceBiomarkers from './cadence/Biomarkers'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 import { apiFetch, startConnect } from '../lib/api'
+import { dlog } from './cadence/CadenceDialog'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -195,6 +196,9 @@ export default function WGHub({ onSignOut }) {
   const [userProfile,      setUserProfile     ] = useState(null)
   const [assistantConfig,  setAssistantConfig ] = useState(null)
   const [onboardingDone,   setOnboardingDone  ] = useState(null) // null=loading, false=show onboarding, true=done
+
+  dlog('WGHub render; view=', view, 'ready=', ready, 'onboardingDone=', onboardingDone)
+  useEffect(() => { dlog('WGHub MOUNT'); return () => dlog('WGHub UNMOUNT') }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

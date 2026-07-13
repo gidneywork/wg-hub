@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { db } from '../../../lib/db'
-import CadenceDialog from '../CadenceDialog'
+import CadenceDialog, { dlog } from '../CadenceDialog'
 import { timeAgo } from './settingsHelpers'
 import { apiFetch, startConnect } from '../../../lib/api'
 
@@ -17,13 +17,26 @@ import { apiFetch, startConnect } from '../../../lib/api'
 export default function WhoopConnectCard() {
   // undefined = loading, null = not connected, object = connected
   const [connection,    setConnection]    = useState(undefined)
-  const [confirmOpen,   setConfirmOpen]   = useState(false)
+  const [confirmOpen,   _setConfirmOpen]  = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [probing,       setProbing]       = useState(false)
   const [probe,         setProbe]         = useState(null)
   const [probeError,    setProbeError]    = useState(null)
   const [backfilling,   setBackfilling]   = useState(false)
   const [backfill,      setBackfill]      = useState(null)
+
+  // Instrumented setter — logs every explicit confirmOpen change WITH the
+  // caller's stack. A REMOUNT resets confirmOpen to false WITHOUT going through
+  // here, so "dialog vanished + no setConfirmOpen(false) log + an UNMOUNT log"
+  // means remount; "vanished + setConfirmOpen(false) log" means something closed
+  // it. (TEMPORARY — flip DIALOG_DEBUG in CadenceDialog.jsx to silence.)
+  const setConfirmOpen = (v) => { dlog(`WhoopConnectCard setConfirmOpen(${v})\n${new Error().stack}`); _setConfirmOpen(v) }
+
+  dlog('WhoopConnectCard render; confirmOpen=', confirmOpen, 'connection=', connection === undefined ? 'loading' : (connection ? 'obj' : 'null'))
+  useEffect(() => {
+    dlog('WhoopConnectCard MOUNT')
+    return () => dlog('WhoopConnectCard UNMOUNT')
+  }, [])
 
   const loadConnection = async () => setConnection(await db.loadWhoopConnection())
   useEffect(() => { loadConnection() }, [])

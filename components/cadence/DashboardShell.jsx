@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import './cadence.css'
 import Sidebar from './Sidebar'
+import { dlog } from './CadenceDialog'
 
 /**
  * Cadence app shell — sidebar + main content slot.
@@ -13,6 +15,7 @@ import Sidebar from './Sidebar'
  * do not override the Cadence token set.
  */
 export default function DashboardShell({ view, setView, userName, userMeta, onSignOut, onThemeToggle, children }) {
+  useEffect(() => { dlog('DashboardShell MOUNT'); return () => dlog('DashboardShell UNMOUNT') }, [])
   return (
     <div data-cadence>
       <div className="shell">
