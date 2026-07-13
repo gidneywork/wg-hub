@@ -201,6 +201,8 @@ export default function Daily({
 
       <SleepScheduleSection
         form={form}
+        date={date}
+        logs={logs}
         onField={onField}
       />
 

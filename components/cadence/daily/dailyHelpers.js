@@ -158,6 +158,10 @@ export function loadFormFromLog(log, whoop) {
     base.sleep.sleepScore    = fill(base.sleep.sleepScore,    whoop.sleep_score)
     base.sleep.recoveryScore = fill(base.sleep.recoveryScore, whoop.recovery_score)
     base.sleep.hoursSlept    = fill(base.sleep.hoursSlept,    whoop.hours_slept, false)
+    // bed_time / wake_time are "HH:MM" strings — round MUST be false
+    // (Math.round("23:08") is NaN), same as hoursSlept above.
+    base.schedule.bedtime  = fill(base.schedule.bedtime,  whoop.bed_time,  false)
+    base.schedule.wakeTime = fill(base.schedule.wakeTime, whoop.wake_time, false)
   }
   return base
 }

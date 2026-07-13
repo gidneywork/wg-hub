@@ -7,10 +7,17 @@ function fmtDuration({ hours, minutes }) {
   return `${hours}h ${minutes}m`
 }
 
-export default function SleepScheduleSection({ form, onField }) {
+export default function SleepScheduleSection({ form, date, logs, onField }) {
   const bedtime  = form?.schedule?.bedtime  ?? null
   const wakeTime = form?.schedule?.wakeTime ?? null
   const dur = computeSleepDuration(bedtime, wakeTime)
+
+  // Source attribution, same rule as BodySection's calories pill: the value
+  // came from Whoop when the log itself didn't own it but the form now has one.
+  const rawBed  = logs?.[date]?.schedule?.bedtime
+  const rawWake = logs?.[date]?.schedule?.wakeTime
+  const bedFromWhoop  = (rawBed  == null || rawBed  === '') && bedtime  != null && bedtime  !== ''
+  const wakeFromWhoop = (rawWake == null || rawWake === '') && wakeTime != null && wakeTime !== ''
 
   return (
     <section className="section r r-6">
@@ -28,6 +35,7 @@ export default function SleepScheduleSection({ form, onField }) {
             value={bedtime ?? ''}
             onChange={e => onField('schedule', 'bedtime', e.target.value || null)}
           />
+          {bedFromWhoop ? <div className="field-source-pill">From Whoop</div> : null}
         </div>
 
         <div className="schedule-card">
@@ -38,6 +46,7 @@ export default function SleepScheduleSection({ form, onField }) {
             value={wakeTime ?? ''}
             onChange={e => onField('schedule', 'wakeTime', e.target.value || null)}
           />
+          {wakeFromWhoop ? <div className="field-source-pill">From Whoop</div> : null}
         </div>
 
       </div>
