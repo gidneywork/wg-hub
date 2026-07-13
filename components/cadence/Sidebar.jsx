@@ -24,37 +24,6 @@ const NAV_HEALTH = [
   ) },
 ]
 
-const NAV_FINANCE = [
-  { view: 'finance-dashboard', label: 'Dashboard', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>
-  ) },
-  { view: 'finance-accounts', label: 'Accounts', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="6" width="20" height="14" rx="2"/>
-      <path d="M2 10h20"/>
-    </svg>
-  ) },
-  { view: 'finance-bills', label: 'Cashflow', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 2h16v16l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5V2"/>
-      <path d="M9 7h6M9 11h6M9 15h4"/>
-    </svg>
-  ) },
-  { view: 'finance-debt', label: 'Holdings', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <path d="M14.5 9.5a3 3 0 0 0-5 2.1c0 2.4 5 3.4 5 5.9a3 3 0 0 1-5 .5"/>
-      <line x1="12" y1="6" x2="12" y2="8"/>
-      <line x1="12" y1="16" x2="12" y2="18"/>
-    </svg>
-  ) },
-  { view: 'finance-rules', label: 'Rules', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/>
-    </svg>
-  ) },
-]
-
 const NAV_PRODUCTIVITY = [
   { view: 'planner', label: 'Planner', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -182,7 +151,6 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
       <NavGroup eyebrow="Today"        items={NAV_TODAY}        view={view} setView={setView} />
       <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness"      defaultOpen />
       <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health"       defaultOpen />
-      <NavGroup eyebrow="Finance"      items={NAV_FINANCE}      view={view} setView={setView} collapsible storageKey="cadence-nav-finance"      defaultOpen />
       <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" defaultOpen />
       <NavGroup eyebrow="Analyse"      items={NAV_ANALYSE}      view={view} setView={setView} collapsible storageKey="cadence-nav-analyse"      defaultOpen />
       <NavGroup eyebrow="Assistant"    items={NAV_ASSISTANT}    view={view} setView={setView} collapsible storageKey="cadence-nav-assistant"    defaultOpen />

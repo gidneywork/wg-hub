@@ -20,12 +20,6 @@ import CadencePlanner from './cadence/Planner'
 import CadenceJournal from './cadence/Journal'
 import CadenceTraining from './cadence/Training'
 import CadenceBiomarkers from './cadence/Biomarkers'
-import CadenceFinanceAccounts from './cadence/FinanceAccounts'
-import CadenceFinanceBills from './cadence/FinanceBills'
-import CadenceFinanceRules from './cadence/FinanceRules'
-import FinanceAccountSummary from './cadence/FinanceAccountSummary'
-import FinanceDashboard from './cadence/FinanceDashboard'
-import FinanceDebt from './cadence/FinanceDebt'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
@@ -309,7 +303,7 @@ export default function WGHub({ onSignOut }) {
     }
   }
 
-  const LEGACY_VIEWS = ['finance']
+  const LEGACY_VIEWS = []
   const isLegacy = LEGACY_VIEWS.includes(view)
 
   // Show onboarding if user_profile row is absent (first login).
@@ -330,13 +324,6 @@ export default function WGHub({ onSignOut }) {
         setView={setView}
       />
     )
-  }
-
-  function renderFinanceAccount(v) {
-    const parts     = v.split(':')
-    const accountId = parts[1]
-    const activeTab = parts[2] || 'overview'
-    return <FinanceAccountSummary accountId={accountId} activeTab={activeTab} onViewChange={setView} />
   }
 
   return (
@@ -395,23 +382,11 @@ export default function WGHub({ onSignOut }) {
         <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
       ) : view === 'biomarkers' ? (
         <CadenceBiomarkers />
-      ) : view === 'finance-dashboard' ? (
-        <FinanceDashboard onViewChange={setView} />
-      ) : view === 'finance-accounts' ? (
-        <CadenceFinanceAccounts onViewChange={setView} />
-      ) : view === 'finance-bills' ? (
-        <CadenceFinanceBills />
-      ) : view === 'finance-debt' ? (
-        <FinanceDebt />
-      ) : view === 'finance-rules' ? (
-        <CadenceFinanceRules />
-      ) : view.startsWith('finance-account:') ? renderFinanceAccount(view)
-      : isLegacy ? (
+      ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>
           {view==='plan'    ? <TrainingPlan plan={plan} savePlan={savePlan}/>
            :view==='planner' ? <PlannerPage/>
-           :view==='finance' ? <FinancePage/>
            :                   <TVMode logs={logs} settings={settings} plan={plan} activities={activities} whoopData={whoopData} setView={setView}/>
           }
         </div>
@@ -1787,29 +1762,6 @@ function PlannerPage() {
   )
 }
 
-// ─── FINANCE PAGE ──────────────────────────────────────────────────────────────
-function FinancePage() {
-  return (
-    <div style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}} className='fade'>
-      <h1 style={{fontFamily:'var(--font-head)',fontSize:38,letterSpacing:2,lineHeight:1,marginBottom:8}}>FINANCE <span style={{color:'var(--accent)'}}>TRACKER</span></h1>
-      <p style={{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--muted)',letterSpacing:1,marginBottom:32}}>Savings, investments and money tracking — coming soon.</p>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
-        {[
-          {title:'SAVINGS',     icon:'💰', desc:'Track savings goals, monthly contributions and progress towards targets.',    color:'var(--accent)'},
-          {title:'INVESTMENTS', icon:'📈', desc:'Monitor portfolio performance, asset allocation and growth over time.',       color:'var(--blue)'},
-          {title:'BUDGET',      icon:'📊', desc:'Monthly income vs expenditure, category breakdown and spending trends.',     color:'var(--orange)'},
-        ].map(({title,icon,desc,color})=>(
-          <div key={title} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',padding:'28px 24px',display:'flex',flexDirection:'column',gap:14}}>
-            <div style={{fontSize:32}}>{icon}</div>
-            <div style={{fontFamily:'var(--font-head)',fontSize:26,color,letterSpacing:1}}>{title}</div>
-            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>{desc}</div>
-            <div style={{marginTop:'auto',fontFamily:'var(--font-mono)',fontSize:10,color:'var(--muted2)',letterSpacing:1,borderTop:'1px solid var(--border)',paddingTop:14}}>COMING SOON</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 function SaveBtn({saved,saving,onClick,large}){
   const label = saving ? 'SAVING...' : saved ? '✓ SAVED' : 'SAVE'
   return <button onClick={onClick} disabled={saving} style={{background:saved||saving?'transparent':'var(--accent)',color:saved?'var(--accent)':saving?'var(--muted)':'#07090f',border:saved?'1px solid var(--accent)':saving?'1px solid var(--border)':'1px solid transparent',borderRadius:8,padding:large?'12px 40px':'10px 22px',fontFamily:'var(--font-mono)',fontSize:large?13:12,fontWeight:600,cursor:saving?'default':'pointer',letterSpacing:1,transition:'all 0.2s',minWidth:large?200:120}}>{label}</button>
