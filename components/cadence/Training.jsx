@@ -7,6 +7,7 @@ import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek } from '..
 const TYPE_LABEL = {
   run: 'Running', swim: 'Swimming', cycle: 'Cycling', hike: 'Hiking',
   gym: 'Gym', strength: 'Strength', functional: 'Functional',
+  climbing: 'Climbing',
   yoga: 'Yoga', stretch: 'Stretching', rest: 'Rest day', custom: 'Custom',
 }
 
@@ -14,6 +15,7 @@ function pipClass(type) {
   if (['run', 'swim', 'cycle', 'hike'].includes(type)) return 't-run'
   if (['gym', 'strength'].includes(type)) return 't-gym'
   if (type === 'functional') return 't-functional'
+  if (type === 'climbing') return 't-climb'
   if (['yoga', 'stretch'].includes(type)) return 't-yoga'
   return 't-rest'
 }
@@ -24,6 +26,7 @@ const SESSION_TYPES = [
   { key: 'run',        label: 'Running' },
   { key: 'functional', label: 'Functional' },
   { key: 'gym',        label: 'Gym' },
+  { key: 'climbing',   label: 'Climbing' },
   { key: 'yoga',       label: 'Yoga' },
   { key: 'rest',       label: 'Rest day' },
   { key: 'swim',       label: 'Swimming' },

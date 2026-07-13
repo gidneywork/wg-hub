@@ -599,6 +599,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .day-meta .pip.run { background: var(--moss); }
 [data-cadence] .day-meta .pip.strength { background: var(--clay); }
 [data-cadence] .day-meta .pip.recovery { background: var(--slate); }
+[data-cadence] .day-meta .pip.climb { background: var(--sand); }
 [data-cadence] .day-meta .pip.rest { background: var(--border-strong); }
 
 /* Sections */

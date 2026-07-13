@@ -13,6 +13,7 @@ const PIP_BY_TYPE = {
   gym: 'strength',
   functional: 'strength',
   strength: 'strength',
+  climbing: 'climb',
   yoga: 'recovery',
   stretch: 'recovery',
   recovery: 'recovery',

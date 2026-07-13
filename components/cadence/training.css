@@ -157,7 +157,8 @@
 /* Training-specific pip colours */
 [data-cadence] .pip.t-run        { background: var(--moss); }
 [data-cadence] .pip.t-gym        { background: var(--slate); }
-[data-cadence] .pip.t-functional { background: var(--sand); }
+[data-cadence] .pip.t-functional { background: var(--d5); }
+[data-cadence] .pip.t-climb      { background: var(--sand); }
 [data-cadence] .pip.t-yoga       { background: var(--moss-soft); }
 [data-cadence] .pip.t-rest       { background: var(--text-faint); }
 
@@ -180,7 +181,8 @@
 [data-cadence] .t-day-session[data-type="hike"]       { border-left-color: var(--moss); }
 [data-cadence] .t-day-session[data-type="gym"],
 [data-cadence] .t-day-session[data-type="strength"]   { border-left-color: var(--slate); }
-[data-cadence] .t-day-session[data-type="functional"] { border-left-color: var(--sand); }
+[data-cadence] .t-day-session[data-type="functional"] { border-left-color: var(--d5); }
+[data-cadence] .t-day-session[data-type="climbing"]   { border-left-color: var(--sand); }
 [data-cadence] .t-day-session[data-type="yoga"],
 [data-cadence] .t-day-session[data-type="stretch"]    { border-left-color: var(--moss-soft); }
 [data-cadence] .t-day-session[data-type="rest"],

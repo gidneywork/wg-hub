@@ -548,6 +548,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   function sessionPipClass(type) {
     if (type === 'run') return 'run'
     if (['gym', 'functional', 'strength'].includes(type)) return 'strength'
+    if (type === 'climbing') return 'climb'
     return 'recovery'
   }
 
