@@ -20,7 +20,7 @@ async function upsertBatch(activities) {
         id:          a.id,
         data:        a,
         start_date:  a.start_date,
-        strava_type: resolveStravaType(a.sport_type, a.type, a.name),
+        strava_type: resolveStravaType(a.sport_type, a.type),
         synced_at:   new Date().toISOString(),
       }))
     )
