@@ -42,51 +42,6 @@ function StatusPill({ status }) {
   return <span className={`planner-status-pill ${status}`}>{status}</span>
 }
 
-// ── Day card ───────────────────────────────────────────────────────────────────
-
-function DayCard({ date, session, isToday, isExpanded, onEmpty, onSession }) {
-  const d       = new Date(date + 'T00:00:00')
-  const dayName = DAY_ABBR[d.getDay()]
-  const dayNum  = d.getDate()
-
-  const cls = ['planner-day', isToday && 'today', isExpanded && 'expanded']
-    .filter(Boolean).join(' ')
-
-  return (
-    <div
-      className={cls}
-      onClick={() => session ? onSession(date) : onEmpty(date)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          session ? onSession(date) : onEmpty(date)
-        }
-      }}
-    >
-      <div className="planner-day-head">
-        <span className="planner-day-name">{dayName}</span>
-        <span className="planner-day-num">{dayNum}</span>
-      </div>
-
-      {session ? (
-        <div className="planner-day-body">
-          <div className="planner-day-session-name">{session.template_name}</div>
-          <div className="planner-day-meta">
-            <span className="planner-day-lift-count">
-              {session.lifts?.length ?? 0} lift{session.lifts?.length !== 1 ? 's' : ''}
-            </span>
-            <StatusPill status={session.status} />
-          </div>
-        </div>
-      ) : (
-        <div className="planner-day-empty" aria-label="Add session">+</div>
-      )}
-    </div>
-  )
-}
-
 // ── Session detail (read-only) ─────────────────────────────────────────────────
 
 function SessionDetail({ session, onStartSession, onSkip, onClose }) {
@@ -1090,6 +1045,302 @@ function TodosSection({ weekStart, today }) {
   )
 }
 
+// ── Event form (expand-in-place — mirrors TodoExpandedEdit) ────────────────────
+
+function EventForm({ date, initial, onSave, onDelete, onCancel }) {
+  const [title,      setTitle     ] = useState(initial?.title || '')
+  const [notes,      setNotes     ] = useState(initial?.notes || '')
+  const [allDay,     setAllDay    ] = useState(initial ? initial.all_day : true)
+  const [startDate,  setStartDate ] = useState(initial?.start_date || date)
+  const [endDate,    setEndDate   ] = useState(initial?.end_date || date)
+  const [startTime,  setStartTime ] = useState(initial?.start_time?.slice(0, 5) || '')
+  const [endTime,    setEndTime   ] = useState(initial?.end_time?.slice(0, 5) || '')
+  const [confirmDel, setConfirmDel] = useState(false)
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onCancel() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onCancel])
+
+  const canSave = title.trim().length > 0 && startDate && endDate && endDate >= startDate
+
+  const handleSave = () => onSave({
+    title:      title.trim(),
+    notes:      notes.trim() || null,
+    all_day:    allDay,
+    start_date: startDate,
+    end_date:   endDate || startDate,
+    start_time: allDay ? null : (startTime || null),
+    end_time:   allDay ? null : (endTime || null),
+  })
+
+  if (confirmDel) {
+    return (
+      <div className="event-form" onClick={e => e.stopPropagation()}>
+        <div className="todo-del-confirm">
+          <p className="todo-del-warn">Delete this event? This cannot be undone.</p>
+          <div className="todo-del-actions">
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(initial.id)}>Delete</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setConfirmDel(false)}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="event-form" onClick={e => e.stopPropagation()}>
+      <div className="event-form-field">
+        <label className="todo-edit-label">Title</label>
+        <input
+          type="text"
+          className="todo-add-input"
+          value={title}
+          autoFocus
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave() }}
+        />
+      </div>
+      <div className="event-form-field">
+        <label className="todo-edit-label">Notes</label>
+        <textarea
+          className="todo-add-input"
+          rows={2}
+          placeholder="Optional note"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+        />
+      </div>
+      <label className="event-form-allday">
+        <input type="checkbox" checked={allDay} onChange={e => setAllDay(e.target.checked)} />
+        <span>All day</span>
+      </label>
+      <div className="event-form-dates">
+        <div className="event-form-date">
+          <label className="todo-edit-label">Start</label>
+          <input type="date" className="todo-add-input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+        </div>
+        <div className="event-form-date">
+          <label className="todo-edit-label">End</label>
+          <input type="date" className="todo-add-input" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
+        </div>
+      </div>
+      {!allDay && (
+        <div className="event-form-dates">
+          <div className="event-form-date">
+            <label className="todo-edit-label">From</label>
+            <input type="time" className="todo-add-input" value={startTime} onChange={e => setStartTime(e.target.value)} />
+          </div>
+          <div className="event-form-date">
+            <label className="todo-edit-label">To</label>
+            <input type="time" className="todo-add-input" value={endTime} onChange={e => setEndTime(e.target.value)} />
+          </div>
+        </div>
+      )}
+      <div className="event-form-actions">
+        {initial
+          ? <button type="button" className="todo-del-trigger" onClick={() => setConfirmDel(true)}>Delete</button>
+          : <span />}
+        <div className="event-form-save-cancel">
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          <button type="button" className="btn btn-primary" disabled={!canSave} onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Week strip day row (holiday + events · session · to-dos) ────────────────────
+
+function DayRow({
+  date, isToday, session, holidays, events, pending, completed,
+  onScheduleSession, onOpenSession, onAddEvent, onEditEvent, onCompleteTodo, form,
+}) {
+  const d       = new Date(date + 'T00:00:00')
+  const dayName = DAY_ABBR[d.getDay()]
+  const dayNum  = d.getDate()
+  const hasCal  = holidays.length > 0 || events.length > 0
+  const hasTodos = pending.length > 0 || completed.length > 0
+
+  return (
+    <div className={`planner-day-row${isToday ? ' today' : ''}`}>
+      <div className="planner-day-gutter">
+        <span className="planner-day-row-name">{dayName}</span>
+        <span className="planner-day-row-num">{dayNum}</span>
+        {isToday && <span className="planner-day-row-today">Today</span>}
+      </div>
+
+      <div className="planner-day-content">
+        {!form && (
+          <button type="button" className="cal-add" onClick={onAddEvent}>+ add</button>
+        )}
+
+        {hasCal && (
+          <div className="planner-band">
+            {holidays.map((title, i) => (
+              <span key={`h${i}`} className="cal-holiday" title={title}>{title}</span>
+            ))}
+            {events.map(ev => (
+              <button key={ev.id} type="button" className="cal-event" onClick={() => onEditEvent(ev)}>
+                {!ev.all_day && ev.start_time && (
+                  <span className="cal-event-time">{ev.start_time.slice(0, 5)}</span>
+                )}
+                <span className="cal-event-title">{ev.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="planner-band">
+          {session ? (
+            <button type="button" className="cal-session" onClick={onOpenSession}>
+              <span className="cal-session-name">{session.template_name}</span>
+              <span className="cal-session-meta">
+                {session.lifts?.length ?? 0} exercise{session.lifts?.length !== 1 ? 's' : ''}
+              </span>
+              <StatusPill status={session.status} />
+            </button>
+          ) : (
+            <button type="button" className="cal-session-add" onClick={onScheduleSession}>
+              + Schedule session
+            </button>
+          )}
+        </div>
+
+        {hasTodos && (
+          <div className="planner-band">
+            {pending.map(todo => (
+              <span key={todo.id} className="cal-todo">
+                <button
+                  type="button"
+                  className="todo-check"
+                  aria-label={`Complete: ${todo.title}`}
+                  onClick={() => onCompleteTodo(todo)}
+                />
+                <span className="cal-todo-title">{todo.title}</span>
+              </span>
+            ))}
+            {completed.map(todo => (
+              <span key={todo.id} className="cal-todo done">
+                <span className="todo-check checked" aria-hidden="true" />
+                <span className="cal-todo-title">{todo.title}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {form}
+      </div>
+    </div>
+  )
+}
+
+// ── Week strip (events + to-dos glance + holidays over the shipped sessions) ────
+
+function WeekStrip({ weekStart, today, sessions, holidaysByDate, onEmptyDay, onSessionDay }) {
+  const [events,      setEvents     ] = useState([])
+  const [todos,       setTodos      ] = useState([])
+  const [completions, setCompletions] = useState([])
+  const [eventForm,   setEventForm  ] = useState(null) // { date, event }
+
+  const dates    = useMemo(() => buildWeekDates(weekStart), [weekStart])
+  const startIso = dates[0]
+  const endIso   = dates[6]
+
+  const refreshEvents = useCallback(async () => {
+    setEvents(await db.loadEventsInRange(startIso, endIso))
+  }, [startIso, endIso])
+
+  useEffect(() => { refreshEvents() }, [refreshEvents])
+
+  useEffect(() => {
+    Promise.all([db.listTodos(), db.listTodoCompletions()]).then(([t, c]) => {
+      setTodos(t)
+      setCompletions(c)
+    })
+  }, [])
+
+  // Events overlapping each date (single- and multi-day, via the range).
+  const eventsByDate = useMemo(() => {
+    const map = {}
+    dates.forEach(d => { map[d] = [] })
+    events.forEach(ev => {
+      dates.forEach(d => { if (ev.start_date <= d && ev.end_date >= d) map[d].push(ev) })
+    })
+    return map
+  }, [events, dates])
+
+  async function handleCompleteTodo(todo, date) {
+    setCompletions(prev => [...prev, { todo_id: todo.id, completion_date: date }])
+    try {
+      await db.completeTodo(todo.id, date)
+    } catch (e) {
+      console.error('completeTodo failed:', e)
+      setCompletions(prev => prev.filter(c => !(c.todo_id === todo.id && c.completion_date === date)))
+    }
+  }
+
+  async function handleSaveEvent(fields) {
+    try {
+      if (eventForm?.event) await db.updateEvent(eventForm.event.id, fields)
+      else                  await db.createEvent(fields)
+      setEventForm(null)
+      await refreshEvents()
+    } catch (e) {
+      console.error('save event failed:', e)
+    }
+  }
+
+  async function handleDeleteEvent(id) {
+    try {
+      await db.deleteEvent(id)
+      setEventForm(null)
+      await refreshEvents()
+    } catch (e) {
+      console.error('delete event failed:', e)
+    }
+  }
+
+  return (
+    <section className="planner-week-strip r r-2">
+      {dates.map(date => {
+        const session   = sessions.find(s => s.scheduled_date === date) ?? null
+        const holidays  = holidaysByDate[date] || []
+        const dayEvents = eventsByDate[date] || []
+        const { pending, completed } = filterTodosForDate(todos, completions, date)
+        const formHere  = eventForm && eventForm.date === date
+        return (
+          <DayRow
+            key={date}
+            date={date}
+            isToday={date === today}
+            session={session}
+            holidays={holidays}
+            events={dayEvents}
+            pending={pending}
+            completed={completed}
+            onScheduleSession={() => onEmptyDay(date)}
+            onOpenSession={() => onSessionDay(date)}
+            onAddEvent={() => setEventForm({ date, event: null })}
+            onEditEvent={ev => setEventForm({ date, event: ev })}
+            onCompleteTodo={todo => handleCompleteTodo(todo, date)}
+            form={formHere ? (
+              <EventForm
+                date={date}
+                initial={eventForm.event}
+                onSave={handleSaveEvent}
+                onDelete={handleDeleteEvent}
+                onCancel={() => setEventForm(null)}
+              />
+            ) : null}
+          />
+        )
+      })}
+    </section>
+  )
+}
+
 // ── Planner (root) ─────────────────────────────────────────────────────────────
 
 export default function Planner({ logs, saveLog }) {
@@ -1099,6 +1350,7 @@ export default function Planner({ logs, saveLog }) {
   const [scheduleModalDate,setScheduleModalDate] = useState(null)
   const [templatesModal,   setTemplatesModal  ] = useState(false)
   const [executingSession, setExecutingSession] = useState(null)
+  const [holidaysByDate,   setHolidaysByDate  ] = useState({})
 
   const dates   = buildWeekDates(weekStart)
   const endDate = dates[6]
@@ -1110,6 +1362,18 @@ export default function Planner({ logs, saveLog }) {
   }, [weekStart, endDate])
 
   useEffect(() => { refreshSessions() }, [refreshSessions])
+
+  // UK public holidays — fetched once, keyed by date. Degrades to none.
+  useEffect(() => {
+    fetch('/api/holidays')
+      .then(r => r.json())
+      .then(({ events }) => {
+        const map = {}
+        ;(events || []).forEach(h => { (map[h.date] ||= []).push(h.title) })
+        setHolidaysByDate(map)
+      })
+      .catch(() => setHolidaysByDate({}))
+  }, [])
 
   function prevWeek() {
     setWeekStart(w => shiftWeek(w, -1))
@@ -1171,24 +1435,14 @@ export default function Planner({ logs, saveLog }) {
       </header>
 
       {/* r-2 — week strip */}
-      <section className="planner-week r r-2">
-        <div className="planner-grid">
-          {dates.map(date => {
-            const session = sessions.find(s => s.scheduled_date === date) ?? null
-            return (
-              <DayCard
-                key={date}
-                date={date}
-                session={session}
-                isToday={date === today}
-                isExpanded={expandedDate === date}
-                onEmpty={handleEmptyDay}
-                onSession={handleSessionDay}
-              />
-            )
-          })}
-        </div>
-      </section>
+      <WeekStrip
+        weekStart={weekStart}
+        today={today}
+        sessions={sessions}
+        holidaysByDate={holidaysByDate}
+        onEmptyDay={handleEmptyDay}
+        onSessionDay={handleSessionDay}
+      />
 
       {/* r-3 — expanded detail or execution form */}
       {executingSession ? (

@@ -6013,3 +6013,186 @@ html::-webkit-scrollbar-track { background: transparent; }
   margin: 0;
 }
 
+/* ── Planner — week strip rows (PR-001) ─────────────────────────────────────── */
+[data-cadence] .planner-week-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+[data-cadence] .planner-day-row {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+[data-cadence] .planner-day-row.today {
+  border-color: var(--moss);
+  background: var(--moss-glow);
+}
+
+[data-cadence] .planner-day-gutter {
+  flex: 0 0 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+[data-cadence] .planner-day-row-name {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+[data-cadence] .planner-day-row-num {
+  font-family: var(--mono);
+  font-size: var(--type-body-sm);
+  color: var(--text);
+}
+[data-cadence] .planner-day-row.today .planner-day-row-name,
+[data-cadence] .planner-day-row.today .planner-day-row-num { color: var(--moss-deep); }
+[data-cadence] .planner-day-row-today {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--moss-deep);
+  margin-top: 2px;
+}
+
+[data-cadence] .planner-day-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: 48px;
+}
+
+[data-cadence] .planner-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+}
+
+/* Band 1 — holidays + events */
+[data-cadence] .cal-holiday,
+[data-cadence] .cal-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--type-body-sm);
+}
+[data-cadence] .cal-holiday::before,
+[data-cadence] .cal-event::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+[data-cadence] .cal-holiday { color: var(--text-muted); }
+[data-cadence] .cal-holiday::before { background: var(--sand); }
+[data-cadence] .cal-event {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  padding: 2px 6px 2px 2px;
+  border-radius: var(--radius-sm);
+}
+[data-cadence] .cal-event::before { background: var(--slate); }
+[data-cadence] .cal-event:hover { background: var(--bg-elevated); }
+[data-cadence] .cal-event-time {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+}
+
+/* Band 2 — session (shipped surface; behaviour unchanged) */
+[data-cadence] .cal-session,
+[data-cadence] .cal-session-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+[data-cadence] .cal-session:hover,
+[data-cadence] .cal-session-add:hover { background: var(--bg-elevated); }
+[data-cadence] .cal-session-name { font-weight: 500; }
+[data-cadence] .cal-session-meta { font-size: var(--type-caption); color: var(--text-muted); }
+[data-cadence] .cal-session-add { color: var(--text-muted); }
+
+/* Band 3 — to-dos (interactive glance) */
+[data-cadence] .cal-todo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--type-body-sm);
+}
+[data-cadence] .cal-todo.done .cal-todo-title {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+
+/* Trailing add */
+[data-cadence] .cal-add {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-faint);
+}
+[data-cadence] .cal-add:hover { color: var(--text); }
+
+/* Inline event form (expand-in-place) */
+[data-cadence] .event-form {
+  width: 100%;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+[data-cadence] .event-form-field { display: flex; flex-direction: column; gap: var(--space-1); }
+[data-cadence] .event-form-allday {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-sm);
+  color: var(--text-soft);
+}
+[data-cadence] .event-form-dates { display: flex; gap: var(--space-3); }
+[data-cadence] .event-form-date { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); }
+[data-cadence] .event-form-actions { display: flex; align-items: center; justify-content: space-between; }
+[data-cadence] .event-form-save-cancel { display: flex; gap: var(--space-2); }
+
+/* Narrow — gutter folds above, block stacks, no horizontal scroll */
+@media (max-width: 640px) {
+  [data-cadence] .planner-day-row { flex-direction: column; gap: var(--space-2); }
+  [data-cadence] .planner-day-gutter {
+    flex: none;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  [data-cadence] .planner-day-content { padding-right: 0; }
+  [data-cadence] .cal-add { position: static; align-self: flex-start; margin-top: var(--space-1); }
+}
+
