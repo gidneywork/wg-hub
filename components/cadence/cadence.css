@@ -2367,6 +2367,13 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+[data-cadence] .settings-page .integration-stat-note {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
 [data-cadence] .settings-page .integration-info p {
   font-size: var(--type-13);
   color: var(--text-soft);

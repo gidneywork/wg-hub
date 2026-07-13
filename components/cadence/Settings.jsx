@@ -115,6 +115,8 @@ export default function Settings({
 
       <StravaCard
         stravaConnection={stravaConnection}
+        shownCount={activities?.length ?? 0}
+        hiddenCount={Math.max(0, (stravaConnection?.activity_count ?? 0) - (activities?.length ?? 0))}
         onDisconnect={handleDisconnect}
         onSynced={handleSynced}
       />
