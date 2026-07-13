@@ -1254,6 +1254,9 @@ function WeekStrip({ weekStart, today, sessions, holidaysByDate, onEmptyDay, onS
 
   useEffect(() => { refreshEvents() }, [refreshEvents])
 
+  // Live-sync events across the week strip and year calendar.
+  useEffect(() => db.subscribeToEvents(() => { refreshEvents() }), [refreshEvents])
+
   useEffect(() => {
     Promise.all([db.listTodos(), db.listTodoCompletions()]).then(([t, c]) => {
       setTodos(t)
@@ -1411,6 +1414,9 @@ function YearCalendar({ holidaysByDate }) {
   }, [year])
 
   useEffect(() => { refreshEvents() }, [refreshEvents])
+
+  // Live-sync events across the week strip and year calendar.
+  useEffect(() => db.subscribeToEvents(() => { refreshEvents() }), [refreshEvents])
 
   // Expand each event across the days it covers within this year.
   const eventsByDate = useMemo(() => {
