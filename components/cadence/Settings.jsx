@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { db } from '../../lib/db'
 import { apiFetch } from '../../lib/api'
-import { dlog } from './CadenceDialog'
 import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import AboutYouSection from './settings/AboutYouSection'
@@ -42,9 +41,6 @@ export default function Settings({
   saveUserProfile,
 }) {
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(settings)))
-
-  dlog('Settings render')
-  useEffect(() => { dlog('Settings MOUNT'); return () => dlog('Settings UNMOUNT') }, [])
 
   // Audit-log version bump — any action that writes to audit_log
   // (target save, Whoop upload) increments this so the activity log

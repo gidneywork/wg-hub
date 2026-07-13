@@ -3,17 +3,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-// ── TEMPORARY diagnostic instrumentation (flip to false or revert to remove) ──
-// Answers the one question that splits the bug in two: when the dialog vanishes,
-// did a component UNMOUNT, or did onCancel FIRE? Every log is timestamped; the
-// onCancel and confirmOpen logs carry a stack trace so the trigger is named.
-export const DIALOG_DEBUG = true
-export function dlog(...args) {
-  if (!DIALOG_DEBUG || typeof window === 'undefined') return
-  // eslint-disable-next-line no-console
-  console.log(`[DLGDBG ${performance.now().toFixed(1)}]`, ...args)
-}
-
 export default function CadenceDialog({
   open,
   title,
@@ -27,51 +16,19 @@ export default function CadenceDialog({
   onConfirm,
   onCancel,
 }) {
-  dlog('CadenceDialog render; open=', open)
-
-  // Component lifecycle. CadenceDialog is mounted for as long as its parent
-  // renders it (it returns null while closed), so this UNMOUNT firing is a
-  // strong signal the PARENT tore the card down.
-  useEffect(() => {
-    dlog('CadenceDialog MOUNT')
-    return () => dlog('CadenceDialog UNMOUNT')
-  }, [])
-
-  // Every path that dismisses routes through here, so we log who called it.
-  const cancel = (e, source) => {
-    dlog(`CadenceDialog onCancel FIRED via ${source}\n${new Error().stack}`)
-    onCancel?.(e)
-  }
-
+  // Outside-dismiss fires on the backdrop's mousedown (below), NOT on click.
+  // This is what makes the dialog immune to the interaction that opened it: the
+  // opening mousedown landed on the trigger button BEFORE this backdrop existed,
+  // so the backdrop can never receive it. A genuine dismiss needs a fresh
+  // mousedown that lands on the backdrop. No timers, no mount-delay gate, no
+  // render-order race — the earlier setTimeout/readyToRender machinery guarded a
+  // race that cannot occur once dismissal is mousedown-based, so it is gone.
   useEffect(() => {
     if (!open) return
-    const handler = (e) => { if (e.key === 'Escape') cancel(e, 'escape') }
+    const handler = (e) => { if (e.key === 'Escape') onCancel?.() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, onCancel]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Environment events during the dialog's open window — the vanish happens
-  // here, so we watch focus/visibility churn and any error thrown while open.
-  useEffect(() => {
-    if (!open || !DIALOG_DEBUG) return
-    const onBlur   = () => dlog('window blur')
-    const onFocus  = () => dlog('window focus')
-    const onVis    = () => dlog('visibilitychange ->', document.visibilityState)
-    const onErr    = (e) => dlog('window ERROR while open:', e.message, `\n${e.error?.stack ?? ''}`)
-    const onRej    = (e) => dlog('unhandledrejection while open:', String(e.reason))
-    window.addEventListener('blur', onBlur)
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', onVis)
-    window.addEventListener('error', onErr)
-    window.addEventListener('unhandledrejection', onRej)
-    return () => {
-      window.removeEventListener('blur', onBlur)
-      window.removeEventListener('focus', onFocus)
-      document.removeEventListener('visibilitychange', onVis)
-      window.removeEventListener('error', onErr)
-      window.removeEventListener('unhandledrejection', onRej)
-    }
-  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 
@@ -79,7 +36,7 @@ export default function CadenceDialog({
     <div
       className="cadence-dialog-backdrop"
       data-cadence=""
-      onMouseDown={(e) => cancel(e, 'backdrop mousedown')}
+      onMouseDown={onCancel}
     >
       <div
         className={`cadence-dialog${dialogClass ? ` ${dialogClass}` : ''}`}
@@ -95,7 +52,7 @@ export default function CadenceDialog({
             {footerExtra && <div className="cadence-dialog-actions-left">{footerExtra}</div>}
             <div className="cadence-dialog-actions-right">
               {cancelLabel && (
-                <button type="button" className="btn btn-ghost" onClick={(e) => cancel(e, 'cancel button')}>
+                <button type="button" className="btn btn-ghost" onClick={onCancel}>
                   {cancelLabel}
                 </button>
               )}

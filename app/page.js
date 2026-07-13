@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import WGHub from '../components/WGHub'
-import { dlog } from '../components/cadence/CadenceDialog'
 import '../components/cadence/login.css'
 
 // ─── Login Screen ─────────────────────────────────────────────────────────────
@@ -151,11 +150,9 @@ export default function Page() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      dlog('Page getSession ->', session ? 'session' : 'NULL')
       setSession(session)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      dlog('Page onAuthStateChange event=', _event, '->', session ? 'session' : 'NULL')
       setSession(session)
     })
     return () => subscription.unsubscribe()
