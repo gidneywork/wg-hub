@@ -1,4 +1,5 @@
 import { getValidWhoopToken, WHOOP_API_BASE } from '../../../../lib/whoop'
+import { resolveUserId } from '../../../../lib/auth-server'
 
 // One page per resource. WHOOP's collection max is limit=25; for the
 // roughly-one-per-day resources that is about 25 days — well over the 7-day
@@ -27,10 +28,13 @@ const COLLECTIONS = [
 //     from a nap record.
 //   - Recovery and sleep records may be unscored: record.score_state can be
 //     'PENDING_SCORE' or 'UNSCORABLE', in which case record.score is null.
-export async function GET() {
+export async function GET(request) {
+  const userId = await resolveUserId(request)
+  if (!userId) return Response.json({ error: 'Not signed in' }, { status: 401 })
+
   let accessToken
   try {
-    accessToken = await getValidWhoopToken()
+    accessToken = await getValidWhoopToken(userId)
   } catch {
     return Response.json({ error: 'WHOOP token error' }, { status: 500 })
   }

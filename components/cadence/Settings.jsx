@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { db } from '../../lib/db'
+import { apiFetch } from '../../lib/api'
 import PageHeader from './settings/PageHeader'
 import InfoBanner from './settings/InfoBanner'
 import AboutYouSection from './settings/AboutYouSection'
@@ -91,7 +92,7 @@ export default function Settings({
   }
 
   const handleDisconnect = async () => {
-    await fetch('/api/strava/disconnect', { method: 'POST' })
+    await apiFetch('/api/strava/disconnect', { method: 'POST' })
     await onStravaConnectionChange?.()
   }
 

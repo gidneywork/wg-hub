@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { db } from '../../../lib/db'
 import CadenceDialog from '../CadenceDialog'
 import { timeAgo } from './settingsHelpers'
+import { apiFetch, startConnect } from '../../../lib/api'
 
 /**
  * WHOOP API connection card (WH-001a).
@@ -36,7 +37,7 @@ export default function WhoopConnectCard() {
     setConfirmOpen(false)
     setDisconnecting(true)
     try {
-      await fetch('/api/whoop/disconnect', { method: 'POST' })
+      await apiFetch('/api/whoop/disconnect', { method: 'POST' })
       setProbe(null)
       setProbeError(null)
       await loadConnection()
@@ -50,7 +51,7 @@ export default function WhoopConnectCard() {
     setProbe(null)
     setProbeError(null)
     try {
-      const res  = await fetch('/api/whoop/probe')
+      const res  = await apiFetch('/api/whoop/probe')
       const data = await res.json()
       if (!res.ok || data.error) setProbeError(data.error || `Probe failed (${res.status})`)
       else setProbe(data)
@@ -65,7 +66,7 @@ export default function WhoopConnectCard() {
     setBackfilling(true)
     setBackfill(null)
     try {
-      const res  = await fetch('/api/whoop/backfill', { method: 'POST' })
+      const res  = await apiFetch('/api/whoop/backfill', { method: 'POST' })
       const data = await res.json()
       if (!res.ok || data.error) setBackfill({ error: data.error || `Backfill failed (${res.status})` })
       else setBackfill(data)
@@ -179,9 +180,9 @@ export default function WhoopConnectCard() {
             <p className="integration-info-p">
               Authenticate with the WHOOP API v2 to probe recovery, sleep, cycle and workout data. This session only reads and displays raw JSON — nothing is written or mapped to Daily data.
             </p>
-            <a href="/api/whoop/connect" className="btn btn-primary connect-link">
+            <button type="button" onClick={() => startConnect('/api/whoop/connect')} className="btn btn-primary connect-link">
               Connect WHOOP
-            </a>
+            </button>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '../lib/db'
+import { apiFetch, startConnect } from '../lib/api'
 
 // ── Strava type → display label + colour
 const SESSION_TYPES = [
@@ -114,7 +115,7 @@ export default function WorkoutHistory({ stravaConnection, onStravaConnectionCha
     setSyncing(true)
     setSyncResult(null)
     try {
-      const res  = await fetch('/api/strava/sync', { method: 'POST' })
+      const res  = await apiFetch('/api/strava/sync', { method: 'POST' })
       const data = await res.json()
       if (data.error) { setSyncResult({ error: data.error }) }
       else {
@@ -214,11 +215,11 @@ export default function WorkoutHistory({ stravaConnection, onStravaConnectionCha
             </button>
           )}
           {!isConnected && (
-            <a href="/api/strava/connect" style={{
-              background: '#fc4c02', color: '#fff', textDecoration: 'none',
-              borderRadius: 8, padding: '10px 20px',
+            <button type="button" onClick={() => startConnect('/api/strava/connect')} style={{
+              background: '#fc4c02', color: '#fff', textDecoration: 'none', border: 'none',
+              borderRadius: 8, padding: '10px 20px', cursor: 'pointer',
               fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, letterSpacing: 1,
-            }}>🔗 CONNECT STRAVA</a>
+            }}>🔗 CONNECT STRAVA</button>
           )}
           <button onClick={() => setManualOpen(true)} style={{
             background: 'var(--s2)', color: 'var(--text)',

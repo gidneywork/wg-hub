@@ -5,6 +5,7 @@ import {
   fmtRelativeAgo,
   activitySummary,
 } from './dailyHelpers'
+import { apiFetch } from '../../../lib/api'
 
 /**
  * Synced section — Strava activity tile.
@@ -36,7 +37,7 @@ export default function SyncedTiles({
   const handleSync = async () => {
     setSyncState('syncing')
     try {
-      const res = await fetch('/api/strava/sync', { method: 'POST' })
+      const res = await apiFetch('/api/strava/sync', { method: 'POST' })
       const data = await res.json()
       if (data.error) {
         setSyncState('error')

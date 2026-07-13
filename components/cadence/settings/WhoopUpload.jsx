@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { db } from '../../../lib/db'
+import { apiFetch } from '../../../lib/api'
 
 const FILE_SLOTS = [
   { key: 'physiological_cycles', label: 'physiological_cycles.csv', desc: 'Recovery, HRV, RHR, strain' },
@@ -49,7 +50,7 @@ export default function WhoopUpload({ onAuditWritten }) {
     try {
       const fd = new FormData()
       Object.entries(files).forEach(([k, f]) => fd.append(k, f))
-      const res = await fetch('/api/whoop/upload', { method: 'POST', body: fd })
+      const res = await apiFetch('/api/whoop/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.error) {
         setResult({ error: data.error })

@@ -1,13 +1,15 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
 import { getValidToken, updateSyncMeta, resolveStravaType } from '../../../../lib/strava'
+import { resolveUserId } from '../../../../lib/auth-server'
 
-async function upsertBatch(activities) {
+async function upsertBatch(activities, userId) {
   if (!activities.length) return 0
 
   const ids = activities.map(a => a.id)
   const { data: existing } = await supabaseServer
     .from('strava_activities')
     .select('id')
+    .eq('user_id', userId)
     .in('id', ids)
 
   const existingIds = new Set((existing || []).map(r => Number(r.id)))
@@ -17,6 +19,7 @@ async function upsertBatch(activities) {
   if (newOnes.length) {
     await supabaseServer.from('strava_activities').insert(
       newOnes.map(a => ({
+        user_id:     userId,
         id:          a.id,
         data:        a,
         start_date:  a.start_date,
@@ -36,15 +39,19 @@ async function upsertBatch(activities) {
   return newOnes.length
 }
 
-export async function POST() {
+export async function POST(request) {
   try {
-    const accessToken = await getValidToken()
+    const userId = await resolveUserId(request)
+    if (!userId) return Response.json({ error: 'Not signed in' }, { status: 401 })
+
+    const accessToken = await getValidToken(userId)
     if (!accessToken) return Response.json({ error: 'Strava not connected' }, { status: 401 })
 
     const { data: connRow } = await supabaseServer
       .from('app_settings')
       .select('value')
       .eq('key', 'strava_connection')
+      .eq('user_id', userId)
       .maybeSingle()
 
     const lastSync = connRow?.value?.last_synced_at
@@ -67,12 +74,13 @@ export async function POST() {
       page++
     }
 
-    const newCount = await upsertBatch(allActivities)
-    await updateSyncMeta()
+    const newCount = await upsertBatch(allActivities, userId)
+    await updateSyncMeta(userId)
 
     const { count } = await supabaseServer
       .from('strava_activities')
       .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
 
     // Write audit log — always, regardless of newCount, so the
     // activity log shows that a sync ran even when nothing new came
@@ -82,6 +90,7 @@ export async function POST() {
       : `No new activities · ${count} total`
 
     await supabaseServer.from('audit_log').insert({
+      user_id:    userId,
       event_type: 'strava_sync',
       title:      newCount > 0 ? `Strava: synced ${newCount} activit${newCount === 1 ? 'y' : 'ies'}` : 'Strava: nothing new',
       detail,

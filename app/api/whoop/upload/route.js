@@ -1,4 +1,5 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
+import { resolveUserId } from '../../../../lib/auth-server'
 
 // ── Parse CSV text into array of objects ──────────────────────────────────────
 function parseCSV(text) {
@@ -44,6 +45,9 @@ const toNum   = (v)    => v && v !== '' ? parseFloat(v) : null
 // ── POST /api/whoop/upload ────────────────────────────────────────────────────
 export async function POST(request) {
   try {
+    const userId = await resolveUserId(request)
+    if (!userId) return Response.json({ error: 'Not signed in' }, { status: 401 })
+
     const formData = await request.formData()
 
     // Accept any combination of the 4 Whoop CSV files
@@ -116,11 +120,11 @@ export async function POST(request) {
       return Response.json({ error: 'No valid data found in uploaded files' }, { status: 400 })
     }
 
-    // ── Upsert all days into whoop_data ───────────────────────────────────────
-    const rows = Object.values(dayMap).filter(d => d.date)
+    // ── Upsert all days into whoop_data (stamped to this user, FC-075a) ───────
+    const rows = Object.values(dayMap).filter(d => d.date).map(d => ({ ...d, user_id: userId }))
     const { error: upsertError } = await supabaseServer
       .from('whoop_data')
-      .upsert(rows, { onConflict: 'date' })
+      .upsert(rows, { onConflict: 'user_id,date' })
 
     if (upsertError) throw upsertError
 
@@ -130,6 +134,7 @@ export async function POST(request) {
     const latest      = datesSorted[datesSorted.length - 1]
 
     await supabaseServer.from('audit_log').insert({
+      user_id:    userId,
       event_type: 'whoop_upload',
       title:      `Whoop: ${rows.length} days imported`,
       detail:     `${earliest} → ${latest}`,

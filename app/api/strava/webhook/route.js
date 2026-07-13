@@ -1,5 +1,6 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
 import { getValidToken, upsertSingleActivity, updateSyncMeta } from '../../../../lib/strava'
+import { resolveUserByStravaAthlete } from '../../../../lib/auth-server'
 
 // ── GET — Strava one-time verification handshake ─────────────────────────────
 // When you register a webhook, Strava immediately hits this endpoint with a
@@ -33,9 +34,18 @@ export async function POST(request) {
 
     const { aspect_type, object_id: activityId } = event
 
+    // Map the Strava athlete (owner_id) to a Cadence user (FC-075a). No match →
+    // drop the event and log it. NEVER fall back to a default user: a second
+    // athlete's activity must not land in someone else's history.
+    const userId = await resolveUserByStravaAthlete(event.owner_id)
+    if (!userId) {
+      console.warn(`Strava webhook: no user for owner_id ${event.owner_id} — event dropped`)
+      return Response.json({ received: true })
+    }
+
     if (aspect_type === 'create' || aspect_type === 'update') {
       // Get a valid access token (auto-refreshes if expired)
-      const accessToken = await getValidToken()
+      const accessToken = await getValidToken(userId)
 
       if (accessToken) {
         // Fetch the full activity detail from Strava
@@ -46,8 +56,8 @@ export async function POST(request) {
 
         if (res.ok) {
           const activity = await res.json()
-          await upsertSingleActivity(activity)
-          await updateSyncMeta()
+          await upsertSingleActivity(activity, userId)
+          await updateSyncMeta(userId)
 
           // Audit write — only on `create` events, never on `update` or
           // `delete`, to avoid log spam from re-sync churn. Failures are
@@ -57,6 +67,7 @@ export async function POST(request) {
               const distanceKm = activity.distance ? activity.distance / 1000 : null
               const distanceLabel = distanceKm != null ? `${distanceKm.toFixed(1)}km` : '—'
               await supabaseServer.from('audit_log').insert({
+                user_id:    userId,
                 event_type: 'strava_sync',
                 title:      `Strava: ${activity.name}`,
                 detail:     `${activity.name} · ${distanceLabel}`,
@@ -79,13 +90,14 @@ export async function POST(request) {
       }
 
     } else if (aspect_type === 'delete') {
-      // Remove the activity from our database
+      // Remove the activity from this user's data
       await supabaseServer
         .from('strava_activities')
         .delete()
+        .eq('user_id', userId)
         .eq('id', activityId)
 
-      await updateSyncMeta()
+      await updateSyncMeta(userId)
       console.log(`Webhook: deleted activity ${activityId}`)
     }
 

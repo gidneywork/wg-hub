@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { getValidWhoopToken } from '../../../../lib/whoop'
 import { ingestWindow } from '../../../../lib/whoop-ingest'
+import { resolveUserByWhoopUser } from '../../../../lib/auth-server'
 
 // POST /api/whoop/webhook
 //
@@ -52,9 +53,17 @@ export async function POST(request) {
   // are acknowledged and ignored (Strava owns workouts; delete semantics are
   // out of scope for WH-001b).
   if (type === 'recovery.updated' || type === 'sleep.updated') {
+    // Map the WHOOP user to a Cadence user (FC-075a). No match → drop and log;
+    // never fall back to a default user. (Will's connection gains whoop_user_id
+    // on his next WHOOP reconnect; manual backfill covers the gap meanwhile.)
+    const userId = await resolveUserByWhoopUser(payload?.user_id)
+    if (!userId) {
+      console.warn(`WHOOP webhook: no user for whoop user_id ${payload?.user_id} — event dropped`)
+      return new Response('ok (no user)', { status: 200 })
+    }
     try {
-      const token = await getValidWhoopToken()
-      if (token) await ingestWindow(token, 7)
+      const token = await getValidWhoopToken(userId)
+      if (token) await ingestWindow(token, userId, 7)
     } catch {
       // Acknowledge receipt regardless — the windowed re-ingest is self-healing
       // (the next event or a manual backfill reconciles). Returning non-2xx

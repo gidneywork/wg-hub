@@ -372,7 +372,15 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
 
   useEffect(() => { setLocalPlan(plan) }, [plan])
 
-  if (!plan) return null
+  // No plan yet (new user, or plan cleared) — empty state, not a broken
+  // calendar. The builder that fills this is FC-035. (FC-075a empty-plan guard.)
+  if (!plan) {
+    return (
+      <div className="cadence-empty">
+        No plan yet. Your training plan will appear here once it&rsquo;s built.
+      </div>
+    )
+  }
 
   const today       = new Date()
   const todayName   = today.toLocaleDateString('en-US', { weekday: 'long' })

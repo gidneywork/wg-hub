@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { timeAgo } from './settingsHelpers'
 import CadenceDialog from '../CadenceDialog'
+import { apiFetch, startConnect } from '../../../lib/api'
 
 /**
  * Strava integration card.
@@ -32,7 +33,7 @@ export default function StravaCard({ stravaConnection, shownCount = null, hidden
     setSyncing(true)
     setSyncResult(null)
     try {
-      const res = await fetch('/api/strava/sync', { method: 'POST' })
+      const res = await apiFetch('/api/strava/sync', { method: 'POST' })
       const data = await res.json()
       if (data.error) {
         setSyncResult({ error: data.error })
@@ -134,12 +135,13 @@ export default function StravaCard({ stravaConnection, shownCount = null, hidden
             <p className="integration-info-p">
               Sync all your activities automatically. Activities appear in the History page where you can rename them, change their type, and add notes. Your Strava data is never modified.
             </p>
-            <a
-              href="/api/strava/connect"
+            <button
+              type="button"
+              onClick={() => startConnect('/api/strava/connect')}
               className="btn btn-primary connect-link"
             >
               Connect Strava
-            </a>
+            </button>
           </div>
           <div className="integration-info">
             <div className="sync-list-eyebrow">What gets synced</div>

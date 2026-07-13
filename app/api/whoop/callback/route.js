@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '../../../../lib/supabase-server'
 import { saveWhoopTokens, WHOOP_API_BASE, WHOOP_TOKEN_URL } from '../../../../lib/whoop'
+import { userIdFromState } from '../../../../lib/auth-server'
 
 // GET /api/whoop/callback
 // OAuth redirect target. Validates the CSRF `state` against the cookie,
@@ -25,7 +26,11 @@ export async function GET(request) {
   } else if (!returnedState || !storedState || returnedState !== storedState) {
     // CSRF check failed — do not exchange the code.
     outcome = 'error'
+  } else if (!userIdFromState(returnedState)) {
+    // No user context in the state — fail closed. Never a default user.
+    outcome = 'error'
   } else {
+    const userId = userIdFromState(returnedState)
     try {
       const tokenRes = await fetch(WHOOP_TOKEN_URL, {
         method:  'POST',
@@ -44,25 +49,29 @@ export async function GET(request) {
       const tokenData = await tokenRes.json()
       if (!tokenData.access_token) throw new Error('token exchange returned no access token')
 
-      await saveWhoopTokens(tokenData)
+      await saveWhoopTokens(tokenData, null, userId)
 
       // Non-secret connection info for the Settings card. The display name
-      // comes from read:profile; a failure here is cosmetic, not fatal.
-      const connection = { connected_at: new Date().toISOString(), last_probe_at: null }
+      // comes from read:profile; a failure here is cosmetic, not fatal. The
+      // WHOOP user_id is NOT cosmetic — it is the key the webhook maps back to
+      // this Cadence user (FC-075a). Without it, this user's webhooks can't be
+      // routed and get dropped.
+      const connection = { connected_at: new Date().toISOString(), last_probe_at: null, whoop_user_id: null }
       try {
         const profRes = await fetch(`${WHOOP_API_BASE}/v2/user/profile/basic`, {
           headers: { Authorization: `Bearer ${tokenData.access_token}` },
         })
         if (profRes.ok) {
           const prof = await profRes.json()
-          connection.first_name = prof.first_name ?? null
-          connection.last_name  = prof.last_name  ?? null
+          connection.first_name    = prof.first_name ?? null
+          connection.last_name     = prof.last_name  ?? null
+          connection.whoop_user_id = prof.user_id ?? null
         }
-      } catch { /* name is cosmetic */ }
+      } catch { /* name is cosmetic; whoop_user_id best-effort here */ }
 
       await supabaseServer
         .from('app_settings')
-        .upsert({ key: 'whoop_connection', value: connection }, { onConflict: 'key' })
+        .upsert({ user_id: userId, key: 'whoop_connection', value: connection }, { onConflict: 'user_id,key' })
     } catch {
       // Static message only — no error object, which could echo token material.
       console.error('WHOOP callback: token exchange failed')

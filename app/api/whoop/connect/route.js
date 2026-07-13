@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server'
-import { randomBytes } from 'crypto'
 import { WHOOP_AUTH_URL, WHOOP_SCOPES } from '../../../../lib/whoop'
+import { resolveUserId, buildOAuthState } from '../../../../lib/auth-server'
 
 // GET /api/whoop/connect
-// Kicks off the WHOOP OAuth flow. Generates a CSRF `state`, stashes it in a
-// short-lived httpOnly cookie, and redirects to WHOOP's authorization URL.
-export async function GET() {
+// Called in-app with the session Bearer token (via apiFetch). Resolves the user,
+// mints a CSRF `state` that ALSO carries the user id (FC-075a), stashes it in a
+// short-lived httpOnly cookie, and returns WHOOP's authorization URL as JSON.
+// The client performs the redirect; the callback reads the user id from `state`.
+export async function GET(request) {
+  const userId = await resolveUserId(request)
+  if (!userId) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+
   const clientId    = process.env.WHOOP_CLIENT_ID
   const appUrl      = process.env.NEXT_PUBLIC_APP_URL
   const redirectUri = `${appUrl}/api/whoop/callback`
 
-  // 32 hex chars — comfortably above WHOOP's 8-character minimum.
-  const state = randomBytes(16).toString('hex')
+  // "<uuid>.<nonce>" — the nonce is the CSRF value (well above WHOOP's 8-char
+  // minimum); the uuid tells the callback whose connection this is.
+  const state = buildOAuthState(userId)
 
   const authUrl = `${WHOOP_AUTH_URL}?` + new URLSearchParams({
     client_id:     clientId,
@@ -21,7 +27,7 @@ export async function GET() {
     state,
   }).toString()
 
-  const res = NextResponse.redirect(authUrl)
+  const res = NextResponse.json({ url: authUrl })
   res.cookies.set('whoop_oauth_state', state, {
     httpOnly: true,
     secure:   true,

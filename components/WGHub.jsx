@@ -21,6 +21,7 @@ import CadenceJournal from './cadence/Journal'
 import CadenceTraining from './cadence/Training'
 import CadenceBiomarkers from './cadence/Biomarkers'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
+import { apiFetch, startConnect } from '../lib/api'
 
 // ─── SESSION TYPES ────────────────────────────────────────────────────────────
 const SESSION_TYPES = [
@@ -1380,7 +1381,7 @@ function SettingsPage({ settings, saveSettings, stravaConnection, onStravaConnec
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:14}}>
         {/* Strava connection */}
-        <StravaConnectionCard stravaConnection={stravaConnection} onDisconnect={async()=>{ await fetch('/api/strava/disconnect',{method:'POST'}); onStravaConnectionChange?.(); }}/>
+        <StravaConnectionCard stravaConnection={stravaConnection} onDisconnect={async()=>{ await apiFetch('/api/strava/disconnect',{method:'POST'}); onStravaConnectionChange?.(); }}/>
 
         {GROUPS.map(({title,accent,keys})=>(
           <div key={title} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',overflow:'hidden'}}>
@@ -1434,7 +1435,7 @@ function WhoopUploadCard() {
     try {
       const fd = new FormData()
       Object.entries(files).forEach(([k,f]) => fd.append(k, f))
-      const res  = await fetch('/api/whoop/upload', { method:'POST', body:fd })
+      const res  = await apiFetch('/api/whoop/upload', { method:'POST', body:fd })
       const data = await res.json()
       setResult(data.error ? { error: data.error } : { ok: true, message: data.message })
     } catch(e) { setResult({ error: e.message }) }
@@ -1717,12 +1718,12 @@ function StravaConnectionCard({ stravaConnection, onDisconnect }) {
               <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.65,marginBottom:16}}>
                 Sync all your activities automatically. Activities appear in the History page where you can rename them, change their type, and add notes. Your Strava data is never modified.
               </div>
-              <a href="/api/strava/connect" style={{
-                display:'inline-block',
+              <button type="button" onClick={() => startConnect('/api/strava/connect')} style={{
+                display:'inline-block',border:'none',cursor:'pointer',
                 background:'#fc4c02',color:'#fff',textDecoration:'none',
                 borderRadius:8,padding:'10px 24px',
                 fontFamily:'var(--font-mono)',fontSize:12,fontWeight:600,letterSpacing:1,
-              }}>🔗 CONNECT STRAVA</a>
+              }}>🔗 CONNECT STRAVA</button>
             </div>
             <div style={{background:'var(--s2)',borderRadius:'var(--r)',padding:'16px 20px'}}>
               <div style={{fontFamily:'var(--font-mono)',fontSize:10,color:'#fc4c02',letterSpacing:1,marginBottom:10}}>WHAT GETS SYNCED</div>
