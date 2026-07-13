@@ -697,6 +697,43 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .card-eyebrow .pip.scheduled { background: var(--border-strong); }
 [data-cadence] .card-eyebrow .pip.live { background: var(--moss); }
+
+/* Today's scheduled sessions — one equal row per session (FC-060) */
+[data-cadence] .today-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+[data-cadence] .today-session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+[data-cadence] .today-session .pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+[data-cadence] .today-session .pip.run      { background: var(--moss); }
+[data-cadence] .today-session .pip.strength { background: var(--clay); }
+[data-cadence] .today-session .pip.recovery { background: var(--slate); }
+[data-cadence] .today-session .pip.climb    { background: var(--sand); }
+[data-cadence] .today-session .pip.rest     { background: var(--border-strong); }
+[data-cadence] .today-session-title {
+  font-size: var(--type-body-sm);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-cadence] .today-session-empty {
+  font-size: var(--type-body-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+}
 [data-cadence] .card-title {
   font-family: var(--display);
   font-weight: 400;

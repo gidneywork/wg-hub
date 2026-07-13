@@ -1,7 +1,7 @@
 'use client'
 
 import { todayStr } from './helpers'
-import { getCurrentWeek, parseRunKm } from '../../lib/plan'
+import { getCurrentWeek } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
@@ -12,22 +12,13 @@ function yesterdayStr() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-// Mirror the WeekGrid parser, kept inline so the two stay independent
-// when their schemas diverge in a later session.
-function parseScheduledMeta(details) {
-  if (!details) return { duration: null, hr: null, distance: null }
-  const s = String(details)
-  const durMatch =
-    s.match(/\b(\d+:\d+(?:[–-]\d+(?::\d+)?)?(?:\s*hrs?)?)\b/i) ||
-    s.match(/\b(\d+(?:\.\d+)?\s*hrs?)\b/i) ||
-    s.match(/\b(\d+\s*(?:min|m))\b/i)
-  const hrMatch = s.match(/\b(\d{2,3}(?:[–-]\d{2,3})?)\s*bpm\b/i)
-  const km = parseRunKm(s)
-  return {
-    duration: durMatch ? durMatch[1].replace(/\s+/g, ' ').trim() : null,
-    hr: hrMatch ? hrMatch[1] : null,
-    distance: km != null ? `${km}km` : null,
-  }
+// Session-type → pip bucket (mirrors WeekGrid.PIP_BY_TYPE; token colours in CSS).
+const PIP_BY_TYPE = {
+  run: 'run', swim: 'run', cycle: 'run', hike: 'run',
+  gym: 'strength', functional: 'strength', strength: 'strength',
+  climbing: 'climb',
+  yoga: 'recovery', stretch: 'recovery', recovery: 'recovery', custom: 'recovery',
+  rest: 'rest',
 }
 
 function shortTitle(details, type) {
@@ -42,29 +33,28 @@ function shortTitle(details, type) {
 function ScheduledCard({ plan }) {
   const dow = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
   const planDay = getCurrentWeek(plan, new Date())?.[dow]
-  const session = planDay?.sessions?.[0]
-  const type = session?.type || 'custom'
-  const isRest = type === 'rest'
-  const title = shortTitle(session?.details, type)
-  const meta = parseScheduledMeta(session?.details)
-  const trainingDetail = session?.details && !isRest
-    ? String(session.details).trim()
-    : null
+  const sessions = planDay?.sessions || []
+  const onlyRest = sessions.length === 1 && sessions[0].type === 'rest'
 
   return (
     <div className="card">
       <div className="card-eyebrow">
         <span className="pip scheduled" />
-        Scheduled · {isRest ? 'recovery' : 'training'}
+        Scheduled · {onlyRest ? 'recovery' : 'training'}
       </div>
-      <div className="card-title">{title}</div>
-      <div className="card-meta">
-        <div className="item">Duration<strong>{meta.duration || '—'}</strong></div>
-        <div className="item">Target HR<strong>{meta.hr || '—'}</strong></div>
-        <div className="item">Distance<strong>{meta.distance || '—'}</strong></div>
-      </div>
-      {trainingDetail && trainingDetail !== title && (
-        <p className="card-note">{trainingDetail}</p>
+      {sessions.length === 0 ? (
+        <div className="today-session-empty">Nothing scheduled</div>
+      ) : onlyRest ? (
+        <div className="card-title">{shortTitle(sessions[0].details, 'rest')}</div>
+      ) : (
+        <div className="today-session-list">
+          {sessions.map(s => (
+            <div key={s.id} className="today-session">
+              <span className={`pip ${PIP_BY_TYPE[s.type] || 'recovery'}`} />
+              <span className="today-session-title">{shortTitle(s.details, s.type)}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
