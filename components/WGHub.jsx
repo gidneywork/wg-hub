@@ -335,7 +335,7 @@ export default function WGHub({ onSignOut }) {
       ) : view === 'dashboard' ? (
         <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} onOpenDate={d => { setLogDate(d); setView('log') }} userName={userProfile?.identity?.displayName ?? 'You'}/>
       ) : view === 'charts' ? (
-        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} userProfile={userProfile}/>
+        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} userProfile={userProfile}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection} logs={logs}/>
       ) : view === 'journal' ? (

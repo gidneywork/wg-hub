@@ -11,7 +11,7 @@ import {
   mean,
 } from './helpers'
 import { db } from '../../lib/db'
-import { computeAdherenceSeries } from './scheduledAnalytics'
+import { computeAdherence } from './scheduledAnalytics'
 import { computeBMR, ageFromBirthday, mostRecentWeightKg } from '../../lib/bmr'
 import CadenceDialog from './CadenceDialog'
 import './charts-page.css'
@@ -671,7 +671,7 @@ function StatTile({ label, val, unit, ctx }) {
 // ─── ANNOTATION FORM BLANK STATE ─────────────────────────────────────────────
 const BLANK_FORM = { kind: '', title: '', note: '', start_date: '', end_date: '' }
 
-export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {}, userProfile = null }) {
+export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {}, plan = null, userProfile = null }) {
   const [activeTab, setActiveTab] = useState('running')
   const [range,     setRange    ] = useState('6m')
   const [compare,   setCompare  ] = useState('target')
@@ -772,6 +772,13 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const stravaKmMap = useMemo(() => kmByDateMap(activities), [activities])
   const rangeDays   = RANGE_DAYS[range]
+
+  // Plan-vs-actual adherence — the plan is the single producer; actuals from
+  // logged activity. Computed once, feeding both the hero/tiles and the bars.
+  const adherenceData = useMemo(() => {
+    if (activeTab !== 'adherence') return null
+    return computeAdherence(plan, activities, logs, daysWindow(rangeDays ?? 730), localIso(new Date()))
+  }, [activeTab, rangeDays, plan, activities, logs])
 
   const runKm = useMemo(
     () => runningHero(logs, stravaKmMap, range),
@@ -988,54 +995,27 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
 
     if (activeTab === 'adherence') {
-      const n      = rangeDays ?? 365
-      const cutoff = rangeDays
-        ? localIso((() => { const d = new Date(); d.setDate(d.getDate() - n); return d })())
-        : null
-      const inRange   = cutoff ? adherenceSessions.filter(s => s.scheduled_date >= cutoff) : adherenceSessions
-      const today     = localIso(new Date())
-      const completed = inRange.filter(s => s.status === 'completed').length
-      const skipped   = inRange.filter(s => s.status === 'skipped').length
-      const missed    = inRange.filter(s => s.status === 'scheduled' && s.scheduled_date < today).length
-      const denom     = completed + skipped + missed
-      const pct       = denom > 0 ? Math.round(completed / denom * 100) : null
-
-      // Best streak — consecutive weeks with adherence >= 75%
-      const weekBuckets = {}
-      inRange.forEach(s => {
-        const wk = localIso(startOfWeek(new Date(s.scheduled_date + 'T00:00:00')))
-        if (!weekBuckets[wk]) weekBuckets[wk] = { c: 0, d: 0 }
-        if (s.status === 'completed') weekBuckets[wk].c++
-        else if (s.status === 'skipped' || (s.status === 'scheduled' && s.scheduled_date < today)) weekBuckets[wk].d++
-      })
-      let bestStreak = 0, cur = 0
-      Object.keys(weekBuckets).sort().forEach(wk => {
-        const { c, d } = weekBuckets[wk]
-        const wkDenom = c + d
-        const wkPct   = wkDenom > 0 ? Math.round(c / wkDenom * 100) : null
-        if (wkPct !== null && wkPct >= 75) { cur++; bestStreak = Math.max(bestStreak, cur) }
-        else cur = 0
-      })
-
+      const s   = adherenceData?.summary
+      const has = !!s && s.gradedDays > 0 && s.planned > 0
+      const pct = has ? s.pct : null
       return {
-        eyebrow: 'Adherence · % sessions completed',
+        eyebrow: 'Adherence · plan vs actual',
         heroStr: pct != null ? `${pct}%` : '—',
         unitStr: pct != null ? `% · ${rangeLabel(range)}` : '',
         delta:   null,
-        metaStr: denom > 0
-          ? `Across ${inRange.length} scheduled sessions`
-          : 'No sessions scheduled yet',
+        metaStr: has
+          ? `${s.matched} of ${s.planned} planned disciplines matched`
+          : 'Not enough plan history yet.',
         tiles: [
-          { label: 'Completed',   val: completed.toString(), unit: '', ctx: 'Sessions finished'       },
-          { label: 'Skipped',     val: skipped.toString(),   unit: '', ctx: 'User-skipped'            },
-          { label: 'Missed',      val: missed.toString(),    unit: '', ctx: 'Past, not actioned'      },
-          { label: 'Best streak', val: bestStreak > 0 ? bestStreak.toString() : '—', unit: '', ctx: 'Consecutive weeks ≥ 75%' },
+          { label: 'Matched',     val: has ? String(s.matched) : '—',              unit: '', ctx: 'Planned + logged same day' },
+          { label: 'Missed',      val: has ? String(s.planned - s.matched) : '—',  unit: '', ctx: 'Planned, not logged'       },
+          { label: 'Best streak', val: (s?.bestStreak ?? 0) > 0 ? String(s.bestStreak) : '—', unit: '', ctx: 'Consecutive weeks ≥ 75%' },
         ],
       }
     }
 
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings, adherenceSessions, rangeDays])
+  }, [activeTab, runKm, allMetrics, range, settings, adherenceData, rangeDays])
 
   // ── Annotations — merged user annotations + auto-detected PBs ──
   // User annotations: all tabs, date = start_date for marker placement
@@ -1097,19 +1077,13 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       return buildChartBars(allMetrics.calsIn.vals, days)
     }
     if (activeTab === 'adherence') {
-      const allWeeks = []
-      const seenWk   = new Set()
-      days.forEach(d => {
-        const wk = localIso(startOfWeek(new Date(d + 'T00:00:00')))
-        if (!seenWk.has(wk)) { seenWk.add(wk); allWeeks.push(wk) }
-      })
-      return computeAdherenceSeries(adherenceSessions, allWeeks, localIso(new Date()))
+      return adherenceData?.series ?? []
     }
     const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain' }[activeTab]
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
-  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, adherenceSessions])
+  }, [activeTab, rangeDays, logs, stravaKmMap, allMetrics, adherenceData])
 
   const calsBurnedBars = useMemo(() => {
     if (activeTab !== 'calories') return []
