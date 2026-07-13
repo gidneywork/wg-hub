@@ -6,6 +6,7 @@ import { listExercises, getExerciseByName } from '../../lib/exercises'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
 import CadenceDialog from './CadenceDialog'
+import MonthGrid from './MonthGrid'
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
@@ -1346,60 +1347,8 @@ function WeekStrip({ weekStart, today, sessions, holidaysByDate, onEmptyDay, onS
 
 // ── Year calendar ──────────────────────────────────────────────────────────────
 
-const MINI_DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Monday-first
-
-// Weeks (Mon-first) of a month; each cell is { iso, day } or null padding.
-function monthMatrix(year, month) {
-  const firstDow     = (new Date(year, month, 1).getDay() + 6) % 7 // Mon=0
-  const daysInMonth  = new Date(year, month + 1, 0).getDate()
-  const cells = []
-  for (let i = 0; i < firstDow; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) {
-    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    cells.push({ iso, day: d })
-  }
-  while (cells.length % 7 !== 0) cells.push(null)
-  const weeks = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
-  return weeks
-}
-
-function MiniMonth({ year, month, today, eventsByDate, holidaysByDate, selectedDate, onSelectDay }) {
-  const weeks     = monthMatrix(year, month)
-  const monthName = new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'long' })
-
-  return (
-    <div className="mini-month">
-      <div className="mini-month-name">{monthName}</div>
-      <div className="mini-week mini-week-head">
-        {MINI_DOW.map((w, i) => <span key={i} className="mini-dow">{w}</span>)}
-      </div>
-      {weeks.map((week, wi) => (
-        <div key={wi} className="mini-week">
-          {week.map((cell, ci) => {
-            if (!cell) return <span key={ci} className="mini-day empty" />
-            const hasEvent  = (eventsByDate[cell.iso] || []).length > 0
-            const isHoliday = (holidaysByDate[cell.iso] || []).length > 0
-            const cls = ['mini-day',
-              cell.iso === today && 'today',
-              ci >= 5 && 'weekend',
-              isHoliday && 'holiday',
-              cell.iso === selectedDate && 'selected',
-            ].filter(Boolean).join(' ')
-            return (
-              <button key={ci} type="button" className={cls} onClick={() => onSelectDay(cell.iso)}>
-                <span className="mini-day-num">{cell.day}</span>
-                <span className="mini-day-dots">
-                  {hasEvent && <span className="mini-dot event" />}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      ))}
-    </div>
-  )
-}
+// monthMatrix + the month-grid scaffold now live in the shared MonthGrid
+// component (FC-060); YearCalendar feeds it event/holiday decoration below.
 
 function YearCalendar({ holidaysByDate }) {
   const [year,         setYear        ] = useState(() => new Date().getFullYear())
@@ -1477,15 +1426,17 @@ function YearCalendar({ holidaysByDate }) {
 
       <div className="planner-year-grid">
         {Array.from({ length: 12 }, (_, m) => (
-          <MiniMonth
+          <MonthGrid
             key={m}
             year={year}
             month={m}
             today={today}
-            eventsByDate={eventsByDate}
-            holidaysByDate={holidaysByDate}
-            selectedDate={selectedDate}
-            onSelectDay={selectDay}
+            getCell={(iso) => ({
+              tint:     (holidaysByDate[iso] || []).length > 0,
+              selected: iso === selectedDate,
+              dots:     (eventsByDate[iso] || []).length > 0 ? ['event'] : [],
+              onClick:  () => selectDay(iso),
+            })}
           />
         ))}
       </div>

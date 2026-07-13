@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import './training.css'
 import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, sumWeekKm } from '../../lib/plan'
+import MonthGrid from './MonthGrid'
 
 const TYPE_LABEL = {
   run: 'Running', swim: 'Swimming', cycle: 'Cycling', hike: 'Hiking',
@@ -471,6 +472,26 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const yogaCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'yoga')).length
   const sessionTotal = currentWeek.reduce((n, day) => n + day.sessions.length, 0)
 
+  // Month calendar — current month, read-only, cells coloured by the same
+  // session-type pips as the weekly plan (pipClass gives 't-run' → 'run').
+  const curYear  = today.getFullYear()
+  const curMonth = today.getMonth()
+  const monthTodayIso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const monthCell = (iso) => {
+    const d = new Date(iso + 'T00:00:00')
+    const week = getCurrentWeek(plan, d)
+    if (!week) return null // outside the plan window → empty cell
+    const dow = (d.getDay() + 6) % 7 // Mon=0
+    const sessions = week[dow]?.sessions || []
+    if (!sessions.length) return null
+    const seen = new Set(); const dots = []
+    for (const s of sessions) {
+      const c = pipClass(s.type).slice(2) // strip 't-' → run/gym/functional/climb/yoga/rest
+      if (!seen.has(c)) { seen.add(c); dots.push(c) }
+    }
+    return { dots: dots.slice(0, 3), extra: dots.length > 3 ? `+${dots.length - 3}` : null }
+  }
+
   return (
     <>
       <header className="training-header r r-1">
@@ -626,6 +647,17 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         </div>
         )}
       </section>
+
+      {!editing && (
+        <section className="section training-month r r-4">
+          <div className="section-head">
+            <h2>Calendar</h2>
+          </div>
+          <div className="training-month-grid">
+            <MonthGrid year={curYear} month={curMonth} today={monthTodayIso} getCell={monthCell} />
+          </div>
+        </section>
+      )}
     </>
   )
 }

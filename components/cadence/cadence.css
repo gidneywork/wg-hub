@@ -6242,6 +6242,25 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 [data-cadence] .mini-dot { width: 4px; height: 4px; border-radius: 50%; }
 [data-cadence] .mini-dot.event { background: var(--slate); }
+/* Session-type dots (Training month grid) — same buckets as the weekly plan pips */
+[data-cadence] .mini-dot.run        { background: var(--moss); }
+[data-cadence] .mini-dot.gym        { background: var(--slate); }
+[data-cadence] .mini-dot.functional { background: var(--d5); }
+[data-cadence] .mini-dot.climb      { background: var(--sand); }
+[data-cadence] .mini-dot.yoga       { background: var(--moss-soft); }
+[data-cadence] .mini-dot.rest       { background: var(--text-faint); }
+[data-cadence] .mini-day-count {
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 1;
+  color: var(--text-faint);
+}
+/* Read-only cells (no onClick) — no pointer affordance */
+[data-cadence] .mini-day.static { cursor: default; }
+[data-cadence] .mini-day.static:hover { background: none; }
+
+/* Training month grid — a single month at a comfortable size */
+[data-cadence] .training-month-grid { max-width: 380px; }
 
 /* Day-detail panel (expand-in-place, no dialog) */
 [data-cadence] .planner-year-detail {
