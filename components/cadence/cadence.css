@@ -6261,6 +6261,10 @@ html::-webkit-scrollbar-track { background: transparent; }
 
 /* Training month grid — a single month at a comfortable size */
 [data-cadence] .training-month-grid { max-width: 380px; }
+/* Up to 4 session-type dots per cell — smaller dot + tighter gap so four
+   fit cleanly. Scoped to Training so the Planner year grid is untouched. */
+[data-cadence] .training-month-grid .mini-dot { width: 3px; height: 3px; }
+[data-cadence] .training-month-grid .mini-day-dots { gap: 1px; }
 
 /* Day-detail panel (expand-in-place, no dialog) */
 [data-cadence] .planner-year-detail {

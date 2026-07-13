@@ -489,7 +489,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
       const c = pipClass(s.type).slice(2) // strip 't-' → run/gym/functional/climb/yoga/rest
       if (!seen.has(c)) { seen.add(c); dots.push(c) }
     }
-    return { dots: dots.slice(0, 3), extra: dots.length > 3 ? `+${dots.length - 3}` : null }
+    return { dots: dots.slice(0, 4), extra: dots.length > 4 ? `+${dots.length - 4}` : null }
   }
 
   return (
