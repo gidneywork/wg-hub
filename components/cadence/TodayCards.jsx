@@ -1,7 +1,7 @@
 'use client'
 
 import { todayStr } from './helpers'
-import { getCurrentWeek } from '../../lib/plan'
+import { getCurrentWeek, parseRunKm } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
@@ -22,11 +22,11 @@ function parseScheduledMeta(details) {
     s.match(/\b(\d+(?:\.\d+)?\s*hrs?)\b/i) ||
     s.match(/\b(\d+\s*(?:min|m))\b/i)
   const hrMatch = s.match(/\b(\d{2,3}(?:[–-]\d{2,3})?)\s*bpm\b/i)
-  const distMatch = s.match(/\b(\d+(?:[–-]\d+)?(?:\.\d+)?)\s*km\b/i)
+  const km = parseRunKm(s)
   return {
     duration: durMatch ? durMatch[1].replace(/\s+/g, ' ').trim() : null,
     hr: hrMatch ? hrMatch[1] : null,
-    distance: distMatch ? `${distMatch[1].replace(/\s+/g, ' ').trim()}km` : null,
+    distance: km != null ? `${km}km` : null,
   }
 }
 

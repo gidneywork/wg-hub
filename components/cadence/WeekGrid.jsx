@@ -1,6 +1,6 @@
 'use client'
 
-import { getCurrentWeek } from '../../lib/plan'
+import { getCurrentWeek, parseRunKm } from '../../lib/plan'
 
 const localIso = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -32,11 +32,11 @@ function parseSessionMeta(details, type) {
     s.match(/\b(\d+:\d+(?:[–-]\d+(?::\d+)?)?\s*(?:hr|h|hrs)?)\b/i) ||
     s.match(/\b(\d+(?:\.\d+)?\s*(?:hrs?|hours?))\b/i) ||
     s.match(/\b(\d+\s*(?:min|m)\b)/i)
-  const distMatch = s.match(/\b(\d+(?:[–-]\d+)?(?:\.\d+)?\s*km)\b/i)
+  const km = parseRunKm(s)
 
   const parts = []
   if (durMatch) parts.push(durMatch[1].replace(/\s+/g, ' ').trim())
-  if (distMatch) parts.push(distMatch[1].replace(/\s+/g, ' ').trim())
+  if (km != null) parts.push(`${km} km`)
   if (parts.length) return parts.join(' · ')
   return type ? type : ''
 }
