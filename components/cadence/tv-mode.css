@@ -546,6 +546,7 @@
 .tv-page .training-pill .pip.strength { background: var(--clay); }
 .tv-page .training-pill .pip.recovery { background: var(--slate); }
 .tv-page .training-pill .pip.climb    { background: var(--sand); }
+.tv-page .training-pill .pip.rest     { background: var(--border-strong); }
 .tv-page .training-pill .name {
   font-family: var(--display);
   font-size: 19px;

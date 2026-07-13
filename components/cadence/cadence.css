@@ -6249,6 +6249,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .mini-dot.climb      { background: var(--sand); }
 [data-cadence] .mini-dot.yoga       { background: var(--moss-soft); }
 [data-cadence] .mini-dot.rest       { background: var(--text-faint); }
+[data-cadence] .mini-dot.custom     { background: var(--d6); }
 [data-cadence] .mini-day-count {
   font-family: var(--mono);
   font-size: 8px;

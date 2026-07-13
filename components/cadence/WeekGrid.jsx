@@ -1,25 +1,9 @@
 'use client'
 
-import { getCurrentWeek, parseRunKm } from '../../lib/plan'
+import { getCurrentWeek, parseRunKm, coarseForType } from '../../lib/plan'
 
 const localIso = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-const PIP_BY_TYPE = {
-  run: 'run',
-  swim: 'run',
-  cycle: 'run',
-  hike: 'run',
-  gym: 'strength',
-  functional: 'strength',
-  strength: 'strength',
-  climbing: 'climb',
-  yoga: 'recovery',
-  stretch: 'recovery',
-  recovery: 'recovery',
-  rest: 'rest',
-  custom: 'recovery',
-}
 
 // Try to pull a short "1h 45m · 20km" style meta from a free-text session detail.
 // Falls back to a generic type label when nothing matches.
@@ -90,7 +74,7 @@ export default function WeekGrid({ plan }) {
       dayNum: date.getDate(),
       title: shortTitle(session?.details, type),
       meta: parseSessionMeta(session?.details, type),
-      pip: PIP_BY_TYPE[type] || 'recovery',
+      pip: coarseForType(type),
     }
   })
 

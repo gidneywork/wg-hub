@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import './training.css'
-import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, sumWeekKm } from '../../lib/plan'
+import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, sumWeekKm, disciplineForType } from '../../lib/plan'
 import MonthGrid from './MonthGrid'
 
 const TYPE_LABEL = {
@@ -10,15 +10,6 @@ const TYPE_LABEL = {
   gym: 'Gym', strength: 'Strength', functional: 'Functional',
   climbing: 'Climbing',
   yoga: 'Yoga', stretch: 'Stretching', rest: 'Rest day', custom: 'Custom',
-}
-
-function pipClass(type) {
-  if (['run', 'swim', 'cycle', 'hike'].includes(type)) return 't-run'
-  if (['gym', 'strength'].includes(type)) return 't-gym'
-  if (type === 'functional') return 't-functional'
-  if (type === 'climbing') return 't-climb'
-  if (['yoga', 'stretch'].includes(type)) return 't-yoga'
-  return 't-rest'
 }
 
 function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
@@ -489,7 +480,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
     if (!sessions.length) return null
     const seen = new Set(); const dots = []
     for (const s of sessions) {
-      const c = pipClass(s.type).slice(2) // strip 't-' → run/gym/functional/climb/yoga/rest
+      const c = disciplineForType(s.type) // run/gym/functional/climb/yoga/rest/custom
       if (!seen.has(c)) { seen.add(c); dots.push(c) }
     }
     return { dots: dots.slice(0, 4), extra: dots.length > 4 ? `+${dots.length - 4}` : null }
@@ -640,7 +631,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
                 ) : (
                   <div className="day-meta">
                     {day.sessions.map(s => (
-                      <span key={s.id} className={`pip ${pipClass(s.type)}`} />
+                      <span key={s.id} className={`pip t-${disciplineForType(s.type)}`} />
                     ))}
                   </div>
                 )}

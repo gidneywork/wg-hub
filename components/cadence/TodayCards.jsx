@@ -1,7 +1,7 @@
 'use client'
 
 import { todayStr } from './helpers'
-import { getCurrentWeek } from '../../lib/plan'
+import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
@@ -10,15 +10,6 @@ function yesterdayStr() {
   const d = new Date()
   d.setDate(d.getDate() - 1)
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-}
-
-// Session-type → pip bucket (mirrors WeekGrid.PIP_BY_TYPE; token colours in CSS).
-const PIP_BY_TYPE = {
-  run: 'run', swim: 'run', cycle: 'run', hike: 'run',
-  gym: 'strength', functional: 'strength', strength: 'strength',
-  climbing: 'climb',
-  yoga: 'recovery', stretch: 'recovery', recovery: 'recovery', custom: 'recovery',
-  rest: 'rest',
 }
 
 function shortTitle(details, type) {
@@ -50,7 +41,7 @@ function ScheduledCard({ plan }) {
         <div className="today-session-list">
           {sessions.map(s => (
             <div key={s.id} className="today-session">
-              <span className={`pip ${PIP_BY_TYPE[s.type] || 'recovery'}`} />
+              <span className={`pip ${coarseForType(s.type)}`} />
               <span className="today-session-title">{shortTitle(s.details, s.type)}</span>
             </div>
           ))}

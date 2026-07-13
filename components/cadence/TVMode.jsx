@@ -10,7 +10,7 @@ import {
   kmByDateMap,
   getKmForDate,
 } from './helpers'
-import { getCurrentWeek } from '../../lib/plan'
+import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
 import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
@@ -545,13 +545,6 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const todayIdx  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
   const todaySessions = getCurrentWeek(plan, new Date())?.[todayIdx]?.sessions || []
 
-  function sessionPipClass(type) {
-    if (type === 'run') return 'run'
-    if (['gym', 'functional', 'strength'].includes(type)) return 'strength'
-    if (type === 'climbing') return 'climb'
-    return 'recovery'
-  }
-
   // T3: first run → primary; else first session → primary; no sessions → no primary
   const primaryIdx = (() => {
     const runIdx = todaySessions.findIndex(s => s.type === 'run')
@@ -746,7 +739,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
                       key={s.id || i}
                       name={name}
                       meta={null}
-                      pipClass={sessionPipClass(s.type)}
+                      pipClass={coarseForType(s.type)}
                       isPrimary={i === primaryIdx}
                     />
                   )

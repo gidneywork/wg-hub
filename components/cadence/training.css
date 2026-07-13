@@ -161,6 +161,7 @@
 [data-cadence] .pip.t-climb      { background: var(--sand); }
 [data-cadence] .pip.t-yoga       { background: var(--moss-soft); }
 [data-cadence] .pip.t-rest       { background: var(--text-faint); }
+[data-cadence] .pip.t-custom     { background: var(--d6); }
 
 /* Expanded day session list */
 [data-cadence] .t-day-sessions {
@@ -184,9 +185,10 @@
 [data-cadence] .t-day-session[data-type="functional"] { border-left-color: var(--d5); }
 [data-cadence] .t-day-session[data-type="climbing"]   { border-left-color: var(--sand); }
 [data-cadence] .t-day-session[data-type="yoga"],
-[data-cadence] .t-day-session[data-type="stretch"]    { border-left-color: var(--moss-soft); }
-[data-cadence] .t-day-session[data-type="rest"],
-[data-cadence] .t-day-session[data-type="custom"]     { border-left-color: var(--text-faint); }
+[data-cadence] .t-day-session[data-type="stretch"],
+[data-cadence] .t-day-session[data-type="recovery"]   { border-left-color: var(--moss-soft); }
+[data-cadence] .t-day-session[data-type="rest"]       { border-left-color: var(--text-faint); }
+[data-cadence] .t-day-session[data-type="custom"]     { border-left-color: var(--d6); }
 [data-cadence] .t-day-session-type {
   font-family: var(--mono);
   font-size: 9px;
