@@ -5988,3 +5988,27 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-bottom-color: var(--moss);
 }
 
+/* ── WHOOP connect card — probe output (WH-001a) ────────────────────────── */
+[data-cadence] .whoop-probe { margin-top: var(--space-4); }
+
+[data-cadence] .whoop-probe-counts {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+[data-cadence] .whoop-probe-json {
+  font-family: var(--mono);
+  font-size: var(--type-caption);
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre;
+  margin: 0;
+}
+

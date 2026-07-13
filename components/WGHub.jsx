@@ -198,7 +198,8 @@ export default function WGHub({ onSignOut }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const stravaStatus = params.get('strava')
-    if (stravaStatus) window.history.replaceState({}, '', window.location.pathname)
+    const whoopStatus  = params.get('whoop')
+    if (stravaStatus || whoopStatus) window.history.replaceState({}, '', window.location.pathname)
 
     ;(async () => {
       try {
@@ -226,6 +227,7 @@ export default function WGHub({ onSignOut }) {
           setOnboardingDone(false)
         }
         if (stravaStatus === 'connected') setView('history')
+        if (whoopStatus) setView('settings')
       } catch (e) {
         console.error('Initial load failed:', e)
         setPlan(getDefaultPlan())
