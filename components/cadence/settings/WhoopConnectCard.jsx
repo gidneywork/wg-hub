@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { db } from '../../../lib/db'
-import CadenceDialog from '../CadenceDialog'
 import { timeAgo } from './settingsHelpers'
 import { apiFetch, startConnect } from '../../../lib/api'
 
@@ -17,7 +16,6 @@ import { apiFetch, startConnect } from '../../../lib/api'
 export default function WhoopConnectCard() {
   // undefined = loading, null = not connected, object = connected
   const [connection,    setConnection]    = useState(undefined)
-  const [confirmOpen,   setConfirmOpen]   = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [probing,       setProbing]       = useState(false)
   const [probe,         setProbe]         = useState(null)
@@ -33,8 +31,7 @@ export default function WhoopConnectCard() {
     ? [connection.first_name, connection.last_name].filter(Boolean).join(' ')
     : null
 
-  const handleConfirmDisconnect = async () => {
-    setConfirmOpen(false)
+  const handleDisconnect = async () => {
     setDisconnecting(true)
     try {
       await apiFetch('/api/whoop/disconnect', { method: 'POST' })
@@ -103,16 +100,8 @@ export default function WhoopConnectCard() {
         </span>
       </div>
 
-      <CadenceDialog
-        open={confirmOpen}
-        title="Disconnect WHOOP?"
-        body="Your imported Whoop CSV data stays in the database. This only removes the API connection."
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
-        confirmClass="btn-danger"
-        onConfirm={handleConfirmDisconnect}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      {/* Confirm dialog removed pending the CadenceDialog paint bug (portal styles
+          not reaching <body>). Restore the confirm once that is fixed. */}
 
       {connection === undefined ? (
         <p className="section-blurb">Loading…</p>
@@ -141,7 +130,7 @@ export default function WhoopConnectCard() {
                   Download JSON
                 </button>
               ) : null}
-              <button type="button" className="btn btn-danger" onClick={() => setConfirmOpen(true)} disabled={disconnecting}>
+              <button type="button" className="btn btn-danger" onClick={handleDisconnect} disabled={disconnecting}>
                 {disconnecting ? 'Disconnecting…' : 'Disconnect WHOOP'}
               </button>
               {probeError ? (
