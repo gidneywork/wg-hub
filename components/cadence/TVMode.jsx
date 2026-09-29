@@ -165,10 +165,11 @@ function valsFor(days, accessor, logs, whoopData) {
   })
 }
 
-function pctOfTarget(avg, targetStr) {
-  const t = parseFloat(targetStr)
-  if (!isFinite(t) || t <= 0 || avg == null) return null
-  return Math.round((avg / t) * 100)
+// Stat tile footer trend (FC-086): the target lives only in the coloured
+// target text under the value, so the footer carries just the change —
+// "▲ 8 · vs yesterday" (Today) / "▲ 8 · vs prior period". No trend → blank.
+function trendText(arrowFor, mag, isToday) {
+  return `${arrowFor} ${mag} · ${isToday ? 'vs yesterday' : 'vs prior period'}`
 }
 
 function arrow(delta) {
@@ -450,17 +451,14 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
 
   const wStatus = (() => {
     if (avgW == null) return { text: 'no data', cls: 'no-data' }
+    if (deltaW == null) return { text: '', cls: 'flat' }
+    // Trend colour: moss when moving toward the goal weight, clay away.
     const target    = parseFloat(settings?.weightTarget?.value)
-    const hasTarget = isFinite(target)
-    const towardTarget = hasTarget && deltaW != null && (
+    const towardTarget = isFinite(target) && (
       (avgW > target && deltaW < 0) ||
       (avgW < target && deltaW > 0)
     )
-    const d = deltaW != null
-      ? `${arrow(deltaW)} ${Math.abs(deltaW).toFixed(1)} kg${hasTarget ? ' · target' : ''}`
-      : '—'
-    const cls = (hasTarget && deltaW != null) ? (towardTarget ? '' : 'down') : 'down'
-    return { text: d, cls }
+    return { text: trendText(arrow(deltaW), `${Math.abs(deltaW).toFixed(1)} kg`, isToday), cls: towardTarget ? '' : 'down' }
   })()
 
   // ── Stat tile: HRV ───────────────────────────────────────────────────────────
@@ -477,13 +475,8 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
 
   const hrvStatus = (() => {
     if (avgHrv == null) return { text: 'no data', cls: 'no-data' }
-    const pct    = pctOfTarget(avgHrv, settings?.hrv?.value)
-    const pctStr = pct != null ? ` · ${pct}% target` : ''
-    if (deltaHrv == null) return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
-    return {
-      text: `${arrow(deltaHrv)} ${Math.abs(Math.round(deltaHrv))}${pctStr}`,
-      cls:  deltaHrv < 0 ? 'down' : '',
-    }
+    if (deltaHrv == null) return { text: '', cls: 'flat' }
+    return { text: trendText(arrow(deltaHrv), Math.abs(Math.round(deltaHrv)), isToday), cls: deltaHrv < 0 ? 'down' : '' }
   })()
 
   // ── Stat tile: Resting HR ────────────────────────────────────────────────────
@@ -500,29 +493,26 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
 
   const rhrStatus = (() => {
     if (avgRhr == null) return { text: 'no data', cls: 'no-data' }
-    const target   = parseFloat(settings?.rhr?.value)
-    const onTarget = isFinite(target) && avgRhr <= target
-    const ref      = isFinite(target) ? (onTarget ? ' · on target' : ' · above target') : ''
-    if (deltaRhr == null) return { text: `●${ref}`, cls: onTarget ? '' : 'down' }
-    return {
-      text: `${arrow(deltaRhr)} ${Math.abs(Math.round(deltaRhr))}${ref}`,
-      cls:  deltaRhr < 0 ? '' : 'down',
-    }
+    if (deltaRhr == null) return { text: '', cls: 'flat' }
+    return { text: trendText(arrow(deltaRhr), Math.abs(Math.round(deltaRhr)), isToday), cls: deltaRhr <= 0 ? '' : 'down' }
   })()
 
   // ── Stat tile: Sleep score ───────────────────────────────────────────────────
-  const { avgSleep, sparkSleep } = useMemo(() => {
+  const { avgSleep, deltaSleep, sparkSleep } = useMemo(() => {
     const acc = m => m?.sleep?.sleepScore
+    const avgSleep   = avgOf(days, acc, logs, whoopData)
+    const priorSleep = avgOf(priorDays, acc, logs, whoopData)
     return {
-      avgSleep:  avgOf(days, acc, logs, whoopData),
+      avgSleep,
+      deltaSleep: avgSleep != null && priorSleep != null ? avgSleep - priorSleep : null,
       sparkSleep: valsFor(days, acc, logs, whoopData),
     }
-  }, [days, logs, whoopData])
+  }, [days, priorDays, logs, whoopData])
 
   const sleepStatus = (() => {
     if (avgSleep == null) return { text: 'no data', cls: 'no-data' }
-    const pct = pctOfTarget(avgSleep, settings?.sleepScore?.value)
-    return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
+    if (deltaSleep == null) return { text: '', cls: 'flat' }
+    return { text: trendText(arrow(deltaSleep), Math.abs(Math.round(deltaSleep)), isToday), cls: deltaSleep < 0 ? 'down' : '' }
   })()
 
   // ── Stat tile: Recovery ──────────────────────────────────────────────────────
@@ -539,28 +529,26 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
 
   const recStatus = (() => {
     if (avgRec == null) return { text: 'no data', cls: 'no-data' }
-    const pct    = pctOfTarget(avgRec, settings?.recoveryScore?.value)
-    const pctStr = pct != null ? ` · ${pct}% target` : ''
-    if (deltaRec == null) return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
-    return {
-      text: `${arrow(deltaRec)} ${Math.abs(Math.round(deltaRec))}${pctStr}`,
-      cls:  deltaRec < 0 ? 'down' : '',
-    }
+    if (deltaRec == null) return { text: '', cls: 'flat' }
+    return { text: trendText(arrow(deltaRec), Math.abs(Math.round(deltaRec)), isToday), cls: deltaRec < 0 ? 'down' : '' }
   })()
 
   // ── Stat tile: Hours slept ───────────────────────────────────────────────────
-  const { avgHours, sparkHours } = useMemo(() => {
+  const { avgHours, deltaHoursMins, sparkHours } = useMemo(() => {
     const acc = m => m?.sleep?.hoursSlept
+    const avgHours   = avgOf(days, acc, logs, whoopData)
+    const priorHours = avgOf(priorDays, acc, logs, whoopData)
     return {
-      avgHours:  avgOf(days, acc, logs, whoopData),
+      avgHours,
+      deltaHoursMins: avgHours != null && priorHours != null ? Math.round((avgHours - priorHours) * 60) : null,
       sparkHours: valsFor(days, acc, logs, whoopData),
     }
-  }, [days, logs, whoopData])
+  }, [days, priorDays, logs, whoopData])
 
   const hoursStatus = (() => {
     if (avgHours == null) return { text: 'no data', cls: 'no-data' }
-    const pct = pctOfTarget(avgHours, settings?.hoursSlept?.value)
-    return { text: pct != null ? `● ${pct}% target` : '—', cls: 'flat' }
+    if (deltaHoursMins == null) return { text: '', cls: 'flat' }
+    return { text: trendText(arrow(deltaHoursMins), `${Math.abs(deltaHoursMins)}m`, isToday), cls: deltaHoursMins < 0 ? 'down' : '' }
   })()
 
   // ── Stat tile: Bedtime ───────────────────────────────────────────────────────
