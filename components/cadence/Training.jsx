@@ -370,6 +370,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   const [expanded,  setExpanded]  = useState(() => new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']))
   const [localPlan, setLocalPlan] = useState(plan)
   const [saveFlash, setSaveFlash] = useState(false)
+  const [saveError, setSaveError] = useState(null) // message of the last failed save / reset
   const [monthOffset, setMonthOffset] = useState(0) // months from the current month
 
   useEffect(() => { setLocalPlan(plan) }, [plan])
@@ -449,19 +450,35 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
       }),
     }))
 
+  // Save and Reset never fail silently: on failure the actual error is shown
+  // and the editor stays open, so nothing looks saved that wasn't.
   const handleSave = async () => {
-    await savePlan(localPlan)
+    setSaveError(null)
+    try {
+      await savePlan(localPlan)
+    } catch (err) {
+      setSaveError(err?.message || String(err))
+      return
+    }
     setEditing(false)
     setSaveFlash(true)
     setTimeout(() => setSaveFlash(false), 2500)
   }
-  const handleCancel = () => { setLocalPlan(plan); setEditing(false) }
+  const handleCancel = () => { setLocalPlan(plan); setEditing(false); setSaveError(null) }
   const handleReset  = async () => {
     if (!getDefaultPlan) return
+    setSaveError(null)
     const d = getDefaultPlan()
     setLocalPlan(d)
-    await savePlan(d)
+    try {
+      await savePlan(d)
+    } catch (err) {
+      setSaveError(err?.message || String(err))
+      return
+    }
     setEditing(false)
+    setSaveFlash(true)
+    setTimeout(() => setSaveFlash(false), 2500)
   }
 
   const weekKm       = sumWeekKm(currentWeek)
@@ -522,6 +539,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
       </header>
 
       {saveFlash && <div className="training-saved">Plan saved</div>}
+      {saveError && <div className="training-save-error" role="alert">Plan not saved — {saveError}</div>}
 
       <div className="stat-row r r-2">
         <div className="stat">

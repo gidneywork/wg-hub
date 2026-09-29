@@ -136,6 +136,19 @@
 }
 [data-theme="dark"] [data-cadence] .training-saved { color: var(--moss); }
 
+/* Save / reset failure — stays until the next attempt or cancel */
+[data-cadence] .training-save-error {
+  border: 1px solid var(--clay-soft);
+  border-radius: var(--radius-md);
+  color: var(--clay-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+}
+[data-theme="dark"] [data-cadence] .training-save-error { color: var(--clay); }
+
 /* Today treatment — left border only on the Training grid */
 [data-cadence] .training-plan .day.today {
   border-color: var(--border);
