@@ -3,7 +3,7 @@ import { supabaseServer } from '../../../../lib/supabase-server'
 import { resolveUserId } from '../../../../lib/auth-server'
 import { openSession, londonParts, shiftDate, isScheduledHour, mergeConsumed, CronometerError } from '../../../../lib/cronometer'
 import {
-  reserveExport, scheduledUserId, readConnection, mergeConnection, exportsUsed, EXPORT_LIMIT_DAILY,
+  reserveExport, scheduledUserId, readConnection, mergeConnection, exportsUsed, refreshesLeft, syncedWithin, EXPORT_LIMIT_DAILY,
   recordCronometerSync, recordCronometerFailure, recordTargetsFallback,
 } from '../../../../lib/cronometer-status'
 
@@ -18,11 +18,12 @@ function secretMatches(header, secret) {
 }
 
 // POST /api/cronometer/sync
-//   Scheduled: Authorization: Bearer <CRON_SECRET> (pg_cron). Honours the
-//     London schedule window and the scheduled export budget (9). `force=1`
-//     skips the window check (budget still applies); `user=<uuid>` names the
-//     user when no cronometer_connection row exists yet.
-//   Manual (Sync now): the signed-in user's session; full daily budget (10).
+//   Scheduled: Authorization: Bearer <CRON_SECRET> (pg_cron). Acts only at
+//     07, 10, 13, 16, 19, 22 London, and skips (no export) if any sync
+//     succeeded in the previous 60 minutes. `force=1` skips both checks (the
+//     daily budget still applies); `user=<uuid>` names the user when no
+//     cronometer_connection row exists yet. Secret holder only.
+//   Manual (Refresh / Sync now): the signed-in user's session; up to 4 a day.
 // Refreshes yesterday and today. Returns 200 with a summary; never returns a
 // credential, cookie or response body.
 export async function POST(request) {
@@ -36,6 +37,9 @@ export async function POST(request) {
     const named = url.searchParams.get('user')
     userId = named && UUID_RE.test(named) ? named : await scheduledUserId()
     if (!userId) return Response.json({ skipped: 'no Cronometer user yet — run Sync now once' })
+    if (url.searchParams.get('force') !== '1' && syncedWithin(await readConnection(userId), 60)) {
+      return Response.json({ skipped: 'synced within the last hour' })
+    }
   } else {
     userId = await resolveUserId(request)
     if (!userId) return Response.json({ error: 'Not signed in' }, { status: 401 })
@@ -51,8 +55,8 @@ export async function POST(request) {
 
     stage = 'budget'
     if (!(await reserveExport(userId, today, { scheduled: source === 'scheduled' }))) {
-      const used = exportsUsed(await readConnection(userId), today)
-      return Response.json({ skipped: 'export budget used', exports_used: used, exports_limit: EXPORT_LIMIT_DAILY },
+      const c = await readConnection(userId)
+      return Response.json({ skipped: 'No refreshes left today', exports_used: exportsUsed(c, today), refreshes_left: refreshesLeft(c, today) },
         { status: source === 'manual' ? 429 : 200 })
     }
 
@@ -75,17 +79,18 @@ export async function POST(request) {
       if (upErr) throw new CronometerError('store write')
     }
 
-    // Targets: fetched once per date (the first successful run of the London
-    // day), then reused. On an unexpected response: Cadence's own targets
-    // apply at read time, and the fallback is logged.
+    // Targets: set once per date (the first successful run of the London day),
+    // then reused. They come from this run's authenticate reply, so no extra
+    // call. If unreadable: Cadence's own targets apply at read time, and the
+    // fallback is logged.
     stage = 'targets'
     let targetsNote = null
+    const targets = session.targets()
     for (const date of [yesterday, today]) {
       if (existing[date]?.targets_fetched_at) continue
-      const t = await session.macroTargets(date)
-      if (t.targets) {
+      if (targets) {
         const { error: tErr } = await supabaseServer.from('cronometer_data').upsert(
-          { user_id: userId, date, ...t.targets, targets_fetched_at: nowIso, synced_at: nowIso },
+          { user_id: userId, date, ...targets, targets_fetched_at: nowIso, synced_at: nowIso },
           { onConflict: 'user_id,date' })
         if (tErr) throw new CronometerError('store targets')
       } else {
@@ -93,7 +98,7 @@ export async function POST(request) {
         // Retried every run (self-heals), but logged once per London day.
         const c = await readConnection(userId)
         if (c?.targets_fallback_day !== today) {
-          await recordTargetsFallback(userId, { status: t.status, source })
+          await recordTargetsFallback(userId, { status: null, source })
           await mergeConnection(userId, { targets_fallback_day: today })
         }
         break
@@ -101,8 +106,8 @@ export async function POST(request) {
     }
 
     await recordCronometerSync(userId, { source, dates: rows.map(r => r.date), targetsNote })
-    const used = exportsUsed(await readConnection(userId), today)
-    return Response.json({ synced: rows.map(r => r.date), targets: targetsNote ? 'fallback' : 'cronometer', exports_used: used, exports_limit: EXPORT_LIMIT_DAILY })
+    const c = await readConnection(userId)
+    return Response.json({ synced: rows.map(r => r.date), targets: targetsNote ? 'fallback' : 'cronometer', exports_used: exportsUsed(c, today), refreshes_left: refreshesLeft(c, today), exports_limit: EXPORT_LIMIT_DAILY })
   } catch (err) {
     const f = err?.name === 'CronometerError' ? { stage: err.stage, status: err.status } : { stage, status: null }
     console.error(`Cronometer sync failed at ${f.stage}`)
