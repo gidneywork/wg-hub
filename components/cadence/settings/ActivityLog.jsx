@@ -9,6 +9,8 @@ const TYPE_LABELS = {
   whoop_upload:   'Whoop upload',
   whoop_sync:     'WHOOP sync',
   whoop_error:    'WHOOP error',
+  cronometer_sync:  'Cronometer sync',
+  cronometer_error: 'Cronometer error',
   strava_sync:    'Strava sync',
   target_updated: 'Target updated',
   activity_sync:  'Activity sync',
@@ -25,6 +27,7 @@ const FILTER_OPTIONS = [
   { val: 'all',            label: 'All events' },
   { val: 'whoop_upload',   label: 'Whoop upload' },
   { val: 'whoop_error',    label: 'WHOOP error' },
+  { val: 'cronometer_error', label: 'Cronometer error' },
   { val: 'strava_sync',    label: 'Strava sync' },
   { val: 'target_updated', label: 'Target updated' },
 ]

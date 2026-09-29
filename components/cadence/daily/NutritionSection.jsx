@@ -1,6 +1,7 @@
 'use client'
 
 import FieldCard from './FieldCard'
+import CronometerRefresh from '../CronometerRefresh'
 import { mergeNutritionForDate, nutritionTargetsForDate } from '../helpers'
 import {
   targetBand,
@@ -59,7 +60,10 @@ export default function NutritionSection({
     <section className="section r r-7">
       <div className="section-head">
         <span className="title">Nutrition</span>
-        <span className="meta">Manual entry · target shown on each</span>
+        <span className="meta">
+          <span>{rows.length} fields · from Cronometer, editable</span>
+          <CronometerRefresh />
+        </span>
       </div>
       <div className="field-grid">
         {rows.map((row, i) => {

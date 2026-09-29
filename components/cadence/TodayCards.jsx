@@ -3,6 +3,7 @@
 import { todayStr, mergeNutritionForDate } from './helpers'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
+import CronometerRefresh from './CronometerRefresh'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
 
@@ -111,6 +112,7 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
         <div className="track"><div className="fill out" style={{ width: `${outPct}%` }} /></div>
         <span className="right">{outValid ? Math.round(calsOutSum).toLocaleString() : '—'}</span>
       </div>
+      <CronometerRefresh className="fuel-foot" />
     </div>
   )
 }

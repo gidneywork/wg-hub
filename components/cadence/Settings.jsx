@@ -8,6 +8,7 @@ import InfoBanner from './settings/InfoBanner'
 import AboutYouSection from './settings/AboutYouSection'
 import StravaCard from './settings/StravaCard'
 import WhoopConnectCard from './settings/WhoopConnectCard'
+import CronometerCard from './settings/CronometerCard'
 import ConnectionsSection from './settings/ConnectionsSection'
 import TargetSection from './settings/TargetSection'
 import CalorieModeSection from './settings/CalorieModeSection'
@@ -122,6 +123,8 @@ export default function Settings({
       />
 
       <WhoopConnectCard />
+
+      <CronometerCard />
 
       <ConnectionsSection />
 
