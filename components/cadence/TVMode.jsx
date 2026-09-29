@@ -550,10 +550,13 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   // ── Stat tile: Bedtime ───────────────────────────────────────────────────────
   // Circular mean — times before 04:00 are shifted +1440 before averaging so that
   // e.g. 23:45 and 00:15 average to 00:00 rather than 12:00.
+  // Read through mergeWhoopForDate like the other tiles: a logged bedtime wins,
+  // WHOOP's fills the gap. Date D is the night ending on D, so on Today this is
+  // last night.
   const { avgBedtime, bedtimeDaysLogged } = useMemo(() => {
     const PIVOT = 240
     const mins = days.map(d => {
-      const t = logs?.[d]?.schedule?.bedtime
+      const t = mergeWhoopForDate(d, logs?.[d], whoopData)?.schedule?.bedtime
       if (!t) return null
       const [h, m] = t.split(':').map(Number)
       if (isNaN(h) || isNaN(m)) return null
@@ -565,7 +568,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     const hh = String(Math.floor(mean / 60) % 24).padStart(2, '0')
     const mm = String(mean % 60).padStart(2, '0')
     return { avgBedtime: `${hh}:${mm}`, bedtimeDaysLogged: mins.length }
-  }, [days, logs])
+  }, [days, logs, whoopData])
 
   const bedtimeStatus = (() => {
     if (avgBedtime == null) return { text: 'no data', cls: 'no-data' }

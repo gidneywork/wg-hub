@@ -52,6 +52,14 @@ export function mergeWhoopForDate(date, log, whoopData) {
       hoursSlept:    pick(log?.sleep?.hoursSlept,    w.hours_slept),
       bedTime:       log?.sleep?.bedTime || w.bed_time || '',
     },
+    // Sleep schedule — the fields Daily Data edits (schedule.bedtime /
+    // wakeTime), log first, WHOOP as fallback. WHOOP dates a night by its
+    // wake-up date, so date D carries the bedtime of the night ending on D.
+    schedule: {
+      ...(log?.schedule || {}),
+      bedtime:  pick(log?.schedule?.bedtime,  w.bed_time),
+      wakeTime: pick(log?.schedule?.wakeTime, w.wake_time),
+    },
   }
 }
 
