@@ -4,18 +4,18 @@ import {
   highlightedNutrients,
   formatNutrient,
   describeTarget,
-  STATE_LABEL,
+  nutrientTargetText,
 } from '../nutrients'
 
 /**
  * Highlighted nutrients (FC-085) — read-only, below Nutrition. Mirrors the
  * Cronometer diary's panel: the same nutrients, in the same order, against
- * Cronometer's targets. Each card: consumed (Ink), a consumed / target bar
- * with %, and the FC-083 target dot, direction-aware:
- *   at least / range  below the minimum → clay dot, "Below target"
- *   range / limit     above the maximum → clay dot, "Above limit"
- *   otherwise         moss dot, "On target"
- * A nutrient with no target shows its value and "No target" — no bar, no dot.
+ * Cronometer's targets. Each card: consumed (Ink), a consumed / target bar,
+ * and the FC-086 target text under it, direction-aware — "34% of target"
+ * (at least), "107% of min" / "Above limit" (range), "N% of limit" (limit),
+ * moss on target, clay off.
+ * A nutrient with no target shows its value and "No target" — no bar, no
+ * target text.
  * Always shown: before the first sync, Cronometer's default eight with "—"
  * ("Waiting for the first Cronometer sync"); on a date with no Cronometer
  * data, the names with "—" ("No Cronometer data for this day").
@@ -63,7 +63,7 @@ function NutrientCard({ item, blank }) {
   }
   const hasTarget = item.kind !== 'none'
   const desc = hasTarget ? describeTarget(item.target, item.unit) : null
-  const pct = item.pct != null ? Math.round(item.pct) : null
+  const tt = nutrientTargetText(item)
   const fill = item.state === 'low' || item.state === 'above' ? ' clay' : ''
   return (
     <div className="field-card nutrient-card">
@@ -74,26 +74,16 @@ function NutrientCard({ item, blank }) {
       <div className="nutrient-value">
         <span className="num">{formatNutrient(item.consumed)}</span>
         <span className="unit">{item.unit}</span>
-        {hasTarget && item.state ? (
-          <span
-            className={`target-dot ${item.state === 'on' ? 'on' : 'off'}`}
-            role="img"
-            aria-label={STATE_LABEL[item.state]}
-            title={desc || undefined}
-          />
-        ) : null}
       </div>
       {hasTarget ? (
         <div className="progress" aria-hidden="true">
-          <div className={`fill${fill}`} style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
+          <div className={`fill${fill}`} style={{ width: `${Math.min(100, item.pct ?? 0)}%` }} />
         </div>
       ) : null}
       <div className="helper">
-        <span>
-          {!hasTarget ? 'No target'
-            : pct == null ? 'Nothing logged'
-            : `${pct}% · ${STATE_LABEL[item.state]}`}
-        </span>
+        {!hasTarget ? <span>No target</span>
+          : !tt ? <span>Nothing logged</span>
+          : <span className={`target-text ${tt.on ? 'on' : 'off'}`}>{tt.text}</span>}
       </div>
     </div>
   )

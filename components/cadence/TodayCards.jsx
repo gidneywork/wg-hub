@@ -5,7 +5,7 @@ import TargetText from './TargetText'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 import CronometerRefresh from './CronometerRefresh'
-import { highlightedNutrients, consumedFor, STATE_LABEL } from './nutrients'
+import { highlightedNutrients, consumedFor, nutrientTargetText } from './nutrients'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
 
@@ -134,7 +134,7 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
 
 // Nutrients card (FC-085) — compact companion to Fuel, never merged into it.
 // Same day rule as Fuel: today once Cronometer has any highlighted value for
-// today, otherwise yesterday. Each row: name, % (Ink) and the FC-083 dot.
+// today, otherwise yesterday. Each row: name, then the FC-086 target text.
 // Always shown: before the first sync it lists Cronometer's default eight
 // with "—" ("Waiting for sync").
 function nutrientsDay(cronometerData) {
@@ -167,10 +167,11 @@ function NutrientsCard({ day }) {
           <div key={i.id} className="nutrient-row">
             <span>{i.name}</span>
             <span className="right">
-              {blank ? '—' : i.kind === 'none' ? 'No target' : i.pct == null ? '—' : `${Math.round(i.pct)}%`}
-              {i.state ? (
-                <span className={`target-dot ${i.state === 'on' ? 'on' : 'off'}`} role="img" aria-label={STATE_LABEL[i.state]} />
-              ) : null}
+              {(() => {
+                const tt = blank ? null : nutrientTargetText(i)
+                if (tt) return <span className={`target-text ${tt.on ? 'on' : 'off'}`}>{tt.text}</span>
+                return blank || i.kind !== 'none' ? '—' : 'No target'
+              })()}
             </span>
           </div>
         ))}

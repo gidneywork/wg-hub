@@ -95,7 +95,21 @@ export function nutrientState(consumed, target) {
   return { kind, pct, state }
 }
 
-export const STATE_LABEL = { on: 'On target', low: 'Below target', above: 'Above limit' }
+// Target text (FC-086) for a nutrient item — replaces the dot. { on, text } or
+// null (no target, or nothing logged). % rounds normally when on, down when
+// off (so an off value never reads 100%).
+//   at least  "N% of target"
+//   range     "N% of min" (low or on) · "Above limit" (over the maximum)
+//   limit     "N% of limit"
+export function nutrientTargetText(item) {
+  if (!item?.state || item.pct == null) return null
+  const on = item.state === 'on'
+  const p = on ? Math.round(item.pct) : Math.floor(item.pct)
+  if (item.kind === 'min') return { on, text: `${p}% of target` }
+  if (item.kind === 'range') return { on, text: item.state === 'above' ? 'Above limit' : `${p}% of min` }
+  if (item.kind === 'max') return { on, text: `${p}% of limit` }
+  return null
+}
 
 // "At least 38 g" · "1000–2500 mg" · "Up to 2300 mg" · null
 export function describeTarget(target, unit) {

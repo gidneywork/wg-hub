@@ -3430,8 +3430,8 @@ html::-webkit-scrollbar-track { background: transparent; }
 }
 
 /* Highlighted nutrients (FC-085) — read-only field cards. The number stays
-   Ink; the FC-083 dot carries the state (moss on target, clay below target
-   or above a limit). */
+   Ink; the FC-086 target text under the bar carries the state (moss on
+   target, clay below target or above a limit). */
 [data-cadence] .daily-page .nutrient-card .nutrient-value {
   display: flex;
   align-items: baseline;
@@ -3451,12 +3451,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-muted);
   margin-left: 6px;
 }
-[data-cadence] .daily-page .nutrient-card .target-dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; align-self: center;
-}
-[data-cadence] .daily-page .nutrient-card .target-dot.on  { background: var(--moss); }
-[data-cadence] .daily-page .nutrient-card .target-dot.off { background: var(--clay-deep); }
-[data-theme="dark"] [data-cadence] .daily-page .nutrient-card .target-dot.off { background: var(--clay); }
 [data-cadence] .daily-page .nutrients-note {
   margin-top: 10px;
   font-size: var(--type-13);
@@ -6313,7 +6307,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .fuel-card .cronometer-refresh.fuel-foot { margin-top: 14px; }
 
 /* Nutrients card (FC-085) — shares the Fuel card's balance styling; rows are
-   quiet mono, the % stays Ink and the FC-083 dot carries the state. */
+   quiet mono, each ending in its FC-086 target text. */
 [data-cadence] .nutrients-card .balance { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
 [data-cadence] .nutrients-card .balance .num {
   font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: -0.025em;
@@ -6328,10 +6322,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-muted); font-variant-numeric: tabular-nums;
 }
 [data-cadence] .nutrients-card .nutrient-row .right { color: var(--text); display: inline-flex; align-items: center; }
-[data-cadence] .nutrients-card .target-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; }
-[data-cadence] .nutrients-card .target-dot.on  { background: var(--moss); }
-[data-cadence] .nutrients-card .target-dot.off { background: var(--clay-deep); }
-[data-theme="dark"] [data-cadence] .nutrients-card .target-dot.off { background: var(--clay); }
+[data-cadence] .nutrients-card .target-text { font-size: inherit; }
 
 /* Fuel card water line (FC-084) — quiet mono row; target text (FC-086) beside the value. */
 [data-cadence] .fuel-card .fuel-water {
