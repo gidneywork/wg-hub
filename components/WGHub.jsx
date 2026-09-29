@@ -315,6 +315,17 @@ export default function WGHub({ onSignOut }) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />
   }
 
+  // TV Mode safety reload (FC-082). Realtime keeps state live, but a TV tab
+  // left open for days can lose its realtime connection silently; TV Mode
+  // calls this every 5 min and when the tab becomes visible. The loaders
+  // return an empty result on error, so an empty result never replaces data.
+  const refreshLiveData = async () => {
+    const [a, l, w] = await Promise.all([db.loadActivities(), db.loadLogs(), db.loadWhoopData()])
+    if (a?.length) setActivities(a)
+    if (l && Object.keys(l).length) setLogs(l)
+    if (w && Object.keys(w).length) setWhoopData(w)
+  }
+
   // TV mode bypasses DashboardShell entirely — no sidebar, dark-by-default
   if (view === 'tv') {
     return (
@@ -325,6 +336,7 @@ export default function WGHub({ onSignOut }) {
         activities={activities}
         whoopData={whoopData}
         setView={setView}
+        onRefresh={refreshLiveData}
       />
     )
   }

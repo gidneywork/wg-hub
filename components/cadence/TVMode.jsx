@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import './tv-mode.css'
 import {
   localIso,
@@ -274,7 +274,7 @@ function TrainingPill({ name, meta, pipClass, isPrimary, done = null }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TVMode({ logs, settings, plan, activities, whoopData, setView }) {
+export default function TVMode({ logs, settings, plan, activities, whoopData, setView, onRefresh }) {
   // Opens on Today unless a locked timescale was saved on this device.
   const [initialView]                   = useState(() => readTvView())
   const [range, setRange]               = useState(initialView.range)
@@ -356,6 +356,23 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     }, 20000)
     return () => clearTimeout(id)
   }, [range, locked])
+
+  // ── Safety reload: every 5 min, and when the tab becomes visible ──────────────
+  // Realtime is the primary path; this catches a silently dropped connection
+  // on a TV left running. TV Mode only. The callback sits in a ref so a new
+  // function identity from the parent never restarts the 5-minute interval.
+  const onRefreshRef = useRef(onRefresh)
+  useEffect(() => { onRefreshRef.current = onRefresh }, [onRefresh])
+  useEffect(() => {
+    const refresh = () => {
+      if (!onRefreshRef.current) return
+      Promise.resolve(onRefreshRef.current()).catch(() => console.error('TV refresh failed'))
+    }
+    const id = setInterval(refresh, 5 * 60_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
+  }, [])
 
   // ── ESC key → exit ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -641,7 +658,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             <div className="wordmark">cadence<span className="dot" /></div>
             <div className="tagline">
               <span className="pulse" />
-              Performance display · auto-refreshes every 30s
+              live · checks every 5 min
             </div>
           </div>
 
