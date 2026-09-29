@@ -16,6 +16,7 @@ import {
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { matchSessionsToActivities } from '../../lib/session-match'
 import TargetText from './TargetText'
+import { targetText } from './settings/settingsHelpers'
 import { highlightedNutrients, nutrientsSummary } from './nutrients'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
@@ -222,8 +223,9 @@ function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, r
   )
 }
 
-// NutRow — one nutrition metric in the bottom nutrition panel.
-function NutRow({ label, fillClass, fillPct, targetPct, targetLabel, total, unit, dailyAvg }) {
+// NutRow — one nutrition metric in the bottom nutrition panel. `target` is
+// the FC-086 target text for the daily average ({ on, text }).
+function NutRow({ label, fillClass, fillPct, target, targetLabel, total, unit, dailyAvg }) {
   const noData = total == null
   return (
     <div className="nut-row">
@@ -234,11 +236,15 @@ function NutRow({ label, fillClass, fillPct, targetPct, targetLabel, total, unit
         </div>
         <div className="bar-foot">
           {noData ? (
-            <span className="target-pct no-data">no data</span>
+            <span className="no-data">no data</span>
           ) : (
             <>
-              <span><span className="target-pct cycleable">{targetPct}%</span> of target</span>
-              <span className="dot" />
+              {target ? (
+                <>
+                  <span className={`target-text cycleable ${target.on ? 'on' : 'off'}`}>{target.text}</span>
+                  <span className="dot" />
+                </>
+              ) : null}
               <span className="cycleable">{targetLabel}</span>
             </>
           )}
@@ -829,7 +835,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
             <div className="sub cycleable">{nutSub}</div>
             <NutRow
               label="Calories" fillClass="moss"
-              fillPct={calPct} targetPct={calPct != null ? `${calPct}%` : null}
+              fillPct={calPct} target={nutDailyAvg && isFinite(calTarget) ? targetText(nutDailyAvg.calories, { value: calTarget }) : null}
               targetLabel={calTargetLabel}
               total={nutDailyAvg ? Math.round(nutTotals.calories).toLocaleString('en-GB') : null}
               unit="kcal"
@@ -837,7 +843,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
             />
             <NutRow
               label="Protein" fillClass="clay"
-              fillPct={protPct} targetPct={protPct != null ? `${protPct}%` : null}
+              fillPct={protPct} target={nutDailyAvg && isFinite(protTarget) ? targetText(nutDailyAvg.protein, { value: protTarget }) : null}
               targetLabel={protTargetLabel}
               total={nutDailyAvg ? Math.round(nutTotals.protein).toLocaleString('en-GB') : null}
               unit="g"
@@ -845,7 +851,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
             />
             <NutRow
               label="Carbs" fillClass="slate"
-              fillPct={carbPct} targetPct={carbPct != null ? `${carbPct}%` : null}
+              fillPct={carbPct} target={nutDailyAvg && isFinite(carbTarget) ? targetText(nutDailyAvg.carbs, { value: carbTarget }) : null}
               targetLabel={carbTargetLabel}
               total={nutDailyAvg ? Math.round(nutTotals.carbs).toLocaleString('en-GB') : null}
               unit="g"
@@ -853,7 +859,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
             />
             <NutRow
               label="Water" fillClass="sand"
-              fillPct={waterPct} targetPct={waterPct != null ? `${waterPct}%` : null}
+              fillPct={waterPct} target={waterAvgMl != null && isFinite(waterTargetL) && waterTargetL > 0 ? targetText((waterAvgMl / 1000).toFixed(1), { value: waterTargetL }) : null}
               targetLabel={isFinite(waterTargetL) ? `${waterTargetL.toFixed(1)} L/day` : null}
               total={waterAvgMl != null ? (nutTotals.waterMl / 1000).toFixed(1) : null}
               unit="L"

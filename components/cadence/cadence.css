@@ -2631,20 +2631,7 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-muted);
   letter-spacing: 0.04em;
 }
-[data-cadence] .settings-page .target-helper .state {
-  color: var(--moss-deep);
-  font-weight: 500;
-}
-[data-theme="dark"] [data-cadence] .settings-page .target-helper .state { color: var(--moss); }
-[data-cadence] .settings-page .target-helper .state.amber {
-  color: var(--sand);
-  font-weight: 500;
-}
-[data-cadence] .settings-page .target-helper .state.off {
-  color: var(--clay-deep);
-  font-weight: 500;
-}
-[data-theme="dark"] [data-cadence] .settings-page .target-helper .state.off { color: var(--clay); }
+[data-cadence] .settings-page .target-helper .target-text { font-size: inherit; letter-spacing: inherit; }
 
 /* "No data yet" — italic Fraunces for missing live values */
 [data-cadence] .settings-page .target-helper .no-data {
@@ -3428,6 +3415,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .daily-page .field-card .helper .pct.up    { color: var(--moss-deep); }
 [data-cadence] .daily-page .field-card .helper .pct.down  { color: var(--clay-deep); }
 [data-cadence] .daily-page .field-card .helper .pct.flat  { color: var(--text-muted); }
+[data-cadence] .daily-page .field-card .helper .target-text { font-size: inherit; letter-spacing: inherit; }
 [data-theme="dark"] [data-cadence] .daily-page .field-card .helper .pct.up   { color: var(--moss); }
 [data-theme="dark"] [data-cadence] .daily-page .field-card .helper .pct.down { color: var(--clay); }
 

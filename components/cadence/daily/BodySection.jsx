@@ -81,7 +81,7 @@ export default function BodySection({
   const rhrTarget = settings?.rhr
   const rhrVal = form?.body?.rhr
   const rhrBand = targetBand(rhrVal, rhrTarget)
-  const rhrHelper = buildVitalsHelper(rhrVal, rhrTarget)
+  const rhrHelper = buildVitalsHelper(rhrVal, rhrTarget, 'bpm')
   const rhrHasValue = rhrVal != null && rhrVal !== ''
 
   return (

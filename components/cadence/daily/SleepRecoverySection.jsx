@@ -32,7 +32,7 @@ export default function SleepRecoverySection({
   const hoursTarget = settings?.hoursSlept
   const hoursVal = form?.sleep?.hoursSlept
   const hoursBand = targetBand(hoursVal, hoursTarget)
-  const hoursHelper = buildVitalsHelper(hoursVal, hoursTarget, 1)
+  const hoursHelper = buildVitalsHelper(hoursVal, hoursTarget)
   const hoursHasValue = hoursVal != null && hoursVal !== ''
 
   // Sleep score (/100)

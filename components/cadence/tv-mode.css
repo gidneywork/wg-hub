@@ -527,9 +527,8 @@
   align-items: center;
   gap: 8px;
 }
-.tv-page .nut-row .bar-foot .target-pct                      { color: var(--moss-deep); }
-[data-theme="dark"] .tv-page .nut-row .bar-foot .target-pct  { color: var(--moss); }
-.tv-page .nut-row .bar-foot .target-pct.no-data              { color: var(--text-faint); }
+.tv-page .nut-row .bar-foot .no-data { color: var(--text-faint); }
+.tv-page .nut-row .bar-foot .target-text { font-size: inherit; letter-spacing: inherit; }
 .tv-page .nut-row .bar-foot .dot {
   width: 3px; height: 3px;
   border-radius: 50%;

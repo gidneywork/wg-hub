@@ -12,6 +12,8 @@
  * downstream commits have a stable import path.
  */
 
+import { targetText } from '../settings/settingsHelpers'
+
 // "Monday · 11 May 2026" for the date display.
 export function fmtDateLong(date) {
   if (!date) return ''
@@ -212,89 +214,48 @@ export function weeklyWeightDelta(date, logs) {
   return today - before
 }
 
-// Weight helper text — chevron + week delta + above/below target.
-// Returns { chevron, tone, text } or null when there's no weight yet.
-//   chevron — "▲ 1.4 kg" / "▼ 0.8 kg" / null
-//   tone    — 'up' | 'down' | 'flat' (drives the .pct colour)
-//   text    — "this week · 5.2 kg above target" / similar
+// Daily Data helper lines (FC-086). A helper is
+//   { chevron, tone, text, target, after }
+// rendered as: chevron (trend, coloured by tone) · text · target · after.
+// `target` is the target text ({ on, text }) — the only target reading, in
+// moss (on) or clay (off); everything else stays muted.
+
+// Weight: week delta chevron + "this week" + target text
+// ("On target" / "1.3 kg off target").
 export function buildWeightHelper(actualStr, target, weekDelta) {
   const a = parseFloat(actualStr)
   if (!isFinite(a) || !target?.value) return null
-  const diff = a - parseFloat(target.value)
-  const above = diff > 0.5
-    ? `${diff.toFixed(1)} kg above target`
-    : diff < -0.5
-      ? `${Math.abs(diff).toFixed(1)} kg below target`
-      : 'on target'
-
   let chevron = null
   let tone = 'flat'
   if (weekDelta != null && Math.abs(weekDelta) > 0.1) {
-    // For a goal-weight metric, dropping (▼) toward target is positive,
-    // gaining away from target is negative. We don't know the user's
-    // direction, so colour the chevron by raw direction: gain → clay,
-    // loss → moss. The mockup uses ▼ down=clay for above-target gain.
+    // Colour the chevron by raw direction: gain → clay, loss → moss.
     chevron = weekDelta > 0
       ? `▲ ${weekDelta.toFixed(1)} kg`
       : `▼ ${Math.abs(weekDelta).toFixed(1)} kg`
     tone = weekDelta > 0 ? 'down' : 'up'
   }
-  return { chevron, tone, text: `this week · ${above}` }
+  return { chevron, tone, text: 'this week', target: targetText(actualStr, { isWeight: true, ...target }) }
 }
 
-// Vitals helper — semantic-aware ▲/▼ delta against a target with a
-// tolerance band. Arrow reflects literal direction; tone reflects
-// movement toward the goal (moss = better, clay = worse).
-//
-//   higher-is-better (HRV, sleep score, recovery, hours slept):
-//     actual > target  → ▲ moss   "▲ 5 vs target"
-//     actual < target  → ▼ clay   "▼ 15 vs target"
-//   lower-is-better (RHR):
-//     actual < target  → ▼ moss
-//     actual > target  → ▲ clay
-//
-//   `decimals` formats the magnitude (1 for hoursSlept, 0 for others)
-//   so "0.5" reads naturally for sub-unit metrics without padding ints.
-export function buildVitalsHelper(actualStr, target, decimals = 0) {
-  const a = parseFloat(actualStr)
-  const t = parseFloat(target?.value)
-  if (!isFinite(a) || !isFinite(t) || t === 0) return null
-  const lower = !!target.lowerIsBetter
-  const diff = a - t
-  const tolerance = decimals > 0 ? 0.25 : 0.5
-  if (Math.abs(diff) <= tolerance) {
-    return { chevron: '●', tone: 'flat', text: 'on target' }
-  }
-  const arrow = diff > 0 ? '▲' : '▼'
-  const better = lower ? diff < 0 : diff > 0
-  const tone = better ? 'up' : 'down'
-  const mag = decimals > 0
-    ? Math.abs(diff).toFixed(decimals)
-    : Math.round(Math.abs(diff)).toString()
-  return {
-    chevron: `${arrow} ${mag}`,
-    tone,
-    text: 'vs target',
-  }
+// Vitals (HRV, resting HR, sleep score, recovery, hours slept): target text
+// only — "108% of target" (higher is better), "On target" / "3 bpm above
+// target" (resting HR).
+export function buildVitalsHelper(actualStr, target, unit = '') {
+  const t = targetText(actualStr, target, unit)
+  return t ? { target: t } : null
 }
 
-// Macro helper text — "97% · 5 g short" / "102% · 12 g over" / "on target".
+// Macros, water and steps: target text, then the gap —
+// "51% of target · 92 g short" / "112% of target · 360 kcal over".
 export function buildMacroHelper(actualStr, target, unit) {
-  const a = parseFloat(actualStr)
-  const t = parseFloat(target?.value)
-  if (!isFinite(a) || !isFinite(t) || t === 0) return null
-  const pct = Math.round((a / t) * 100)
-  const diff = t - a
-  let suffix
-  if (Math.abs(diff) < 1) {
-    suffix = 'on target'
-  } else if (diff > 0) {
-    suffix = `${Math.round(diff)} ${unit} short`
-  } else {
-    suffix = `${Math.abs(Math.round(diff))} ${unit} over`
-  }
-  const tone = pct >= 95 ? 'up' : pct >= 85 ? 'up' : 'down'
-  return { chevron: `${pct}%`, tone, text: `of target · ${suffix}` }
+  const t = targetText(actualStr, target)
+  if (!t) return null
+  const diff = parseFloat(target.value) - parseFloat(actualStr)
+  const fmt = v => (unit === 'L' ? Math.abs(v).toFixed(1) : Math.round(Math.abs(v)).toLocaleString('en-GB'))
+  const after = Math.abs(diff) < (unit === 'L' ? 0.05 : 1) ? null
+    : diff > 0 ? `${fmt(diff)} ${unit} short`
+    : `${fmt(diff)} ${unit} over`
+  return { target: t, after }
 }
 
 // Activity-tile summary for one date. Counts runs and sums their

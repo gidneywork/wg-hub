@@ -23,7 +23,9 @@ import { useEffect, useRef, useState } from 'react'
  *               Fraunces helper styling
  *   progress    { pct, variant } — pct 0..100, variant 'sand'|'clay'|
  *               'slate'|null (null = default moss)
- *   helper      { chevron, tone, text } or { stubText } for stubs
+ *   helper      { chevron, tone, text, target, after } or { stubText } for
+ *               stubs. `target` ({ on, text }) is the FC-086 target text —
+ *               moss on target, clay off; the rest stays muted.
  *   rowIndex    absolute row index across the page; drives the 60ms
  *               stagger on the first-paint bar entrance
  *   saved       drives the .saved class (shows the moss save-tick)
@@ -100,7 +102,14 @@ export default function FieldCard({
             {helper.chevron ? (
               <span className={`pct ${helper.tone || 'flat'}`}>{helper.chevron}</span>
             ) : null}
-            <span>{helper.text}</span>
+            {helper.text ? <span>{helper.text}</span> : null}
+            {helper.target ? (
+              <>
+                {helper.text ? <span>·</span> : null}
+                <span className={`target-text ${helper.target.on ? 'on' : 'off'}`}>{helper.target.text}</span>
+              </>
+            ) : null}
+            {helper.after ? <span>· {helper.after}</span> : null}
           </>
         ) : null}
       </div>

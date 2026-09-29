@@ -84,7 +84,11 @@ export default function NutritionSection({
           const merged = mergeNutritionForDate(date, { nutrition: form?.nutrition }, cronometerData)
           const mergedVal = row.mergedValue ? row.mergedValue(merged) : merged[row.key]
           const fromCronometer = !hasValue && merged.source[row.key] === 'cronometer' ? mergedVal : null
-          const effective = hasValue ? value : fromCronometer
+          // Judged as displayed: a synced value is shown rounded (kcal/g to
+          // whole numbers, water to 0.1 L).
+          const effective = hasValue ? value
+            : fromCronometer == null ? null
+            : row.showEstimate ? row.showEstimate(fromCronometer) : Math.round(fromCronometer)
           const allTargets = nutritionTargetsForDate(date, cronometerData, settings)
           const targetValue = row.targetFrom ? row.targetFrom(allTargets) : allTargets[row.key]
           const target = targetValue != null ? { ...(settings?.[row.targetKey] || {}), value: targetValue } : null

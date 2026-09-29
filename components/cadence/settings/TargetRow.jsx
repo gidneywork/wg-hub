@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { TARGET_SPECS, targetState, stateWord } from './settingsHelpers'
+import { TARGET_SPECS, targetState } from './settingsHelpers'
+import TargetText from '../TargetText'
 
 /**
  * Single target row.
@@ -32,7 +33,6 @@ export default function TargetRow({ targetKey, def, actual, onChange, rowIndex }
   }, [targetPct, rowIndex])
 
   const fillClass = `target-fill${band === 'amber' ? ' amber' : band === 'off' ? ' off' : ''}`
-  const stateClass = `state${band === 'amber' ? ' amber' : band === 'off' ? ' off' : ''}`
 
   return (
     <div className="target-row">
@@ -73,7 +73,7 @@ export default function TargetRow({ targetKey, def, actual, onChange, rowIndex }
         </div>
         {hasData ? (
           <div className="target-helper">
-            {spec.prefix(def.value)} · <span className={stateClass}>{spec.actual(actual)} · {stateWord(band)}</span>
+            {spec.prefix(def.value)} · {spec.actual(actual)} · <TargetText value={actual} def={def} unit={def.lowerIsBetter ? spec.unit : ''} />
           </div>
         ) : (
           <div className="target-helper">

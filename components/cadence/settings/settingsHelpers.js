@@ -307,9 +307,6 @@ export const SECTION_LAYOUT = [
 ]
 
 // Word for the trailing state span — coloured to match the bar.
-export function stateWord(band) {
-  return band === 'on' ? 'on target' : band === 'amber' ? 'approaching' : 'off target'
-}
 
 // ── Target-changed diff for audit writes
 // Compares two settings objects and returns an array of change records,
