@@ -1,5 +1,5 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
-import { getValidToken, updateSyncMeta, resolveStravaType } from '../../../../lib/strava'
+import { getValidToken, updateSyncMeta, resolveStravaType, isExcludedStravaActivity } from '../../../../lib/strava'
 import { resolveUserId } from '../../../../lib/auth-server'
 
 async function upsertBatch(activities, userId) {
@@ -74,7 +74,11 @@ export async function POST(request) {
       page++
     }
 
-    const newCount = await upsertBatch(allActivities, userId)
+    // Excluded activities (Walk) are never ingested (FC-079).
+    const kept     = allActivities.filter(a => !isExcludedStravaActivity(a))
+    const excluded = allActivities.length - kept.length
+
+    const newCount = await upsertBatch(kept, userId)
     await updateSyncMeta(userId)
 
     const { count } = await supabaseServer
@@ -100,10 +104,11 @@ export async function POST(request) {
         newCount,
         total:    count,
         synced:   allActivities.length,
+        excluded,
       },
     })
 
-    return Response.json({ synced: allActivities.length, new: newCount, total: count })
+    return Response.json({ synced: allActivities.length, new: newCount, total: count, excluded })
 
   } catch (err) {
     console.error('Sync error:', err)

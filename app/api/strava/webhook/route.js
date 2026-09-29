@@ -1,5 +1,5 @@
 import { supabaseServer } from '../../../../lib/supabase-server'
-import { getValidToken, upsertSingleActivity, updateSyncMeta } from '../../../../lib/strava'
+import { getValidToken, upsertSingleActivity, updateSyncMeta, isExcludedStravaActivity } from '../../../../lib/strava'
 import { resolveUserByStravaAthlete } from '../../../../lib/auth-server'
 
 // ── GET — Strava one-time verification handshake ─────────────────────────────
@@ -56,6 +56,21 @@ export async function POST(request) {
 
         if (res.ok) {
           const activity = await res.json()
+
+          // Excluded (Walk) — never ingested, never audited. An activity
+          // re-typed to Walk on Strava drops its existing row (FC-079).
+          if (isExcludedStravaActivity(activity)) {
+            const { data: removed } = await supabaseServer
+              .from('strava_activities')
+              .delete()
+              .eq('user_id', userId)
+              .eq('id', activityId)
+              .select('id')
+            if (removed?.length) await updateSyncMeta(userId)
+            console.log(`Webhook: skipped excluded activity ${activityId}`)
+            return Response.json({ received: true })
+          }
+
           await upsertSingleActivity(activity, userId)
           await updateSyncMeta(userId)
 
