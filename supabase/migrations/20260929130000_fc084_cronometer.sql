@@ -46,12 +46,13 @@ create table if not exists cronometer_data (
 
 alter table cronometer_data enable row level security;
 
--- Signed-in users can read (the app merges it at read time). Writes are
+-- A signed-in user reads only their own rows (the app merges them at read
+-- time). Already at the B3 lockdown standard (user_id = auth.uid()), by
+-- explicit decision, ahead of the other per-user tables. Writes are
 -- service-role only (the sync route), so there is no insert/update policy.
--- Permissive, like the other per-user tables until B3 tightens them all.
 drop policy if exists "cronometer_data_select" on cronometer_data;
 create policy "cronometer_data_select" on cronometer_data
-  for select to authenticated using (true);
+  for select to authenticated using (user_id = auth.uid());
 
 create table if not exists cronometer_session (
   user_id     uuid        primary key references auth.users(id),
