@@ -15,6 +15,7 @@ import { db } from '../../lib/db'
 import { computeAdherence } from './scheduledAnalytics'
 import { computeBMR, ageFromBirthday, mostRecentWeightKg } from '../../lib/bmr'
 import CadenceDialog from './CadenceDialog'
+import { NUTRIENTS, snapshotForDate, consumedFor, nutrientState, describeTarget } from './nutrients'
 import './charts-page.css'
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'strain',   label: 'Strain',           pip: 'body'  },
   { id: 'calories',   label: 'Calories',        pip: 'intake'},
   { id: 'water',      label: 'Water',           pip: 'intake'},
+  { id: 'nutrients',  label: 'Nutrients',       pip: 'intake'},
   { id: 'adherence', label: 'Adherence',       pip: 'body'  },
 ]
 
@@ -680,6 +682,15 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   const [compare,   setCompare  ] = useState('target')
   const [smoothing, setSmoothing] = useState('raw')
 
+  // Nutrients tab (FC-085): one highlighted nutrient at a time, against the
+  // target Cronometer currently sets for it.
+  const nutrientSnap = useMemo(() => snapshotForDate(localIso(new Date()), cronometerData), [cronometerData])
+  const nutrientIds  = useMemo(() => (nutrientSnap?.highlighted || []).filter(id => NUTRIENTS[id]), [nutrientSnap])
+  const [pickedNutrient, setPickedNutrient] = useState(null)
+  const nutrientId   = nutrientIds.includes(pickedNutrient) ? pickedNutrient : (nutrientIds[0] ?? null)
+  const nutrientMeta = nutrientId ? NUTRIENTS[nutrientId] : null
+  const nutrientTarget = nutrientId ? (nutrientSnap?.targets?.[String(nutrientId)] || null) : null
+
   // ── User annotations (chart_annotations table) ──────────────────
   const [userAnnotations, setUserAnnotations] = useState([])
 
@@ -818,6 +829,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       hoursSlept: bm((m)    => m?.sleep?.hoursSlept),
       calsIn:   bm((_, __, d) => mergeNutritionForDate(d, logs[d], cronometerData).calories),
       water:    bm((_, __, d) => { const ml = mergeNutritionForDate(d, logs[d], cronometerData).water_ml; return ml != null && ml > 0 ? ml / 1000 : null }),
+      nutrient: bm((_, __, d) => (nutrientId ? consumedFor(nutrientId, cronometerData[d]) : null)),
       calsBurned: bm((_, w, d) => burnedForDate(w, d) ?? null),
       calsBalance: bm((_, w, d) => {
         const intake = mergeNutritionForDate(d, logs[d], cronometerData).calories
@@ -827,7 +839,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         return intake - burned
       }),
     }
-  }, [logs, whoopData, cronometerData, rangeDays, userProfile])
+  }, [logs, whoopData, cronometerData, rangeDays, userProfile, nutrientId])
 
   // ── Hero config driven by activeTab ─────────────────────────────
   const heroConfig = useMemo(() => {
@@ -1006,6 +1018,30 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }
     }
 
+    if (activeTab === 'nutrients') {
+      if (!nutrientMeta) {
+        return { eyebrow: 'Nutrients · per day', heroStr: '—', unitStr: '', delta: null, metaStr: 'No highlighted nutrients synced yet', tiles: [] }
+      }
+      const m = allMetrics.nutrient
+      const d = calcDelta(m.avg, m.priorAvg)
+      const u = nutrientMeta.unit
+      const onDays = nutrientTarget ? m.vals.filter(x => nutrientState(x.value, nutrientTarget).state === 'on').length : null
+      const hasTarget = nutrientTarget && (nutrientTarget.min != null || nutrientTarget.max != null)
+      return {
+        eyebrow: `${nutrientMeta.name} · ${u} per day`,
+        heroStr: fmtDp1(m.avg),
+        unitStr: `${u} · ${rangeLabel(range)}`,
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtDp1(m.priorAvg)} ${u}` : 'vs prior period',
+        tiles: [
+          { label: 'Average',        val: fmtDp1(m.avg),  unit: u, ctx: `Across ${m.count} day${m.count !== 1 ? 's' : ''}` },
+          { label: 'Target',         val: hasTarget ? describeTarget(nutrientTarget, u) : 'No target', unit: '', ctx: 'From Cronometer' },
+          { label: 'Days on target', val: hasTarget && m.count > 0 ? String(onDays) : '—', unit: '', ctx: nutrientTarget?.max != null ? 'Within the range' : 'At or above target' },
+          { label: 'Best day',       val: fmtDp1(m.peak), unit: u, ctx: 'Highest in range' },
+        ],
+      }
+    }
+
     if (activeTab === 'adherence') {
       const s   = adherenceData?.summary
       const has = !!s && s.gradedDays > 0 && s.planned > 0
@@ -1027,7 +1063,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
 
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings, adherenceData, rangeDays])
+  }, [activeTab, runKm, allMetrics, range, settings, adherenceData, rangeDays, nutrientMeta, nutrientTarget])
 
   // ── Annotations — merged user annotations + auto-detected PBs ──
   // User annotations: all tabs, date = start_date for marker placement
@@ -1091,7 +1127,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     if (activeTab === 'adherence') {
       return adherenceData?.series ?? []
     }
-    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', water: 'water' }[activeTab]
+    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', water: 'water', nutrients: 'nutrient' }[activeTab]
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
@@ -1111,8 +1147,10 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     return buildChartBars(allMetrics.weight.vals, days)
   }, [activeTab, rangeDays, allMetrics])
 
-  const animKey   = `${activeTab}-${range}`
-  const metricMeta = METRIC_META[activeTab] ?? METRIC_META_FALLBACK
+  const animKey   = `${activeTab}-${range}${activeTab === 'nutrients' ? `-${nutrientId}` : ''}`
+  const metricMeta = activeTab === 'nutrients'
+    ? { unit: nutrientMeta?.unit || '', lowerIsBetter: false, fmt: v => v.toFixed(1) }
+    : (METRIC_META[activeTab] ?? METRIC_META_FALLBACK)
 
   const smoothWindow = smoothing === '4w' ? 4 : smoothing === '12w' ? 12 : 1
 
@@ -1152,12 +1190,18 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       const v = settings?.dailyWater?.value
       return v != null && v !== '' ? parseFloat(v) : null
     }
+    // Nutrients: the line sits at the minimum (the target), or at the limit
+    // when there is only a maximum.
+    if (activeTab === 'nutrients') {
+      const t = nutrientTarget?.min ?? nutrientTarget?.max
+      return t != null ? Number(t) : null
+    }
     return null
-  }, [activeTab, settings])
+  }, [activeTab, settings, nutrientTarget])
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'calories' || activeTab === 'adherence' || activeTab === 'water') return []
+    if (activeTab === 'calories' || activeTab === 'adherence' || activeTab === 'water' || activeTab === 'nutrients') return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)
@@ -1287,6 +1331,23 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
               )}
             </div>
           </div>
+
+          {activeTab === 'nutrients' && nutrientIds.length > 0 && (
+            <div className="control-group nutrient-picker" role="group" aria-label="Nutrient">
+              <span className="gl">Nutrient</span>
+              {nutrientIds.map(id => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`filter-pill${id === nutrientId ? ' active' : ''}`}
+                  aria-pressed={id === nutrientId}
+                  onClick={() => setPickedNutrient(id)}
+                >
+                  {NUTRIENTS[id].name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Chart canvas */}
           <div className="chart-canvas">

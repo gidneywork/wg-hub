@@ -1004,3 +1004,11 @@
   [data-cadence] .annot-row .pip { width: 8px; height: 8px; }
   [data-cadence] .annot-row .kind { justify-self: start; }
 }
+
+/* Nutrients tab (FC-085) — nutrient pills under the chart head; wraps. */
+[data-cadence] .charts-page .nutrient-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 4px 0 12px;
+}
