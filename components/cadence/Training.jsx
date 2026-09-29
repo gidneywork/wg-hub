@@ -465,13 +465,13 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
   }
 
   const weekKm       = sumWeekKm(currentWeek)
-  const funcCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'functional')).length
+  const stairCount   = currentWeek.filter(d => d.sessions.some(s => s.type === 'stairmaster')).length
   const gymTypes     = [...new Set(
     currentWeek.flatMap(d => d.sessions.filter(s => s.type === 'gym').map(s =>
       s.details.split('–')[0].split('/')[0].trim()
     ))
   )].length
-  const yogaCount    = currentWeek.filter(d => d.sessions.some(s => s.type === 'yoga')).length
+  const mobilityCount = currentWeek.filter(d => d.sessions.some(s => s.type === 'stretch' || s.type === 'yoga')).length
   const sessionTotal = currentWeek.reduce((n, day) => n + day.sessions.length, 0)
 
   // Month calendar — navigable month, read-only, cells coloured by the same
@@ -533,8 +533,8 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
           <div className="helper">this week</div>
         </div>
         <div className="stat">
-          <div className="label">Functional</div>
-          <div className="value">{funcCount}</div>
+          <div className="label">Stairmaster</div>
+          <div className="value">{stairCount}</div>
           <div className="helper">sessions this week</div>
         </div>
         <div className="stat">
@@ -543,8 +543,8 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
           <div className="helper">types in plan</div>
         </div>
         <div className="stat">
-          <div className="label">Yoga</div>
-          <div className="value">{yogaCount}</div>
+          <div className="label">Mobility</div>
+          <div className="value">{mobilityCount}</div>
           <div className="helper">days this week</div>
         </div>
         <div className="stat">

@@ -43,9 +43,9 @@ function shortTitle(details, type) {
   return candidate.slice(0, 26).replace(/\s+\S*$/, '') + '…'
 }
 
-// Pick the primary session of a plan day. Order from getDefaultPlan in WGHub:
-// rest pushed first (if any), then runs, then func, then gym, then yoga.
-// "Primary" = first session, which already reflects that priority.
+// Pick the primary session of a plan day: the first session, in plan order
+// (lib/plan.js). From week 12 the template leads with the gym session on
+// Mon / Wed / Fri, so those days show Push / Legs / Pull.
 function primarySession(planDay) {
   if (!planDay?.sessions?.length) return null
   return planDay.sessions[0]
