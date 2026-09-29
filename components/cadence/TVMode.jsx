@@ -17,8 +17,9 @@ import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const RANGES = ['7D', '30D', '6M', '1Y', 'YTD']
+const RANGES = ['Today', '7D', '30D', '6M', '1Y', 'YTD']
 const DAYS_LABEL = {
+  'Today': 'today',
   '7D':  'avg · 7 days',
   '30D': 'avg · 30 days',
   '6M':  'avg · 6 months',
@@ -27,6 +28,7 @@ const DAYS_LABEL = {
 }
 
 const KM_HEAD = {
+  'Today': 'Km run · today',
   '7D':  'Km run · last 7 days',
   '30D': 'Km run · last 30 days',
   '6M':  'Km run · last 6 months',
@@ -35,6 +37,7 @@ const KM_HEAD = {
 }
 
 const NUT_HEAD = {
+  'Today': 'Nutrition totals · today',
   '7D':  'Nutrition totals · last 7 days',
   '30D': 'Nutrition totals · last 30 days',
   '6M':  'Nutrition totals · last 6 months',
@@ -48,6 +51,7 @@ function kmContext(km, sessionCount, rangeKey) {
   const sessions = `${sessionCount} session${sessionCount !== 1 ? 's' : ''}`
   if (km === 0) {
     const empty = {
+      'Today': 'No runs logged today.',
       '7D':  'No runs logged this week.',
       '30D': 'No runs this month.',
       '6M':  'No runs in the last 6 months.',
@@ -55,6 +59,9 @@ function kmContext(km, sessionCount, rangeKey) {
       'YTD': 'No runs logged this year.',
     }
     return empty[rangeKey] || 'No runs logged.'
+  }
+  if (rangeKey === 'Today') {
+    return `${km.toFixed(1)} km today — ${sessions}.`
   }
   const now = new Date()
   if (rangeKey === '7D') {
@@ -86,7 +93,8 @@ function kmContext(km, sessionCount, rangeKey) {
 function periodDays(rangeKey) {
   const now = new Date()
   let n
-  if      (rangeKey === '7D')  n = 7
+  if      (rangeKey === 'Today') n = 1
+  else if (rangeKey === '7D')  n = 7
   else if (rangeKey === '30D') n = 30
   else if (rangeKey === '6M')  n = 180
   else if (rangeKey === '1Y')  n = 365
@@ -231,11 +239,14 @@ function TrainingPill({ name, meta, pipClass, isPrimary }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TVMode({ logs, settings, plan, activities, whoopData, setView }) {
-  const [range, setRange]               = useState('7D')
+  const [range, setRange]               = useState('Today')
   const [progressKey, setProgressKey]   = useState(0)
   const [dataChanging, setDataChanging] = useState(false)
   const [clockTime, setClockTime]       = useState('')
   const [clockDate, setClockDate]       = useState('')
+  // Local date, refreshed by the clock tick. Everything "today" hangs off it,
+  // so a TV left on overnight rolls over at midnight (FC-082).
+  const [dayKey, setDayKey]             = useState(() => localIso())
   const [tvTodos,       setTvTodos      ] = useState([])
   const [tvCompletions, setTvCompletions] = useState([])
 
@@ -256,7 +267,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     })
   }, [])
 
-  const tvToday = useMemo(() => localIso(), [])
+  const tvToday = dayKey
   const { pending: pendingTodos, completed: completedTodos } = useMemo(
     () => filterTodosForDate(tvTodos, tvCompletions, tvToday),
     [tvTodos, tvCompletions, tvToday]
@@ -280,6 +291,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
       const mm  = String(now.getMinutes()).padStart(2, '0')
       setClockTime(`${hh}:${mm}`)
       setClockDate(`${DAYS[now.getDay()]} · ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`)
+      setDayKey(localIso(now))
     }
     update()
     const id = setInterval(update, 30000)
@@ -332,8 +344,10 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   }
 
   // ── Period day arrays ────────────────────────────────────────────────────────
-  const days      = useMemo(() => periodDays(range), [range])
-  const priorDays = useMemo(() => priorPeriodDays(range), [range])
+  // dayKey is a dependency so the windows roll over at midnight.
+  const days      = useMemo(() => periodDays(range), [range, dayKey])
+  const priorDays = useMemo(() => priorPeriodDays(range), [range, dayKey])
+  const isToday   = range === 'Today'
 
   // ── Stat tile: Weight ────────────────────────────────────────────────────────
   const { avgW, deltaW, sparkW } = useMemo(() => {
@@ -484,6 +498,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
 
   const bedtimeStatus = (() => {
     if (avgBedtime == null) return { text: 'no data', cls: 'no-data' }
+    if (isToday) return { text: '● last night', cls: 'flat' }
     return {
       text: `● ${bedtimeDaysLogged} day${bedtimeDaysLogged !== 1 ? 's' : ''} logged`,
       cls:  'flat',
@@ -535,15 +550,18 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const carbTargetLabel = isFinite(carbTarget) ? `${Math.round(carbTarget)} g/day` : null
 
   const nutPending = days.length - nutLoggedDays
-  const nutSub = nutLoggedDays > 0
+  const nutSub = isToday
+    ? (nutLoggedDays > 0 ? 'logged today' : 'not logged yet')
+    : nutLoggedDays > 0
     ? `${nutLoggedDays} day${nutLoggedDays !== 1 ? 's' : ''} logged · ${nutPending} pending`
     : `${days.length} days · none logged`
 
   // ── Today's training plan ────────────────────────────────────────────────────
   const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-  const todayName = WEEKDAYS[new Date().getDay()]
-  const todayIdx  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
-  const todaySessions = getCurrentWeek(plan, new Date())?.[todayIdx]?.sessions || []
+  const todayDate = new Date(dayKey + 'T12:00:00')
+  const todayName = WEEKDAYS[todayDate.getDay()]
+  const todayIdx  = todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1
+  const todaySessions = getCurrentWeek(plan, todayDate)?.[todayIdx]?.sessions || []
 
   // T3: first run → primary; else first session → primary; no sessions → no primary
   const primaryIdx = (() => {
@@ -611,37 +629,37 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             label="Weight"     sub={periodLabel}
             value={avgW   != null ? avgW.toFixed(1)         : null} unit="kg"
             status={wStatus.text}     statusClass={wStatus.cls}
-            sparkValues={sparkW}      revealClass="r-3"
+            sparkValues={isToday ? [] : sparkW}      revealClass="r-3"
           />
           <StatTile
             label="HRV"        sub={periodLabel}
             value={avgHrv  != null ? Math.round(avgHrv)    : null} unit="ms"
             status={hrvStatus.text}   statusClass={hrvStatus.cls}
-            sparkValues={sparkHrv}    revealClass="r-4"
+            sparkValues={isToday ? [] : sparkHrv}    revealClass="r-4"
           />
           <StatTile
             label="Resting HR" sub={periodLabel}
             value={avgRhr  != null ? Math.round(avgRhr)    : null} unit="bpm"
             status={rhrStatus.text}   statusClass={rhrStatus.cls}
-            sparkValues={sparkRhr}    revealClass="r-5"
+            sparkValues={isToday ? [] : sparkRhr}    revealClass="r-5"
           />
           <StatTile
             label="Sleep score" sub={periodLabel}
             value={avgSleep != null ? Math.round(avgSleep) : null} unit="/100"
             status={sleepStatus.text} statusClass={sleepStatus.cls}
-            sparkValues={sparkSleep}  revealClass="r-6"
+            sparkValues={isToday ? [] : sparkSleep}  revealClass="r-6"
           />
           <StatTile
             label="Recovery"   sub={periodLabel}
             value={avgRec  != null ? Math.round(avgRec)   : null} unit="/100"
             status={recStatus.text}   statusClass={recStatus.cls}
-            sparkValues={sparkRec}    revealClass="r-7"
+            sparkValues={isToday ? [] : sparkRec}    revealClass="r-7"
           />
           <StatTile
             label="Hours slept" sub={periodLabel}
             value={avgHours != null ? formatHoursColon(avgHours) : null} unit="h"
             status={hoursStatus.text} statusClass={hoursStatus.cls}
-            sparkValues={sparkHours}  revealClass="r-8"
+            sparkValues={isToday ? [] : sparkHours}  revealClass="r-8"
           />
           <StatTile
             label="Bedtime"    sub={periodLabel}
