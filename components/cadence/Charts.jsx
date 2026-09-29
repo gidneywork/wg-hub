@@ -33,6 +33,9 @@ const TABS = [
   { id: 'adherence', label: 'Adherence',       pip: 'body'  },
 ]
 
+// Tabs with no prior-period series: "vs Prev" is hidden rather than inert.
+const NO_PREV_TABS = ['water', 'nutrients']
+
 // ─── RANGE DAYS ───────────────────────────────────────────────────────────────
 const RANGE_DAYS = { '1m': 30, '3m': 91, '6m': 182, '1y': 365, 'all': null }
 
@@ -1201,7 +1204,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'calories' || activeTab === 'adherence' || activeTab === 'water' || activeTab === 'nutrients') return []
+    if (activeTab === 'calories' || activeTab === 'adherence' || NO_PREV_TABS.includes(activeTab)) return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)
@@ -1256,7 +1259,10 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
           <button
             key={tab.id}
             className={`chart-tab${activeTab === tab.id ? ' active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id)
+              if (compare === 'prev' && NO_PREV_TABS.includes(tab.id)) setCompare('target')
+            }}
           >
             <span className={`pip ${tab.pip}`} />
             {tab.label}
@@ -1314,7 +1320,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
                     { val: 'off',    label: 'Off'      },
                     { val: 'target', label: 'vs Target' },
                     { val: 'prev',   label: 'vs Prev'   },
-                  ].map(c => {
+                  ].filter(c => c.val !== 'prev' || !NO_PREV_TABS.includes(activeTab)).map(c => {
                     const disabled = c.val === 'prev' && range === 'all'
                     return (
                       <button
