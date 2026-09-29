@@ -2621,7 +2621,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-radius: 2px;
   transition: width var(--t-bar) var(--ease);
 }
-[data-cadence] .settings-page .target-fill.amber { background: var(--sand); }
 [data-cadence] .settings-page .target-fill.off { background: var(--clay-deep); }
 [data-theme="dark"] [data-cadence] .settings-page .target-fill.off { background: var(--clay); }
 
@@ -3397,7 +3396,6 @@ html::-webkit-scrollbar-track { background: transparent; }
   border-radius: 2px;
   transition: width 600ms var(--ease);
 }
-[data-cadence] .daily-page .field-card .progress .fill.sand  { background: var(--sand); }
 [data-cadence] .daily-page .field-card .progress .fill.clay  { background: var(--clay); }
 [data-cadence] .daily-page .field-card .progress .fill.slate { background: var(--slate); }
 

@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from 'react'
  *               don't apply
  *   stub        Phase 2 stub — applies .field-card.stub for the italic
  *               Fraunces helper styling
- *   progress    { pct, variant } — pct 0..100, variant 'sand'|'clay'|
+ *   progress    { pct, variant } — pct 0..100, variant 'clay'|
  *               'slate'|null (null = default moss)
  *   helper      { chevron, tone, text, target, after } or { stubText } for
  *               stubs. `target` ({ on, text }) is the FC-086 target text —

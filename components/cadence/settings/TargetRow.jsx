@@ -32,7 +32,8 @@ export default function TargetRow({ targetKey, def, actual, onChange, rowIndex }
     return () => clearTimeout(id)
   }, [targetPct, rowIndex])
 
-  const fillClass = `target-fill${band === 'amber' ? ' amber' : band === 'off' ? ' off' : ''}`
+  // Two states, agreeing with the target text (FC-086): moss on, clay off.
+  const fillClass = `target-fill${band === 'amber' || band === 'off' ? ' off' : ''}`
 
   return (
     <div className="target-row">

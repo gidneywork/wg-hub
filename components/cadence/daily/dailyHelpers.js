@@ -193,12 +193,11 @@ export function targetBand(actual, def) {
   return { band, pct }
 }
 
-// Bar fill variant — moss (no class) for on-target, sand for amber,
-// clay for off-target. Returns null for the default moss when band='on'
-// so the CSS class string stays clean.
+// Bar fill variant — two states so the bar always agrees with the target
+// text (FC-086): moss (no class) on target, clay off target. Amber counts as
+// off. Null (default moss / empty bar) when on or when there's no band.
 export function fillVariantForBand(band) {
-  if (band === 'amber') return 'sand'
-  if (band === 'off')   return 'clay'
+  if (band === 'amber' || band === 'off') return 'clay'
   return null
 }
 
