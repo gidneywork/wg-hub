@@ -107,14 +107,20 @@ export function describeTarget(target, unit) {
   return null
 }
 
+// Cronometer's own default list (its web app's defaults for the diary's
+// Highlighted nutrients slots), shown until the first sync stores the real one.
+export const DEFAULT_HIGHLIGHTED = [291, 303, 301, 320, 401, 418, 417, 306]
+
 // The snapshot (list + targets) in force for a date: the row's own, else the
-// most recent stored.
+// most recent stored, else Cronometer's defaults with no targets (pending).
 export function snapshotForDate(date, cronometerData) {
   const own = cronometerData?.[date]
   const has = r => Array.isArray(r?.highlighted) && r.highlighted.length
-  if (has(own)) return { highlighted: own.highlighted, targets: own.micro_targets || {} }
+  if (has(own)) return { highlighted: own.highlighted, targets: own.micro_targets || {}, pending: false }
   const latest = Object.keys(cronometerData || {}).sort().reverse().map(d => cronometerData[d]).find(has)
-  return latest ? { highlighted: latest.highlighted, targets: latest.micro_targets || {} } : null
+  return latest
+    ? { highlighted: latest.highlighted, targets: latest.micro_targets || {}, pending: false }
+    : { highlighted: DEFAULT_HIGHLIGHTED, targets: {}, pending: true }
 }
 
 export function consumedFor(id, row) {
@@ -125,30 +131,37 @@ export function consumedFor(id, row) {
 // Highlighted nutrients for one date or a period (dates = array of ISO days).
 // A period averages consumed over the days that have a value for that
 // nutrient; targets and the list come from the latest date's snapshot.
-// Returns { items, unmapped } or null when nothing has synced yet.
-//   item: { id, name, unit, consumed, target, kind, pct, state }
+// Always returns { status, items, unmapped } (null only with no dates):
+//   status  'pending'  nothing synced yet — Cronometer's default eight, no values
+//           'no-data'  no Cronometer row for the date(s)
+//           'ok'       values (or "nothing logged") to show
+//   item    { id, name, unit, consumed, target, kind, pct, state }
 export function highlightedNutrients(dates, cronometerData) {
   const days = [].concat(dates).filter(Boolean).sort()
   if (!days.length) return null
   const snap = snapshotForDate(days[days.length - 1], cronometerData)
-  if (!snap) return null
+  const anyRow = days.some(d => cronometerData?.[d])
+  const status = snap.pending ? 'pending' : anyRow ? 'ok' : 'no-data'
   const items = [], unmapped = []
   for (const id of snap.highlighted) {
     const meta = NUTRIENTS[id]
     if (!meta) { unmapped.push(id); continue }
-    const vals = days.map(d => consumedFor(id, cronometerData?.[d])).filter(v => v != null)
+    const vals = status === 'ok' ? days.map(d => consumedFor(id, cronometerData?.[d])).filter(v => v != null) : []
     const consumed = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     const target = snap.targets[String(id)] || null
     items.push({ id, name: meta.name, unit: meta.unit, consumed, target, ...nutrientState(consumed, target) })
   }
-  return { items, unmapped }
+  return { status, items, unmapped }
 }
 
 // "Nutrients: 5 of 8 on target · low: Fibre, Vitamin A, Potassium"
-// Counts only nutrients that have a target and a value. Null when none do.
+// Counts only nutrients that have a target and a value. Before the first
+// sync: "Nutrients: waiting for sync"; nothing to judge in the period:
+// "Nutrients: no data for this period".
 export function nutrientsSummary(result) {
-  const judged = (result?.items || []).filter(i => i.state)
-  if (!judged.length) return null
+  if (!result || result.status === 'pending') return 'Nutrients: waiting for sync'
+  const judged = result.items.filter(i => i.state)
+  if (!judged.length) return 'Nutrients: no data for this period'
   const on = judged.filter(i => i.state === 'on').length
   const low = judged.filter(i => i.state === 'low').map(i => i.name)
   const above = judged.filter(i => i.state === 'above').map(i => i.name)

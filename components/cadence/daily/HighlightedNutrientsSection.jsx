@@ -16,11 +16,13 @@ import {
  *   range / limit     above the maximum → clay dot, "Above limit"
  *   otherwise         moss dot, "On target"
  * A nutrient with no target shows its value and "No target" — no bar, no dot.
- * Hidden until the first sync has stored a highlighted list.
+ * Always shown: before the first sync, Cronometer's default eight with "—"
+ * ("Waiting for the first Cronometer sync"); on a date with no Cronometer
+ * data, the names with "—" ("No Cronometer data for this day").
  */
 export default function HighlightedNutrientsSection({ date, cronometerData }) {
   const result = highlightedNutrients([date], cronometerData)
-  if (!result || (!result.items.length && !result.unmapped.length)) return null
+  const blank = result.status !== 'ok'
 
   return (
     <section className="section r r-7">
@@ -31,8 +33,13 @@ export default function HighlightedNutrientsSection({ date, cronometerData }) {
         </span>
       </div>
       <div className="field-grid cols-4">
-        {result.items.map(item => <NutrientCard key={item.id} item={item} />)}
+        {result.items.map(item => <NutrientCard key={item.id} item={item} blank={blank} />)}
       </div>
+      {blank ? (
+        <p className="nutrients-note">
+          {result.status === 'pending' ? 'Waiting for the first Cronometer sync' : 'No Cronometer data for this day'}
+        </p>
+      ) : null}
       {result.unmapped.length ? (
         <p className="nutrients-note">
           {result.unmapped.length === 1 ? '1 highlighted nutrient isn’t' : `${result.unmapped.length} highlighted nutrients aren’t`} in Cronometer’s export, so {result.unmapped.length === 1 ? 'it isn’t' : 'they aren’t'} shown.
@@ -42,7 +49,18 @@ export default function HighlightedNutrientsSection({ date, cronometerData }) {
   )
 }
 
-function NutrientCard({ item }) {
+function NutrientCard({ item, blank }) {
+  if (blank) {
+    return (
+      <div className="field-card nutrient-card">
+        <div className="row"><span className="label">{item.name}</span></div>
+        <div className="nutrient-value">
+          <span className="num">—</span>
+          <span className="unit">{item.unit}</span>
+        </div>
+      </div>
+    )
+  }
   const hasTarget = item.kind !== 'none'
   const desc = hasTarget ? describeTarget(item.target, item.unit) : null
   const pct = item.pct != null ? Math.round(item.pct) : null

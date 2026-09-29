@@ -686,7 +686,8 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
   const [smoothing, setSmoothing] = useState('raw')
 
   // Nutrients tab (FC-085): one highlighted nutrient at a time, against the
-  // target Cronometer currently sets for it.
+  // target Cronometer currently sets for it. Before the first sync the picker
+  // lists Cronometer's default eight and the chart shows its empty state.
   const nutrientSnap = useMemo(() => snapshotForDate(localIso(new Date()), cronometerData), [cronometerData])
   const nutrientIds  = useMemo(() => (nutrientSnap?.highlighted || []).filter(id => NUTRIENTS[id]), [nutrientSnap])
   const [pickedNutrient, setPickedNutrient] = useState(null)
@@ -832,7 +833,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       hoursSlept: bm((m)    => m?.sleep?.hoursSlept),
       calsIn:   bm((_, __, d) => mergeNutritionForDate(d, logs[d], cronometerData).calories),
       water:    bm((_, __, d) => { const ml = mergeNutritionForDate(d, logs[d], cronometerData).water_ml; return ml != null && ml > 0 ? ml / 1000 : null }),
-      nutrient: bm((_, __, d) => (nutrientId ? consumedFor(nutrientId, cronometerData[d]) : null)),
+      nutrient: bm((_, __, d) => (nutrientId && !nutrientSnap?.pending ? consumedFor(nutrientId, cronometerData[d]) : null)),
       calsBurned: bm((_, w, d) => burnedForDate(w, d) ?? null),
       calsBalance: bm((_, w, d) => {
         const intake = mergeNutritionForDate(d, logs[d], cronometerData).calories
@@ -842,7 +843,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         return intake - burned
       }),
     }
-  }, [logs, whoopData, cronometerData, rangeDays, userProfile, nutrientId])
+  }, [logs, whoopData, cronometerData, rangeDays, userProfile, nutrientId, nutrientSnap])
 
   // ── Hero config driven by activeTab ─────────────────────────────
   const heroConfig = useMemo(() => {
@@ -1023,8 +1024,9 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
 
     if (activeTab === 'nutrients') {
       if (!nutrientMeta) {
-        return { eyebrow: 'Nutrients · per day', heroStr: '—', unitStr: '', delta: null, metaStr: 'No highlighted nutrients synced yet', tiles: [] }
+        return { eyebrow: 'Nutrients · per day', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
       }
+      const pending = !!nutrientSnap?.pending
       const m = allMetrics.nutrient
       const d = calcDelta(m.avg, m.priorAvg)
       const u = nutrientMeta.unit
@@ -1038,7 +1040,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
         metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtDp1(m.priorAvg)} ${u}` : 'vs prior period',
         tiles: [
           { label: 'Average',        val: fmtDp1(m.avg),  unit: u, ctx: `Across ${m.count} day${m.count !== 1 ? 's' : ''}` },
-          { label: 'Target',         val: hasTarget ? describeTarget(nutrientTarget, u) : 'No target', unit: '', ctx: 'From Cronometer' },
+          { label: 'Target',         val: pending ? '—' : hasTarget ? describeTarget(nutrientTarget, u) : 'No target', unit: '', ctx: pending ? 'Waiting for sync' : 'From Cronometer' },
           { label: 'Days on target', val: hasTarget && m.count > 0 ? String(onDays) : '—', unit: '', ctx: nutrientTarget?.max != null ? 'Within the range' : 'At or above target' },
           { label: 'Best day',       val: fmtDp1(m.peak), unit: u, ctx: 'Highest in range' },
         ],
@@ -1066,7 +1068,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     }
 
     return { eyebrow: '', heroStr: '—', unitStr: '', delta: null, metaStr: '', tiles: [] }
-  }, [activeTab, runKm, allMetrics, range, settings, adherenceData, rangeDays, nutrientMeta, nutrientTarget])
+  }, [activeTab, runKm, allMetrics, range, settings, adherenceData, rangeDays, nutrientMeta, nutrientTarget, nutrientSnap])
 
   // ── Annotations — merged user annotations + auto-detected PBs ──
   // User annotations: all tabs, date = start_date for marker placement

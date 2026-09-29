@@ -135,17 +135,23 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
 // Nutrients card (FC-085) — compact companion to Fuel, never merged into it.
 // Same day rule as Fuel: today once Cronometer has any highlighted value for
 // today, otherwise yesterday. Each row: name, % (Ink) and the FC-083 dot.
+// Always shown: before the first sync it lists Cronometer's default eight
+// with "—" ("Waiting for sync").
 function nutrientsDay(cronometerData) {
   const today = todayStr()
   const r = highlightedNutrients([today], cronometerData)
-  const live = r?.items.some(i => consumedFor(i.id, cronometerData?.[today]) != null)
+  const live = r.status === 'ok' && r.items.some(i => consumedFor(i.id, cronometerData?.[today]) != null)
   return live ? { date: today, isLive: true, result: r } : { date: yesterdayStr(), isLive: false, result: highlightedNutrients([yesterdayStr()], cronometerData) }
 }
 
 function NutrientsCard({ day }) {
   const { isLive, result } = day
+  const blank = result.status !== 'ok'
   const judged = result.items.filter(i => i.state)
   const on = judged.filter(i => i.state === 'on').length
+  const label = result.status === 'pending' ? 'Waiting for sync'
+    : result.status === 'no-data' ? 'No Cronometer data'
+    : 'on target'
   return (
     <div className="card nutrients-card">
       <div className="card-eyebrow">
@@ -153,15 +159,15 @@ function NutrientsCard({ day }) {
         {isLive ? 'Live' : 'Yesterday'} · nutrients
       </div>
       <div className="balance">
-        <span className="num">{judged.length ? `${on} of ${judged.length}` : '—'}</span>
-        <span className="label">on target</span>
+        <span className="num">{!blank && judged.length ? `${on} of ${judged.length}` : '—'}</span>
+        <span className="label">{label}</span>
       </div>
       <div className="nutrient-rows">
         {result.items.map(i => (
           <div key={i.id} className="nutrient-row">
             <span>{i.name}</span>
             <span className="right">
-              {i.kind === 'none' ? 'No target' : i.pct == null ? '—' : `${Math.round(i.pct)}%`}
+              {blank ? '—' : i.kind === 'none' ? 'No target' : i.pct == null ? '—' : `${Math.round(i.pct)}%`}
               {i.state ? (
                 <span className={`target-dot ${i.state === 'on' ? 'on' : 'off'}`} role="img" aria-label={STATE_LABEL[i.state]} />
               ) : null}
@@ -215,7 +221,6 @@ function JournalCard({ logs, onOpenDate }) {
 
 export default function TodayCards({ plan, logs, cronometerData, activities, settings, setView, onOpenDate }) {
   const nutrients = nutrientsDay(cronometerData)
-  const showNutrients = !!nutrients.result?.items.length
   return (
     <section className="section r r-6">
       <div className="section-head">
@@ -224,10 +229,10 @@ export default function TodayCards({ plan, logs, cronometerData, activities, set
           <button type="button" className="link" onClick={() => setView && setView('planner')}>Open planner →</button>
         </div>
       </div>
-      <div className={`today-grid${showNutrients ? ' with-nutrients' : ''}`}>
+      <div className="today-grid with-nutrients">
         <ScheduledCard plan={plan} />
         <FuelCard logs={logs} cronometerData={cronometerData} activities={activities} settings={settings} />
-        {showNutrients ? <NutrientsCard day={nutrients} /> : null}
+        <NutrientsCard day={nutrients} />
         <JournalCard logs={logs} onOpenDate={onOpenDate} />
       </div>
     </section>
