@@ -107,9 +107,11 @@ export default function StatRow({ logs, whoopData, settings }) {
   const sleepAtTarget = avg7Hours != null && isFinite(sleepTarget) && avg7Hours >= sleepTarget
 
   // ── Bedtime ──────────────────────────────────────────────────
-  // Reads schedule.bedtime directly from logs — manually entered, no Whoop source.
-  const win7BedtimeMins      = win7.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
-  const win7PriorBedtimeMins = win7prior.map(d => parseBedtimeMins(logs?.[d]?.schedule?.bedtime ?? null))
+  // Logged bedtime first, WHOOP's as fallback — through mergeWhoopForDate like
+  // the other stats (a logs-only read left this blank on days with no log).
+  const bedtimeFor = d => mergeWhoopForDate(d, logs?.[d], whoopData)?.schedule?.bedtime ?? null
+  const win7BedtimeMins      = win7.map(d => parseBedtimeMins(bedtimeFor(d)))
+  const win7PriorBedtimeMins = win7prior.map(d => parseBedtimeMins(bedtimeFor(d)))
   const avg7BedtimeMins      = rollingAvg(win7BedtimeMins)
   const avg7PriorBedtimeMins = rollingAvg(win7PriorBedtimeMins)
   const bedtimeDisplay       = avg7BedtimeMins != null ? bedtimeMinsToStr(avg7BedtimeMins) : null
