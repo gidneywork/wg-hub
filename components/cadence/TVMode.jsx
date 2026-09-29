@@ -15,7 +15,7 @@ import {
 } from './helpers'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { matchSessionsToActivities } from '../../lib/session-match'
-import TargetDot from './TargetDot'
+import TargetText from './TargetText'
 import { highlightedNutrients, nutrientsSummary } from './nutrients'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
@@ -196,8 +196,8 @@ function MiniSpark({ values }) {
 // StatTile — one of the 6 metric tiles across the top grid.
 // `value` is null when there's no data for the period (renders "—" in italic).
 // `statusClass` is one of: '' (moss/positive), 'down' (clay), 'flat' (muted), 'no-data' (faint).
-// `target` — { value, def, unit } for the FC-083 target dot; value is the value
-// as displayed. The status line stays the week-on-week trend.
+// `target` — { value, def, unit } for the FC-086 target text under the value;
+// value is the value as displayed. The status line stays the week-on-week trend.
 function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, revealClass, target }) {
   const hasData = value != null
   return (
@@ -206,8 +206,11 @@ function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, r
         <div className="label">{label}</div>
         <div className="sub cycleable">{sub}</div>
       </div>
-      <div className={`value cycleable${!hasData ? ' empty' : ''}`}>
-        {hasData ? <>{value}<span className="unit">{unit}</span>{target && <TargetDot value={target.value} def={target.def} unit={target.unit} />}</> : '—'}
+      <div>
+        <div className={`value cycleable${!hasData ? ' empty' : ''}`}>
+          {hasData ? <>{value}<span className="unit">{unit}</span></> : '—'}
+        </div>
+        {hasData && target ? <div className="target-line cycleable"><TargetText value={target.value} def={target.def} unit={target.unit} /></div> : null}
       </div>
       <div className="footer">
         <span className={`status cycleable${statusClass ? ` ${statusClass}` : ''}`}>

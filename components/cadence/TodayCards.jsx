@@ -1,7 +1,7 @@
 'use client'
 
 import { todayStr, mergeNutritionForDate, formatLitres } from './helpers'
-import TargetDot from './TargetDot'
+import TargetText from './TargetText'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 import CronometerRefresh from './CronometerRefresh'
@@ -122,7 +122,7 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
             <span>Water</span>
             <span className="right">
               {formatLitres(ml) ?? '—'}
-              {ml != null && def?.value ? <TargetDot value={(ml / 1000).toFixed(1)} def={def} unit="L" /> : null}
+              {ml != null && def?.value ? <TargetText value={(ml / 1000).toFixed(1)} def={def} className="beside" /> : null}
             </span>
           </div>
         )

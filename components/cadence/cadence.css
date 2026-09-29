@@ -495,19 +495,20 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-weight: 400;
   letter-spacing: 0;
 }
-/* Target dot (FC-083) — the number stays Ink; only the dot carries colour.
-   On target: moss. Below / off target: clay-deep (clay in dark). */
-[data-cadence] .stat .value .target-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-left: 8px;
-  vertical-align: middle;
+/* Target text (FC-086) — replaces the FC-083 dot. The number stays Ink; only
+   this small status line carries colour: moss on target, clay-deep off target
+   (clay in dark). Used on every surface that shows a target. */
+[data-cadence] .target-text {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
 }
-[data-cadence] .stat .value .target-dot.on  { background: var(--moss); }
-[data-cadence] .stat .value .target-dot.off { background: var(--clay-deep); }
-[data-theme="dark"] [data-cadence] .stat .value .target-dot.off { background: var(--clay); }
+[data-cadence] .target-text.on  { color: var(--moss); }
+[data-cadence] .target-text.off { color: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .target-text.off { color: var(--clay); }
+[data-cadence] .target-text.beside { margin-left: 8px; }
+[data-cadence] .stat .target-line { margin: -2px 0 6px; }
 [data-cadence] .stat .row {
   display: flex;
   align-items: center;
@@ -6344,7 +6345,7 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .nutrients-card .target-dot.off { background: var(--clay-deep); }
 [data-theme="dark"] [data-cadence] .nutrients-card .target-dot.off { background: var(--clay); }
 
-/* Fuel card water line (FC-084) — quiet mono row; the dot is the FC-083 target dot. */
+/* Fuel card water line (FC-084) — quiet mono row; target text (FC-086) beside the value. */
 [data-cadence] .fuel-card .fuel-water {
   display: flex;
   justify-content: space-between;
@@ -6357,9 +6358,4 @@ html::-webkit-scrollbar-track { background: transparent; }
   font-variant-numeric: tabular-nums;
 }
 [data-cadence] .fuel-card .fuel-water .right { color: var(--text); }
-[data-cadence] .fuel-card .fuel-water .target-dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; vertical-align: middle;
-}
-[data-cadence] .fuel-card .fuel-water .target-dot.on  { background: var(--moss); }
-[data-cadence] .fuel-card .fuel-water .target-dot.off { background: var(--clay-deep); }
-[data-theme="dark"] [data-cadence] .fuel-card .fuel-water .target-dot.off { background: var(--clay); }
+

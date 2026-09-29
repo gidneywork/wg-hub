@@ -69,6 +69,36 @@ export function targetState(actual, def) {
   return { band, pct }
 }
 
+// ── Target text (FC-086)
+// The small status line beside or under a value, replacing the FC-083 dot.
+// The value stays Ink; only this text is coloured (moss on, clay off).
+// Judged by targetState on the value AS DISPLAYED; amber counts as off.
+//   higher is better  "N% of target"
+//   lower is better   "On target" / "N <unit> above target"
+//   clock time        "On time" / "N min late"
+//   weight            "On target" / "N.N kg off target"
+// % rounds normally when on, and down when off, so an off value never reads
+// "100% of target". Returns { on, text } or null (no target or no value).
+export function pctText(pct, on) {
+  return String(on ? Math.round(pct) : Math.floor(pct))
+}
+export function targetText(value, def, unit = '') {
+  const s = targetState(value, def)
+  if (!s) return null
+  const on = s.band === 'on'
+  if (def.isTime) {
+    const late = clockToMins(String(value)) - clockToMins(String(def.value))
+    return { on, text: on ? 'On time' : `${late} min late` }
+  }
+  const a = parseFloat(value), t = parseFloat(def.value)
+  if (def.isWeight) return { on, text: on ? 'On target' : `${Math.abs(a - t).toFixed(1)} kg off target` }
+  if (def.lowerIsBetter) {
+    const over = Math.round((a - t) * 10) / 10
+    return { on, text: on ? 'On target' : `${over}${unit ? ` ${unit}` : ''} above target` }
+  }
+  return { on, text: `${pctText((a / t) * 100, on)}% of target` }
+}
+
 // ── Live current values per target key
 // Reads from the existing logs / whoopData / activities shapes that
 // WGHub already keeps in state. weeklyKm sums the current Monday-week

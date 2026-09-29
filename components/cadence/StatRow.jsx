@@ -6,7 +6,7 @@ import {
   formatHoursColon,
   sparklinePath,
 } from './helpers'
-import TargetDot from './TargetDot'
+import TargetText from './TargetText'
 
 function MiniSpark({ values, color = 'var(--moss)' }) {
   const path = sparklinePath(values, 60, 20, 3)
@@ -102,10 +102,18 @@ export default function StatRow({ logs, whoopData, settings }) {
     const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.sleep?.hoursSlept)
     return isFinite(v) ? v : null
   })
-  const avg7Hours    = rollingAvg(win7Hours)
-  const sleepDisplay = avg7Hours != null ? formatHoursColon(avg7Hours) : null
-  const sleepTarget  = parseFloat(settings?.hoursSlept?.value)
-  const sleepAtTarget = avg7Hours != null && isFinite(sleepTarget) && avg7Hours >= sleepTarget
+  const win7PriorHours = win7prior.map(d => {
+    const v = parseFloat(mergeWhoopForDate(d, logs?.[d], whoopData)?.sleep?.hoursSlept)
+    return isFinite(v) ? v : null
+  })
+  const avg7Hours      = rollingAvg(win7Hours)
+  const avg7PriorHours = rollingAvg(win7PriorHours)
+  const sleepDisplay   = avg7Hours != null ? formatHoursColon(avg7Hours) : null
+  // 7-day trend in minutes, like the other tiles (FC-086 F4); the target
+  // reading is the target text under the value.
+  const sleepDeltaMins = avg7Hours != null && avg7PriorHours != null
+    ? Math.round((avg7Hours - avg7PriorHours) * 60)
+    : null
 
   // ── Bedtime ──────────────────────────────────────────────────
   // Logged bedtime first, WHOOP's as fallback — through mergeWhoopForDate like
@@ -160,8 +168,8 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {rhrDisplay != null ? rhrDisplay : '—'}
           <span className="unit">bpm</span>
-          {rhrDisplay != null && <TargetDot value={rhrDisplay} def={settings?.rhr} unit="bpm" />}
         </div>
+        {rhrDisplay != null && <div className="target-line"><TargetText value={rhrDisplay} def={settings?.rhr} unit="bpm" /></div>}
         <div className="row">
           <span className={`delta ${deltaClass(rhrDelta, 'lower')}`}>
             {rhrDelta != null
@@ -177,15 +185,13 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {sleepDisplay || '—'}
           {sleepDisplay && <span className="unit">h</span>}
-          {avg7Hours != null && <TargetDot value={Math.round(avg7Hours * 60) / 60} def={settings?.hoursSlept} unit="h" />}
         </div>
+        {avg7Hours != null && <div className="target-line"><TargetText value={Math.round(avg7Hours * 60) / 60} def={settings?.hoursSlept} /></div>}
         <div className="row">
-          <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(avg7Hours != null && isFinite(sleepTarget) ? avg7Hours - sleepTarget : null, 'higher')}`}>
-            {sleepAtTarget
-              ? <>● target</>
-              : avg7Hours != null && isFinite(sleepTarget)
-                ? <>{arrow(avg7Hours - sleepTarget)} {Math.abs(avg7Hours - sleepTarget).toFixed(1)}h · target</>
-                : '—'}
+          <span className={`delta ${deltaClass(sleepDeltaMins, 'higher')}`}>
+            {sleepDeltaMins != null
+              ? <>{arrow(sleepDeltaMins)} {Math.abs(sleepDeltaMins)}m · 7d avg</>
+              : 'no baseline'}
           </span>
           <MiniSpark values={win7Hours} />
         </div>
@@ -195,8 +201,8 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="label">Bedtime</div>
         <div className="value">
           {bedtimeDisplay ?? '—'}
-          {bedtimeDisplay && <TargetDot value={bedtimeDisplay} def={settings?.bedtimeTarget} />}
         </div>
+        {bedtimeDisplay && <div className="target-line"><TargetText value={bedtimeDisplay} def={settings?.bedtimeTarget} /></div>}
         <div className="row">
           <span className="delta flat">
             {bedtimeDeltaMins != null
@@ -211,8 +217,8 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {hrvDisplay != null ? hrvDisplay : '—'}
           <span className="unit">ms</span>
-          {hrvDisplay != null && <TargetDot value={hrvDisplay} def={settings?.hrv} unit="ms" />}
         </div>
+        {hrvDisplay != null && <div className="target-line"><TargetText value={hrvDisplay} def={settings?.hrv} /></div>}
         <div className="row">
           <span className={`delta ${deltaClass(hrvDelta, 'higher')}`}>
             {hrvDelta != null
@@ -228,8 +234,8 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {stepsDisplay != null ? stepsDisplay : '—'}
           {stepsDisplay != null && <span className="unit">steps</span>}
-          {stepsDisplay != null && <TargetDot value={stepsDisplay} def={settings?.dailySteps} unit="steps" />}
         </div>
+        {stepsDisplay != null && <div className="target-line"><TargetText value={stepsDisplay} def={settings?.dailySteps} /></div>}
         <div className="row">
           <span className={`delta ${deltaClass(stepsDelta, 'higher')}`}>
             {stepsDelta != null
