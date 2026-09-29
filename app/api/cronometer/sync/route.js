@@ -5,7 +5,7 @@ import { openSession, londonParts, shiftDate, isScheduledHour, mergeConsumed, Cr
 import {
   reserveExport, scheduledUserId, readConnection, mergeConnection, exportsUsed, refreshesLeft, syncedWithin, EXPORT_LIMIT_DAILY,
   recordCronometerSync, recordCronometerFailure, recordTargetsFallback,
-  readFoodVerdicts, saveFoodVerdicts, recordWaterFallback,
+  readFoodVerdicts, saveFoodVerdicts, recordWaterFallback, recordMicroTargetsFallback,
 } from '../../../../lib/cronometer-status'
 
 export const maxDuration = 60
@@ -126,6 +126,31 @@ export async function POST(request) {
         }
         break
       }
+    }
+
+    // Highlighted nutrients (FC-085): the list and each nutrient's min/max,
+    // refreshed on every successful run, on today's row only (past days keep
+    // the snapshot they last had). The list comes from this run's
+    // authenticate reply; the targets cost one JSON request, no export. If
+    // the targets can't be read, the stored ones are kept and it is logged
+    // once per London day; the sync still succeeds.
+    stage = 'micro targets'
+    const micro = {}
+    const highlighted = session.highlighted()
+    if (highlighted) micro.highlighted = highlighted
+    try {
+      micro.micro_targets = await session.microTargets()
+    } catch (e) {
+      const c = await readConnection(userId)
+      if (c?.micro_targets_fallback_day !== today) {
+        await recordMicroTargetsFallback(userId, { status: e?.status ?? null, source })
+        await mergeConnection(userId, { micro_targets_fallback_day: today })
+      }
+    }
+    if (Object.keys(micro).length && rows.some(r => r.date === today)) {
+      const { error: mErr } = await supabaseServer.from('cronometer_data')
+        .update(micro).eq('user_id', userId).eq('date', today)
+      if (mErr) throw new CronometerError('store micro targets')
     }
 
     await recordCronometerSync(userId, { source, dates: rows.map(r => r.date), targetsNote })
