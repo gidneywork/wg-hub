@@ -535,7 +535,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         <div className="stat">
           <div className="label">Stairmaster</div>
           <div className="value">{stairCount}</div>
-          <div className="helper">sessions this week</div>
+          <div className="helper">days this week</div>
         </div>
         <div className="stat">
           <div className="label">Gym types</div>
