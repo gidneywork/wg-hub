@@ -16,6 +16,7 @@ import {
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { matchSessionsToActivities } from '../../lib/session-match'
 import TargetDot from './TargetDot'
+import { highlightedNutrients, nutrientsSummary } from './nutrients'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
 import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
@@ -644,6 +645,13 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
   const protTargetLabel = isFinite(protTarget) ? `${Math.round(protTarget)} g/day` : null
   const carbTargetLabel = isFinite(carbTarget) ? `${Math.round(carbTarget)} g/day` : null
 
+  // Highlighted nutrients (FC-085): one summary line; period views average
+  // each nutrient over the days that have a value.
+  const nutrientsLine = useMemo(
+    () => nutrientsSummary(highlightedNutrients(days, cronometerData)),
+    [days, cronometerData]
+  )
+
   const nutPending = days.length - nutLoggedDays
   const nutSub = isToday
     ? (nutLoggedDays > 0 ? 'logged today' : 'not logged yet')
@@ -848,6 +856,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
               unit="L"
               dailyAvg={waterAvgMl != null ? (waterAvgMl / 1000).toFixed(1) : null}
             />
+            {nutrientsLine && <div className="tv-nutrients cycleable">{nutrientsLine}</div>}
             {tvCalMode && (
               <div className="tv-cal-target">
                 <div className="tv-cal-mode">

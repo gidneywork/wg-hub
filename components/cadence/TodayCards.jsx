@@ -5,6 +5,7 @@ import TargetDot from './TargetDot'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 import CronometerRefresh from './CronometerRefresh'
+import { highlightedNutrients, consumedFor, STATE_LABEL } from './nutrients'
 
 const MOOD_WORDS = { 1: 'Rough', 2: 'Flat', 3: 'Okay', 4: 'Good', 5: 'Strong' }
 
@@ -131,6 +132,47 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
   )
 }
 
+// Nutrients card (FC-085) — compact companion to Fuel, never merged into it.
+// Same day rule as Fuel: today once Cronometer has any highlighted value for
+// today, otherwise yesterday. Each row: name, % (Ink) and the FC-083 dot.
+function nutrientsDay(cronometerData) {
+  const today = todayStr()
+  const r = highlightedNutrients([today], cronometerData)
+  const live = r?.items.some(i => consumedFor(i.id, cronometerData?.[today]) != null)
+  return live ? { date: today, isLive: true, result: r } : { date: yesterdayStr(), isLive: false, result: highlightedNutrients([yesterdayStr()], cronometerData) }
+}
+
+function NutrientsCard({ day }) {
+  const { isLive, result } = day
+  const judged = result.items.filter(i => i.state)
+  const on = judged.filter(i => i.state === 'on').length
+  return (
+    <div className="card nutrients-card">
+      <div className="card-eyebrow">
+        <span className={`pip${isLive ? ' live' : ''}`} />
+        {isLive ? 'Live' : 'Yesterday'} · nutrients
+      </div>
+      <div className="balance">
+        <span className="num">{judged.length ? `${on} of ${judged.length}` : '—'}</span>
+        <span className="label">on target</span>
+      </div>
+      <div className="nutrient-rows">
+        {result.items.map(i => (
+          <div key={i.id} className="nutrient-row">
+            <span>{i.name}</span>
+            <span className="right">
+              {i.kind === 'none' ? 'No target' : i.pct == null ? '—' : `${Math.round(i.pct)}%`}
+              {i.state ? (
+                <span className={`target-dot ${i.state === 'on' ? 'on' : 'off'}`} role="img" aria-label={STATE_LABEL[i.state]} />
+              ) : null}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function JournalCard({ logs, onOpenDate }) {
   const yst = yesterdayStr()
   const feelings = logs?.[yst]?.data?.feelings
@@ -172,6 +214,8 @@ function JournalCard({ logs, onOpenDate }) {
 }
 
 export default function TodayCards({ plan, logs, cronometerData, activities, settings, setView, onOpenDate }) {
+  const nutrients = nutrientsDay(cronometerData)
+  const showNutrients = !!nutrients.result?.items.length
   return (
     <section className="section r r-6">
       <div className="section-head">
@@ -180,9 +224,10 @@ export default function TodayCards({ plan, logs, cronometerData, activities, set
           <button type="button" className="link" onClick={() => setView && setView('planner')}>Open planner →</button>
         </div>
       </div>
-      <div className="today-grid">
+      <div className={`today-grid${showNutrients ? ' with-nutrients' : ''}`}>
         <ScheduledCard plan={plan} />
         <FuelCard logs={logs} cronometerData={cronometerData} activities={activities} settings={settings} />
+        {showNutrients ? <NutrientsCard day={nutrients} /> : null}
         <JournalCard logs={logs} onOpenDate={onOpenDate} />
       </div>
     </section>

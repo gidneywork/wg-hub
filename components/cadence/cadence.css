@@ -684,6 +684,9 @@ html::-webkit-scrollbar-track { background: transparent; }
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 12px;
 }
+/* FC-085: a fourth card (Nutrients) beside Fuel, once highlighted nutrients
+   have synced. */
+[data-cadence] .today-grid.with-nutrients { grid-template-columns: 1.2fr 1fr 1fr 1fr; }
 [data-cadence] .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -4206,8 +4209,10 @@ html::-webkit-scrollbar-track { background: transparent; }
    RESPONSIVE
    ===================================================================== */
 @media (max-width: 1200px) {
-  [data-cadence] .today-grid { grid-template-columns: 1fr 1fr; }
+  [data-cadence] .today-grid,
+  [data-cadence] .today-grid.with-nutrients { grid-template-columns: 1fr 1fr; }
   [data-cadence] .today-grid .card:nth-child(3) { grid-column: 1 / -1; }
+  [data-cadence] .today-grid.with-nutrients .card:nth-child(3) { grid-column: auto; }
   [data-cadence] .charts-grid { grid-template-columns: 1fr; }
   [data-cadence] .stat-row { grid-template-columns: repeat(3, 1fr); }
   [data-cadence] .pb-strip { grid-template-columns: repeat(3, 1fr); }
@@ -4226,7 +4231,8 @@ html::-webkit-scrollbar-track { background: transparent; }
     padding: 20px;
   }
   [data-cadence] .hero { grid-template-columns: 1fr; gap: 16px; }
-  [data-cadence] .today-grid { grid-template-columns: 1fr; }
+  [data-cadence] .today-grid,
+  [data-cadence] .today-grid.with-nutrients { grid-template-columns: 1fr; }
   [data-cadence] .pb-strip { grid-template-columns: repeat(2, 1fr); }
   [data-cadence] main { padding: 20px 24px; }
 }
@@ -6316,6 +6322,27 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .cronometer-refresh button:hover:not(:disabled) { text-decoration: underline; }
 [data-cadence] .cronometer-refresh button:disabled { color: var(--text-faint); cursor: default; }
 [data-cadence] .fuel-card .cronometer-refresh.fuel-foot { margin-top: 14px; }
+
+/* Nutrients card (FC-085) — shares the Fuel card's balance styling; rows are
+   quiet mono, the % stays Ink and the FC-083 dot carries the state. */
+[data-cadence] .nutrients-card .balance { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+[data-cadence] .nutrients-card .balance .num {
+  font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: -0.025em;
+  color: var(--text); font-variant-numeric: tabular-nums;
+}
+[data-cadence] .nutrients-card .balance .label {
+  font-family: var(--mono); font-size: 9px; color: var(--text-quiet); text-transform: uppercase; letter-spacing: 0.14em;
+}
+[data-cadence] .nutrients-card .nutrient-row {
+  display: flex; justify-content: space-between; align-items: center; padding: 3px 0;
+  font-family: var(--mono); font-size: var(--type-10); letter-spacing: 0.08em;
+  color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+[data-cadence] .nutrients-card .nutrient-row .right { color: var(--text); display: inline-flex; align-items: center; }
+[data-cadence] .nutrients-card .target-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; }
+[data-cadence] .nutrients-card .target-dot.on  { background: var(--moss); }
+[data-cadence] .nutrients-card .target-dot.off { background: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .nutrients-card .target-dot.off { background: var(--clay); }
 
 /* Fuel card water line (FC-084) — quiet mono row; the dot is the FC-083 target dot. */
 [data-cadence] .fuel-card .fuel-water {

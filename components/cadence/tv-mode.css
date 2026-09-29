@@ -835,6 +835,18 @@
   gap: 6px;
 }
 .tv-page .nut-row:has(+ .tv-cal-target) { border-bottom: none; }
+/* Highlighted nutrients summary (FC-085) — one quiet line under the rows. */
+.tv-page .tv-nutrients {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.tv-page .nut-row:has(+ .tv-nutrients) { border-bottom: none; }
 .tv-page .tv-cal-mode {
   font-family: var(--mono);
   font-size: 13px;
