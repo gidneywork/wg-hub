@@ -1,5 +1,6 @@
 import { getValidWhoopToken, WHOOP_API_BASE } from '../../../../lib/whoop'
 import { resolveUserId } from '../../../../lib/auth-server'
+import { recordWhoopFailure, failureFromError } from '../../../../lib/whoop-status'
 
 // One page per resource. WHOOP's collection max is limit=25; for the
 // roughly-one-per-day resources that is about 25 days — well over the 7-day
@@ -35,7 +36,8 @@ export async function GET(request) {
   let accessToken
   try {
     accessToken = await getValidWhoopToken(userId)
-  } catch {
+  } catch (err) {
+    await recordWhoopFailure(userId, { ...failureFromError(err), source: 'probe' })
     return Response.json({ error: 'WHOOP token error' }, { status: 500 })
   }
   if (!accessToken) return Response.json({ error: 'WHOOP not connected' }, { status: 401 })

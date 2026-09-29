@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { getValidWhoopToken } from '../../../../lib/whoop'
 import { ingestWindow } from '../../../../lib/whoop-ingest'
 import { resolveUserByWhoopUser } from '../../../../lib/auth-server'
+import { recordWhoopFailure, recordWhoopSync, failureFromError } from '../../../../lib/whoop-status'
 
 // POST /api/whoop/webhook
 //
@@ -63,13 +64,17 @@ export async function POST(request) {
     }
     try {
       const token = await getValidWhoopToken(userId)
-      if (token) await ingestWindow(token, userId, 7)
-    } catch {
-      // Acknowledge receipt regardless — the windowed re-ingest is self-healing
-      // (the next event or a manual backfill reconciles). Returning non-2xx
-      // would only trigger WHOOP retry storms.
+      if (token) {
+        await ingestWindow(token, userId, 7)
+        await recordWhoopSync(userId)
+      }
+    } catch (err) {
+      // Acknowledge receipt regardless — returning non-2xx would only trigger
+      // WHOOP retry storms. But never silently (FC-080): the failure goes to
+      // audit_log and the Settings card's error state.
       console.error('WHOOP webhook re-ingest failed')
-      return new Response('ok (ingest deferred)', { status: 200 })
+      await recordWhoopFailure(userId, { ...failureFromError(err), source: 'webhook' })
+      return new Response('ok (ingest failed, logged)', { status: 200 })
     }
   }
 

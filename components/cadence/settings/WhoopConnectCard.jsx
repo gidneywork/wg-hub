@@ -27,6 +27,15 @@ export default function WhoopConnectCard() {
   useEffect(() => { loadConnection() }, [])
 
   const connected = !!connection
+
+  // Failing when the latest recorded error is newer than the latest successful
+  // sync (FC-080). A reconnect replaces the connection, clearing last_error.
+  const lastError = connection?.last_error || null
+  const failing = !!lastError && (
+    !connection.last_synced_at || new Date(lastError.at) > new Date(connection.last_synced_at)
+  )
+  // timeAgo reads 'Just now' as a standalone value; mid-sentence it is lower case.
+  const failedAgo = lastError ? timeAgo(lastError.at).replace(/^Just now$/, 'just now') : ''
   const name = connection && (connection.first_name || connection.last_name)
     ? [connection.first_name, connection.last_name].filter(Boolean).join(' ')
     : null
@@ -56,6 +65,7 @@ export default function WhoopConnectCard() {
       setProbeError('Probe request failed')
     } finally {
       setProbing(false)
+      await loadConnection()
     }
   }
 
@@ -71,6 +81,7 @@ export default function WhoopConnectCard() {
       setBackfill({ error: 'Backfill request failed' })
     } finally {
       setBackfilling(false)
+      await loadConnection()
     }
   }
 
@@ -95,8 +106,8 @@ export default function WhoopConnectCard() {
     <section className="settings-section r r-3">
       <div className="section-head">
         <span className="section-label">WHOOP</span>
-        <span className={`status-badge${connected ? '' : ' warning'}`}>
-          {connected ? 'Connected' : 'Not connected'}
+        <span className={`status-badge${connected && !failing ? '' : ' warning'}`}>
+          {!connected ? 'Not connected' : failing ? 'Sync failing' : 'Connected'}
         </span>
       </div>
 
@@ -110,6 +121,10 @@ export default function WhoopConnectCard() {
           <div>
             <h3 className="integration-name">{name || 'WHOOP account'}</h3>
             <div className="integration-stats">
+              <div className="integration-stat">
+                <div className="label">Last sync</div>
+                <div className="value">{timeAgo(connection.last_synced_at)}</div>
+              </div>
               <div className="integration-stat">
                 <div className="label">Connected</div>
                 <div className="value">{timeAgo(connection.connected_at)}</div>
@@ -135,6 +150,11 @@ export default function WhoopConnectCard() {
               </button>
               {probeError ? (
                 <span className="upload-result error">Probe failed — {probeError}</span>
+              ) : null}
+              {failing ? (
+                <span className="upload-result error">
+                  {lastError.reconnect ? `Sync failed ${failedAgo} · reconnect WHOOP` : `Sync failed ${failedAgo}`}
+                </span>
               ) : null}
             </div>
 

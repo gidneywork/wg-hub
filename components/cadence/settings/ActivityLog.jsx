@@ -7,6 +7,8 @@ import { db } from '../../../lib/db'
 // for any future event types we haven't mapped yet.
 const TYPE_LABELS = {
   whoop_upload:   'Whoop upload',
+  whoop_sync:     'WHOOP sync',
+  whoop_error:    'WHOOP error',
   strava_sync:    'Strava sync',
   target_updated: 'Target updated',
   activity_sync:  'Activity sync',
@@ -22,6 +24,7 @@ function labelForType(t) {
 const FILTER_OPTIONS = [
   { val: 'all',            label: 'All events' },
   { val: 'whoop_upload',   label: 'Whoop upload' },
+  { val: 'whoop_error',    label: 'WHOOP error' },
   { val: 'strava_sync',    label: 'Strava sync' },
   { val: 'target_updated', label: 'Target updated' },
 ]
