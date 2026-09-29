@@ -14,7 +14,7 @@ import { apiFetch, startConnect } from '../../../lib/api'
  * content inside the new chrome — no new disconnected design exists
  * in the mockups yet.
  */
-export default function StravaCard({ stravaConnection, shownCount = null, hiddenCount = 0, onDisconnect, onSynced }) {
+export default function StravaCard({ stravaConnection, onDisconnect, onSynced }) {
   const [disconnecting,  setDisconnecting ] = useState(false)
   const [syncing,        setSyncing       ] = useState(false)
   const [syncResult,     setSyncResult    ] = useState(null)
@@ -86,10 +86,7 @@ export default function StravaCard({ stravaConnection, shownCount = null, hidden
             <div className="integration-stats">
               <div className="integration-stat">
                 <div className="label">Activities</div>
-                <div className="value">{shownCount ?? stravaConnection.activity_count ?? '—'}</div>
-                {hiddenCount > 0 ? (
-                  <div className="integration-stat-note">shown · {hiddenCount} auto-walks hidden</div>
-                ) : null}
+                <div className="value">{stravaConnection.activity_count ?? '—'}</div>
               </div>
               <div className="integration-stat">
                 <div className="label">Last sync</div>

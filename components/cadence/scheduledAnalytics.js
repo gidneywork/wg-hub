@@ -31,8 +31,8 @@ function plannedDisciplines(plan, iso) {
   return set
 }
 
-// Disciplines actually done on a date. `activities` is already WHOOP-auto-walk
-// filtered upstream (db.loadActivities, FI-004).
+// Disciplines actually done on a date. Walks never reach `activities` — they
+// are excluded at ingest (FC-079).
 //
 // KNOWN GAP — deferred to FC-035 (Workout Plan Builder): climb and functional
 // have NO actuals source unless they arrive via Strava. Daily hangboard and
