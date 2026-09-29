@@ -382,7 +382,7 @@ export default function WGHub({ onSignOut }) {
           saveLog={saveLog}
         />
       ) : view === 'training' ? (
-        <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} />
+        <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} activities={activities} />
       ) : view === 'biomarkers' ? (
         <CadenceBiomarkers />
       ) : isLegacy ? (

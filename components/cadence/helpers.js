@@ -102,6 +102,20 @@ export function startOfWeek(date = new Date()) {
   return d
 }
 
+// Actual running km for the Mon–Sun week containing `date`, from Strava via
+// kmByDateMap — the same run definition as Dashboard, Charts and TV Mode.
+// Returns 0 (not null) for a week with no runs yet.
+export function runKmThisWeek(activities, date = new Date()) {
+  const kmMap = kmByDateMap(activities)
+  const d = startOfWeek(date)
+  let total = 0
+  for (let i = 0; i < 7; i++) {
+    total += kmMap[localIso(d)] || 0
+    d.setDate(d.getDate() + 1)
+  }
+  return Math.round(total * 10) / 10
+}
+
 // "7.4" hours → "7h 24m"
 export function formatHoursMinutes(hoursDecimal) {
   if (hoursDecimal === null || hoursDecimal === undefined || hoursDecimal === '' || isNaN(parseFloat(hoursDecimal))) return null

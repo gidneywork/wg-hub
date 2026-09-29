@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import './training.css'
-import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, sumWeekKm, disciplineForType } from '../../lib/plan'
+import { getCurrentWeek, getPlanPosition, resolveWeek, buildEmptyWeek, disciplineForType } from '../../lib/plan'
+import { runKmThisWeek } from './helpers'
 import MonthGrid from './MonthGrid'
 
 const TYPE_LABEL = {
@@ -365,7 +366,7 @@ function EditProgramme({ localPlan, setLocalPlan, updateSession, deleteSession, 
   )
 }
 
-export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
+export default function Training({ plan, savePlan, settings, getDefaultPlan, activities }) {
   const [editing,   setEditing]   = useState(false)
   const [expanded,  setExpanded]  = useState(() => new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']))
   const [localPlan, setLocalPlan] = useState(plan)
@@ -481,7 +482,7 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
     setTimeout(() => setSaveFlash(false), 2500)
   }
 
-  const weekKm       = sumWeekKm(currentWeek)
+  const weekKm       = runKmThisWeek(activities, today) // actual, from Strava — the plan carries no km
   const stairCount   = currentWeek.filter(d => d.sessions.some(s => s.type === 'stairmaster')).length
   const gymTypes     = [...new Set(
     currentWeek.flatMap(d => d.sessions.filter(s => s.type === 'gym').map(s =>
@@ -545,10 +546,10 @@ export default function Training({ plan, savePlan, settings, getDefaultPlan }) {
         <div className="stat">
           <div className="label">Distance</div>
           <div className="value">
-            {weekKm != null ? (weekKm % 1 === 0 ? weekKm : weekKm.toFixed(1)) : '—'}
-            {weekKm != null && <span className="unit">km</span>}
+            {weekKm % 1 === 0 ? weekKm : weekKm.toFixed(1)}
+            <span className="unit">km</span>
           </div>
-          <div className="helper">this week</div>
+          <div className="helper">run this week</div>
         </div>
         <div className="stat">
           <div className="label">Stairmaster</div>
