@@ -23,6 +23,8 @@ const BUCKET = {
   swim: 'run',
   cycle: 'run',
   hike: 'run',
+  stairmaster: 'run',
+  stairstepper: 'run',
   gym: 'strength',
   functional: 'strength',
   strength: 'strength',

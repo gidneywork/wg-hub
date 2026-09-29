@@ -7,6 +7,7 @@ import MonthGrid from './MonthGrid'
 
 const TYPE_LABEL = {
   run: 'Running', swim: 'Swimming', cycle: 'Cycling', hike: 'Hiking',
+  stairmaster: 'Stairmaster',
   gym: 'Gym', strength: 'Strength', functional: 'Functional',
   climbing: 'Climbing',
   yoga: 'Yoga', stretch: 'Stretching', rest: 'Rest day', custom: 'Custom',
@@ -16,6 +17,7 @@ function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}
 
 const SESSION_TYPES = [
   { key: 'run',        label: 'Running' },
+  { key: 'stairmaster', label: 'Stairmaster' },
   { key: 'functional', label: 'Functional' },
   { key: 'gym',        label: 'Gym' },
   { key: 'climbing',   label: 'Climbing' },

@@ -179,7 +179,8 @@
 [data-cadence] .t-day-session[data-type="run"],
 [data-cadence] .t-day-session[data-type="swim"],
 [data-cadence] .t-day-session[data-type="cycle"],
-[data-cadence] .t-day-session[data-type="hike"]       { border-left-color: var(--moss); }
+[data-cadence] .t-day-session[data-type="hike"],
+[data-cadence] .t-day-session[data-type="stairmaster"] { border-left-color: var(--moss); }
 [data-cadence] .t-day-session[data-type="gym"],
 [data-cadence] .t-day-session[data-type="strength"]   { border-left-color: var(--slate); }
 [data-cadence] .t-day-session[data-type="functional"] { border-left-color: var(--d5); }
