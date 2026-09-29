@@ -54,6 +54,18 @@ export default function NutritionSection({
       targetKey: 'dailyCarbs',
       unitShort: 'g',
     },
+    // Water (FC-084): typed in litres; synced and targeted in ml.
+    {
+      key:    'water',
+      label:  'Water',
+      unit:   'L',
+      targetKey: 'dailyWater',
+      unitShort: 'L',
+      inputMode: 'decimal',
+      mergedValue: m => (m.water_ml != null ? m.water_ml / 1000 : null),
+      targetFrom:  t => (t.water_ml != null ? t.water_ml / 1000 : null),
+      showEstimate: v => v.toFixed(1),
+    },
   ]
 
   return (
@@ -70,14 +82,16 @@ export default function NutritionSection({
           const value = form?.nutrition?.[row.key]
           const hasValue = value != null && value !== ''
           const merged = mergeNutritionForDate(date, { nutrition: form?.nutrition }, cronometerData)
-          const fromCronometer = !hasValue && merged.source[row.key] === 'cronometer' ? merged[row.key] : null
+          const mergedVal = row.mergedValue ? row.mergedValue(merged) : merged[row.key]
+          const fromCronometer = !hasValue && merged.source[row.key] === 'cronometer' ? mergedVal : null
           const effective = hasValue ? value : fromCronometer
-          const targetValue = nutritionTargetsForDate(date, cronometerData, settings)[row.key]
+          const allTargets = nutritionTargetsForDate(date, cronometerData, settings)
+          const targetValue = row.targetFrom ? row.targetFrom(allTargets) : allTargets[row.key]
           const target = targetValue != null ? { ...(settings?.[row.targetKey] || {}), value: targetValue } : null
           const band = targetBand(effective, target)
           const helper = buildMacroHelper(effective, target, row.unitShort)
           const targetRef = target?.value
-            ? `Target ${Number(target.value).toLocaleString('en-GB')} ${row.unitShort}`
+            ? `Target ${row.key === 'water' ? Number(target.value).toFixed(1) : Number(target.value).toLocaleString('en-GB')} ${row.unitShort}`
             : null
           return (
             <FieldCard
@@ -87,9 +101,9 @@ export default function NutritionSection({
               value={value}
               onChange={v => onField('nutrition', row.key, v)}
               unit={row.unit}
-              inputMode="numeric"
+              inputMode={row.inputMode || 'numeric'}
               placeholder="—"
-              estimate={fromCronometer != null ? Math.round(fromCronometer) : null}
+              estimate={fromCronometer != null ? (row.showEstimate ? row.showEstimate(fromCronometer) : Math.round(fromCronometer)) : null}
               sourcePill={fromCronometer != null ? 'From Cronometer' : null}
               progress={{
                 pct:     band?.pct ?? 0,

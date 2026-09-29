@@ -5,6 +5,7 @@ import { openSession, londonParts, shiftDate, isScheduledHour, mergeConsumed, Cr
 import {
   reserveExport, scheduledUserId, readConnection, mergeConnection, exportsUsed, refreshesLeft, syncedWithin, EXPORT_LIMIT_DAILY,
   recordCronometerSync, recordCronometerFailure, recordTargetsFallback,
+  readFoodVerdicts, saveFoodVerdicts, recordWaterFallback,
 } from '../../../../lib/cronometer-status'
 
 export const maxDuration = 60
@@ -62,6 +63,28 @@ export async function POST(request) {
 
     stage = 'export'
     const rows = (await session.exportDailySummary(yesterday, today)).filter(r => r.date === yesterday || r.date === today)
+
+    // Logged water (diary servings; no export cost). A failure keeps the stored
+    // value and is logged once per London day; the sync still succeeds.
+    stage = 'water'
+    const water = {}
+    try {
+      const known = await readFoodVerdicts(userId)
+      const learned = {}
+      for (const date of [yesterday, today]) {
+        const w = await session.loggedWater(date, { ...known, ...learned })
+        water[date] = w.ml
+        Object.assign(learned, w.verdicts)
+      }
+      if (Object.keys(learned).length) await saveFoodVerdicts(userId, { ...known, ...learned })
+    } catch (e) {
+      const c = await readConnection(userId)
+      if (c?.water_fallback_day !== today) {
+        await recordWaterFallback(userId, { status: e?.status ?? null, source })
+        await mergeConnection(userId, { water_fallback_day: today })
+      }
+    }
+    for (const r of rows) if (water[r.date] != null) r.water_ml = water[r.date]
 
     stage = 'store'
     const { data: existingRows, error: readErr } = await supabaseServer

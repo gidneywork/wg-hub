@@ -83,7 +83,22 @@ export function mergeNutritionForDate(date, log, cronometerData) {
       out[key] = null; out.source[key] = null
     }
   }
+  // Water (FC-084): typed in litres (nutrition.water), synced in ml. The
+  // merge speaks ml; a typed value wins, as for every other field.
+  const typedL = parseFloat(n.water)
+  if (n.water != null && n.water !== '' && Number.isFinite(typedL)) {
+    out.water_ml = Math.round(typedL * 1000); out.source.water = 'log'
+  } else if (c && c.water_ml != null && Number.isFinite(Number(c.water_ml))) {
+    out.water_ml = Number(c.water_ml); out.source.water = 'cronometer'
+  } else {
+    out.water_ml = null; out.source.water = null
+  }
   return out
+}
+
+// "2.4 L" from ml (one decimal). Null in, null out.
+export function formatLitres(ml) {
+  return ml == null || !Number.isFinite(Number(ml)) ? null : `${(Number(ml) / 1000).toFixed(1)} L`
 }
 
 // Targets for a date: Cronometer's (from the sync) where present, else
@@ -97,6 +112,8 @@ export function nutritionTargetsForDate(date, cronometerData, settings) {
     protein:  pick(c?.target_protein,   settings?.dailyProtein?.value),
     carbs:    pick(c?.target_net_carbs, settings?.dailyCarbs?.value),
     fat:      pick(c?.target_fat,       null),
+    // Water target is Cadence's own setting (litres), as ml.
+    water_ml: (() => { const l = num(settings?.dailyWater?.value); return l == null ? null : l * 1000 })(),
     source:   c?.targets_fetched_at ? 'cronometer' : 'settings',
   }
 }

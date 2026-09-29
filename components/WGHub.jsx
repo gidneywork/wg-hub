@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
   dailyCalories:     {value:2800,  label:'Daily Calories',            unit:'kcal',  lowerIsBetter:false},
   dailyProtein:      {value:180,   label:'Daily Protein',             unit:'g',     lowerIsBetter:false},
   dailyCarbs:        {value:320,   label:'Daily Carbs',               unit:'g',     lowerIsBetter:false},
+  dailyWater:        {value:3,     label:'Daily Water',               unit:'L',     lowerIsBetter:false},
   weightTarget:      {value:75,    label:'Weight Target',             unit:'kg',    lowerIsBetter:false, isWeight:true},
   sleepScore:        {value:85,    label:'Sleep Score Target',        unit:'/100',  lowerIsBetter:false},
   recoveryScore:     {value:80,    label:'Recovery Score Target',     unit:'/100',  lowerIsBetter:false},

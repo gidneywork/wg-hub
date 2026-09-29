@@ -144,6 +144,7 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [], cron
     dailyCalories:     meanNutrition('calories'),
     dailyProtein:      meanNutrition('protein'),
     dailyCarbs:        meanNutrition('carbs'),
+    dailyWater:        (() => { const ml = meanNutrition('water_ml'); return ml == null ? null : ml / 1000 })(),
   }
 }
 
@@ -257,6 +258,14 @@ export const TARGET_SPECS = {
     prefix: t => `Target: ${numFmt(t)} g/day`,
     actual: v => `avg ${numFmt(v)} g`,
   },
+  dailyWater: {
+    label: 'Daily water',
+    pill: null,
+    unit: 'L',
+    step: 0.1,
+    prefix: t => `Target: ${Number(t).toFixed(1)} L/day`,
+    actual: v => `avg ${Number(v).toFixed(1)} L`,
+  },
 }
 
 export const SECTION_LAYOUT = [
@@ -264,7 +273,7 @@ export const SECTION_LAYOUT = [
   { label: 'Activity',         rN: 'r-5', keys: ['dailySteps'] },
   { label: 'Body metrics',     rN: 'r-6', keys: ['weightTarget', 'hrv', 'rhr'] },
   { label: 'Sleep & recovery', rN: 'r-7', keys: ['sleepScore', 'recoveryScore', 'hoursSlept', 'bedtimeTarget'] },
-  { label: 'Nutrition',        rN: 'r-8', keys: ['dailyCalories', 'dailyProtein', 'dailyCarbs'] },
+  { label: 'Nutrition',        rN: 'r-8', keys: ['dailyCalories', 'dailyProtein', 'dailyCarbs', 'dailyWater'] },
 ]
 
 // Word for the trailing state span — coloured to match the bar.

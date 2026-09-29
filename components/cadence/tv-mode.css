@@ -514,6 +514,7 @@
 .tv-page .nut-row .track .fill.moss  { background: var(--moss); }
 .tv-page .nut-row .track .fill.clay  { background: var(--clay); }
 .tv-page .nut-row .track .fill.slate { background: var(--slate); }
+.tv-page .nut-row .track .fill.sand  { background: var(--sand); }
 
 .tv-page .nut-row .bar-foot {
   font-family: var(--mono);

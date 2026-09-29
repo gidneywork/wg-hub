@@ -27,6 +27,7 @@ const TABS = [
   { id: 'recovery', label: 'Recovery',         pip: 'sleep' },
   { id: 'strain',   label: 'Strain',           pip: 'body'  },
   { id: 'calories',   label: 'Calories',        pip: 'intake'},
+  { id: 'water',      label: 'Water',           pip: 'intake'},
   { id: 'adherence', label: 'Adherence',       pip: 'body'  },
 ]
 
@@ -325,6 +326,7 @@ const METRIC_META = {
   recovery: { unit: '/100', lowerIsBetter: false, fmt: v => Math.round(v).toString()                        },
   strain:   { unit: '',     lowerIsBetter: false, fmt: v => v.toFixed(1)                                    },
   calories:   { unit: 'kcal', lowerIsBetter: false, fmt: v => Math.round(v).toLocaleString() },
+  water:      { unit: 'L',    lowerIsBetter: false, fmt: v => v.toFixed(1) },
   adherence:  { unit: '%',   lowerIsBetter: false, fmt: v => Math.round(v) + '%' },
 }
 const METRIC_META_FALLBACK = { unit: '', lowerIsBetter: false, fmt: v => Math.round(v).toString() }
@@ -815,6 +817,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       strain:   bm((_, w)   => w?.day_strain),
       hoursSlept: bm((m)    => m?.sleep?.hoursSlept),
       calsIn:   bm((_, __, d) => mergeNutritionForDate(d, logs[d], cronometerData).calories),
+      water:    bm((_, __, d) => { const ml = mergeNutritionForDate(d, logs[d], cronometerData).water_ml; return ml != null && ml > 0 ? ml / 1000 : null }),
       calsBurned: bm((_, w, d) => burnedForDate(w, d) ?? null),
       calsBalance: bm((_, w, d) => {
         const intake = mergeNutritionForDate(d, logs[d], cronometerData).calories
@@ -983,6 +986,26 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       }
     }
 
+    if (activeTab === 'water') {
+      const m = allMetrics.water
+      const d = calcDelta(m.avg, m.priorAvg)
+      const t = parseFloat(settings?.dailyWater?.value)
+      const hitDays = isFinite(t) ? m.vals.filter(x => x.value >= t).length : null
+      return {
+        eyebrow: 'Water · litres per day',
+        heroStr: fmtDp1(m.avg),
+        unitStr: `L · ${rangeLabel(range)}`,
+        delta:   d,
+        metaStr: m.priorAvg != null ? `vs prior period avg · ${fmtDp1(m.priorAvg)} L` : 'vs prior period',
+        tiles: [
+          { label: 'Average',       val: fmtDp1(m.avg),  unit: 'L', ctx: `Across ${m.count} day${m.count !== 1 ? 's' : ''}` },
+          { label: 'Target',        val: isFinite(t) ? t.toFixed(1) : '—', unit: isFinite(t) ? 'L' : '', ctx: 'Daily goal' },
+          { label: 'Days on target',val: hitDays != null && m.count > 0 ? String(hitDays) : '—', unit: '', ctx: 'At or above target' },
+          { label: 'Best day',      val: fmtDp1(m.peak), unit: 'L', ctx: 'Highest in range' },
+        ],
+      }
+    }
+
     if (activeTab === 'adherence') {
       const s   = adherenceData?.summary
       const has = !!s && s.gradedDays > 0 && s.planned > 0
@@ -1068,7 +1091,7 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
     if (activeTab === 'adherence') {
       return adherenceData?.series ?? []
     }
-    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain' }[activeTab]
+    const metricKey = { hrv: 'hrv', rhr: 'rhr', weight: 'weight', sleep: 'sleep', recovery: 'recovery', strain: 'strain', water: 'water' }[activeTab]
     const metric = metricKey ? allMetrics[metricKey] : null
     if (!metric) return []
     return buildChartBars(metric.vals, days)
@@ -1125,12 +1148,16 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       const v = settings?.weightTarget?.value
       return v != null && v !== '' ? parseFloat(v) : null
     }
+    if (activeTab === 'water') {
+      const v = settings?.dailyWater?.value
+      return v != null && v !== '' ? parseFloat(v) : null
+    }
     return null
   }, [activeTab, settings])
 
   const prevChartBars = useMemo(() => {
     if (compare !== 'prev' || !rangeDays) return []
-    if (activeTab === 'calories' || activeTab === 'adherence') return []
+    if (activeTab === 'calories' || activeTab === 'adherence' || activeTab === 'water') return []
     const n = rangeDays
     const priorEnd = new Date()
     priorEnd.setDate(priorEnd.getDate() - n)

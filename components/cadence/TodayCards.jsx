@@ -1,6 +1,7 @@
 'use client'
 
-import { todayStr, mergeNutritionForDate } from './helpers'
+import { todayStr, mergeNutritionForDate, formatLitres } from './helpers'
+import TargetDot from './TargetDot'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 import CronometerRefresh from './CronometerRefresh'
@@ -112,6 +113,19 @@ function FuelCard({ logs, cronometerData, activities, settings }) {
         <div className="track"><div className="fill out" style={{ width: `${outPct}%` }} /></div>
         <span className="right">{outValid ? Math.round(calsOutSum).toLocaleString() : '—'}</span>
       </div>
+      {(() => {
+        const ml = mergeNutritionForDate(dateKey, log, cronometerData).water_ml
+        const def = settings?.dailyWater
+        return (
+          <div className="fuel-water">
+            <span>Water</span>
+            <span className="right">
+              {formatLitres(ml) ?? '—'}
+              {ml != null && def?.value ? <TargetDot value={(ml / 1000).toFixed(1)} def={def} unit="L" /> : null}
+            </span>
+          </div>
+        )
+      })()}
       <CronometerRefresh className="fuel-foot" />
     </div>
   )

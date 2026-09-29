@@ -7,6 +7,7 @@ import {
   mergeWhoopForDate,
   mergeNutritionForDate,
   nutritionTargetsForDate,
+  formatLitres,
   sparklinePath,
   formatHoursColon,
   kmByDateMap,
@@ -600,11 +601,12 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
   // ── Nutrition data ───────────────────────────────────────────────────────────
   // Manual entry first, Cronometer as fallback (FC-084). Targets: the average
   // of each logged day's target (Cronometer's, else Cadence's settings).
-  const { nutTotals, nutLoggedDays, nutTargets } = useMemo(() => {
-    let calories = 0, protein = 0, carbs = 0, loggedDays = 0
+  const { nutTotals, nutLoggedDays, nutWaterDays, nutTargets } = useMemo(() => {
+    let calories = 0, protein = 0, carbs = 0, loggedDays = 0, waterMl = 0, waterDays = 0
     const tSum = { calories: 0, protein: 0, carbs: 0 }, tCount = { calories: 0, protein: 0, carbs: 0 }
     for (const d of days) {
       const n = mergeNutritionForDate(d, logs?.[d], cronometerData)
+      if (n.water_ml > 0) { waterMl += n.water_ml; waterDays++ }
       const cal = n.calories || 0, pro = n.protein || 0, crb = n.carbs || 0
       if (cal || pro || crb) {
         loggedDays++; calories += cal; protein += pro; carbs += crb
@@ -614,7 +616,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
     }
     const avgT = k => (tCount[k] ? tSum[k] / tCount[k] : NaN)
     return {
-      nutTotals: { calories, protein, carbs }, nutLoggedDays: loggedDays,
+      nutTotals: { calories, protein, carbs, waterMl }, nutLoggedDays: loggedDays, nutWaterDays: waterDays,
       nutTargets: { calories: avgT('calories'), protein: avgT('protein'), carbs: avgT('carbs') },
     }
   }, [days, logs, cronometerData, settings])
@@ -634,6 +636,10 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
   const protPct = nutDailyAvg && isFinite(protTarget) ? Math.round(nutDailyAvg.protein  / protTarget * 100) : null
   const carbPct = nutDailyAvg && isFinite(carbTarget) ? Math.round(nutDailyAvg.carbs    / carbTarget * 100) : null
 
+  // Water (FC-084): litres; daily average over days with water logged.
+  const waterTargetL  = parseFloat(settings?.dailyWater?.value)
+  const waterAvgMl    = nutWaterDays > 0 ? nutTotals.waterMl / nutWaterDays : null
+  const waterPct      = waterAvgMl != null && isFinite(waterTargetL) && waterTargetL > 0 ? Math.round(waterAvgMl / (waterTargetL * 1000) * 100) : null
   const calTargetLabel  = isFinite(calTarget)  ? `${Math.round(calTarget).toLocaleString('en-GB')} kcal/day` : null
   const protTargetLabel = isFinite(protTarget) ? `${Math.round(protTarget)} g/day` : null
   const carbTargetLabel = isFinite(carbTarget) ? `${Math.round(carbTarget)} g/day` : null
@@ -833,6 +839,14 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
               total={nutDailyAvg ? Math.round(nutTotals.carbs).toLocaleString('en-GB') : null}
               unit="g"
               dailyAvg={nutDailyAvg ? nutDailyAvg.carbs.toLocaleString('en-GB') : null}
+            />
+            <NutRow
+              label="Water" fillClass="sand"
+              fillPct={waterPct} targetPct={waterPct != null ? `${waterPct}%` : null}
+              targetLabel={isFinite(waterTargetL) ? `${waterTargetL.toFixed(1)} L/day` : null}
+              total={waterAvgMl != null ? (nutTotals.waterMl / 1000).toFixed(1) : null}
+              unit="L"
+              dailyAvg={waterAvgMl != null ? (waterAvgMl / 1000).toFixed(1) : null}
             />
             {tvCalMode && (
               <div className="tv-cal-target">

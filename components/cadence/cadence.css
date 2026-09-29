@@ -6282,3 +6282,23 @@ html::-webkit-scrollbar-track { background: transparent; }
 [data-cadence] .cronometer-refresh button:hover:not(:disabled) { text-decoration: underline; }
 [data-cadence] .cronometer-refresh button:disabled { color: var(--text-faint); cursor: default; }
 [data-cadence] .fuel-card .cronometer-refresh.fuel-foot { margin-top: 14px; }
+
+/* Fuel card water line (FC-084) — quiet mono row; the dot is the FC-083 target dot. */
+[data-cadence] .fuel-card .fuel-water {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .fuel-card .fuel-water .right { color: var(--text); }
+[data-cadence] .fuel-card .fuel-water .target-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; vertical-align: middle;
+}
+[data-cadence] .fuel-card .fuel-water .target-dot.on  { background: var(--moss); }
+[data-cadence] .fuel-card .fuel-water .target-dot.off { background: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .fuel-card .fuel-water .target-dot.off { background: var(--clay); }

@@ -735,6 +735,51 @@ function NutritionChart({ logs, cronometerData, days }) {
   )
 }
 
+// ─── Chart: Water · daily litres (FC-084) ─────────────────────────────
+// Logged water (manual first, Cronometer fallback) against the daily target.
+function WaterChart({ logs, cronometerData, days, settings }) {
+  const litres = days.map(d => {
+    const ml = mergeNutritionForDate(d, logs?.[d], cronometerData).water_ml
+    return ml != null && ml > 0 ? ml / 1000 : NaN
+  })
+  const avg = mean(litres)
+  const target = parseFloat(settings?.dailyWater?.value)
+  const yMin = 0, yMax = 4
+  const line = buildLine(litres, yMin, yMax)
+  const ticks = xAxisTicks(days)
+  // Same geometry as buildLine (BOT / H), so the target sits on the right grid line.
+  const targetY = isFinite(target) ? BOT - ((Math.min(Math.max(target, yMin), yMax) - yMin) / (yMax - yMin)) * H : null
+  const onTarget = isFinite(target) ? litres.filter(v => isFinite(v) && v >= target).length : null
+  return (
+    <div className="chart-card">
+      <div className="chart-head">
+        <div>
+          <div className="label">Water · daily</div>
+          <div className="value">
+            {avg != null ? avg.toFixed(1) : '—'}
+            <span className="unit">L/day avg</span>
+          </div>
+        </div>
+        <div className="meta-right">
+          {onTarget != null && <div className="delta-line">{onTarget} day{onTarget !== 1 ? 's' : ''} on target</div>}
+          <div className="meta-sub">target {isFinite(target) ? target.toFixed(1) : '—'} L</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 560 170" preserveAspectRatio="none" style={{ overflow: 'visible', width: '100%', height: 'auto' }}>
+        <GridLines />
+        <YAxisLeft labels={['4 L', '2.5 L', '1 L']} />
+        {targetY != null && <line x1="0" x2={W} y1={targetY} y2={targetY} style={{ stroke: 'var(--border-strong)' }} strokeWidth="1" strokeDasharray="4 4" />}
+        {line.linePath && <path className="draw-line trend-5" pathLength="1" d={line.linePath} style={{ stroke: 'var(--slate)', fill: 'none' }} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
+        <XAxisLabels ticks={ticks} />
+      </svg>
+      <div className="legend">
+        <span className="item"><span className="swatch slate" />Water · L</span>
+        <span className="item"><span className="swatch" style={{ background: 'var(--border-strong)' }} />Target</span>
+      </div>
+    </div>
+  )
+}
+
 // ─── Chart: Lifts volume ─────────────────────────────────────────────
 // Weekly weight×reps sum across all loaded exercises. Bodyweight lifts
 // (weight === 0) are excluded. 6-week window, clay bars.
@@ -871,6 +916,7 @@ export default function Trends({ logs, whoopData, cronometerData, activities, se
         <CaloriesWeightChart    logs={logs} cronometerData={cronometerData} activities={activities} days={days} prevDays={prevDays} settings={settings} />
         <AdherenceChart         plan={plan} activities={activities} />
         <NutritionChart         logs={logs} cronometerData={cronometerData} days={days} />
+        <WaterChart             logs={logs} cronometerData={cronometerData} days={days} settings={settings} />
         <StepsCaloriesOutChart  logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
         <LiftsVolumeChart       logs={logs} />
       </div>
