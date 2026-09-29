@@ -12,6 +12,7 @@ import {
 } from './helpers'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { matchSessionsToActivities } from '../../lib/session-match'
+import TargetDot from './TargetDot'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
 import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
@@ -191,7 +192,9 @@ function MiniSpark({ values }) {
 // StatTile — one of the 6 metric tiles across the top grid.
 // `value` is null when there's no data for the period (renders "—" in italic).
 // `statusClass` is one of: '' (moss/positive), 'down' (clay), 'flat' (muted), 'no-data' (faint).
-function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, revealClass }) {
+// `target` — { value, def, unit } for the FC-083 target dot; value is the value
+// as displayed. The status line stays the week-on-week trend.
+function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, revealClass, target }) {
   const hasData = value != null
   return (
     <div className={`stat-tile r ${revealClass}`}>
@@ -200,7 +203,7 @@ function StatTile({ label, sub, value, unit, status, statusClass, sparkValues, r
         <div className="sub cycleable">{sub}</div>
       </div>
       <div className={`value cycleable${!hasData ? ' empty' : ''}`}>
-        {hasData ? <>{value}<span className="unit">{unit}</span></> : '—'}
+        {hasData ? <>{value}<span className="unit">{unit}</span>{target && <TargetDot value={target.value} def={target.def} unit={target.unit} />}</> : '—'}
       </div>
       <div className="footer">
         <span className={`status cycleable${statusClass ? ` ${statusClass}` : ''}`}>
@@ -726,42 +729,49 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             value={avgW   != null ? avgW.toFixed(1)         : null} unit="kg"
             status={wStatus.text}     statusClass={wStatus.cls}
             sparkValues={isToday ? [] : sparkW}      revealClass="r-3"
+            target={avgW != null ? { value: avgW.toFixed(1), def: settings?.weightTarget, unit: 'kg' } : null}
           />
           <StatTile
             label="HRV"        sub={periodLabel}
             value={avgHrv  != null ? Math.round(avgHrv)    : null} unit="ms"
             status={hrvStatus.text}   statusClass={hrvStatus.cls}
             sparkValues={isToday ? [] : sparkHrv}    revealClass="r-4"
+            target={avgHrv != null ? { value: Math.round(avgHrv), def: settings?.hrv, unit: 'ms' } : null}
           />
           <StatTile
             label="Resting HR" sub={periodLabel}
             value={avgRhr  != null ? Math.round(avgRhr)    : null} unit="bpm"
             status={rhrStatus.text}   statusClass={rhrStatus.cls}
             sparkValues={isToday ? [] : sparkRhr}    revealClass="r-5"
+            target={avgRhr != null ? { value: Math.round(avgRhr), def: settings?.rhr, unit: 'bpm' } : null}
           />
           <StatTile
             label="Sleep score" sub={periodLabel}
             value={avgSleep != null ? Math.round(avgSleep) : null} unit="/100"
             status={sleepStatus.text} statusClass={sleepStatus.cls}
             sparkValues={isToday ? [] : sparkSleep}  revealClass="r-6"
+            target={avgSleep != null ? { value: Math.round(avgSleep), def: settings?.sleepScore } : null}
           />
           <StatTile
             label="Recovery"   sub={periodLabel}
             value={avgRec  != null ? Math.round(avgRec)   : null} unit="/100"
             status={recStatus.text}   statusClass={recStatus.cls}
             sparkValues={isToday ? [] : sparkRec}    revealClass="r-7"
+            target={avgRec != null ? { value: Math.round(avgRec), def: settings?.recoveryScore } : null}
           />
           <StatTile
             label="Hours slept" sub={periodLabel}
             value={avgHours != null ? formatHoursColon(avgHours) : null} unit="h"
             status={hoursStatus.text} statusClass={hoursStatus.cls}
             sparkValues={isToday ? [] : sparkHours}  revealClass="r-8"
+            target={avgHours != null ? { value: Math.round(avgHours * 60) / 60, def: settings?.hoursSlept, unit: 'h' } : null}
           />
           <StatTile
             label="Bedtime"    sub={periodLabel}
             value={avgBedtime ?? null} unit=""
             status={bedtimeStatus.text} statusClass={bedtimeStatus.cls}
             sparkValues={[]}  revealClass="r-9"
+            target={avgBedtime != null ? { value: avgBedtime, def: settings?.bedtimeTarget } : null}
           />
         </section>
 

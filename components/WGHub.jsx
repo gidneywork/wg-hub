@@ -56,6 +56,7 @@ const DEFAULT_SETTINGS = {
   hoursSlept:        {value:8,     label:'Hours Slept Target',        unit:'hrs',   lowerIsBetter:false},
   hrv:               {value:70,    label:'HRV Target',                unit:'',      lowerIsBetter:false},
   rhr:               {value:52,    label:'Resting HR Target',         unit:'bpm',   lowerIsBetter:true},
+  bedtimeTarget:     {value:'23:00', label:'Bedtime Target',          unit:'',      lowerIsBetter:true, isTime:true},
   autoTheme:         false,
   calorieTargetMode: null,
 }
@@ -215,7 +216,9 @@ export default function WGHub({ onSignOut }) {
           db.loadAssistantConfig(),
         ])
         setLogs(logsData || {})
-        if (settingsData) setSettings(settingsData)
+        // Defaults underneath, so a target added later (e.g. bedtimeTarget,
+        // FC-083) exists before it has ever been saved.
+        if (settingsData) setSettings({ ...DEFAULT_SETTINGS, ...settingsData })
         setPlan(normalisePlan(planData, logsData))
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])

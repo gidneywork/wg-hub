@@ -101,6 +101,23 @@ export function computeLoadForDay(date, logs, activities, stravaKmMap) {
   return km + (gymMins / 60) * 8 + (yogaMins / 60) * 3
 }
 
+// ── Clock times ("HH:MM") on an overnight scale ─────────────────────────────
+// Times before 04:00 count as after midnight of the evening before (+1440), so
+// 23:45 < 00:15 and bedtimes compare and average correctly across midnight.
+export const CLOCK_PIVOT_MINS = 240
+export function clockToMins(str) {
+  if (typeof str !== 'string') return null
+  const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim())
+  if (!m) return null
+  const raw = Number(m[1]) * 60 + Number(m[2])
+  if (raw >= 1440) return null
+  return raw < CLOCK_PIVOT_MINS ? raw + 1440 : raw
+}
+export function minsToClock(mins) {
+  const w = ((Math.round(mins) % 1440) + 1440) % 1440
+  return `${String(Math.floor(w / 60)).padStart(2, '0')}:${String(w % 60).padStart(2, '0')}`
+}
+
 // Monday-anchored week start (ISO week)
 export function startOfWeek(date = new Date()) {
   const d = new Date(date)

@@ -10,7 +10,7 @@ import { TARGET_SPECS, targetState, stateWord } from './settingsHelpers'
  *   def         — full target definition from local settings
  *                 ({ value, label, unit, lowerIsBetter, isWeight })
  *   actual      — live current value (number or null)
- *   onChange    — (newValue: number) => void
+ *   onChange    — (newValue: number | "HH:MM" for time targets) => void
  *   rowIndex    — absolute row index for staggered bar animation
  */
 export default function TargetRow({ targetKey, def, actual, onChange, rowIndex }) {
@@ -46,14 +46,23 @@ export default function TargetRow({ targetKey, def, actual, onChange, rowIndex }
           ) : null}
         </div>
         <div className="input-group">
-          <input
-            className="target-field"
-            type="number"
-            step={spec.step}
-            min={0}
-            value={def?.value ?? ''}
-            onChange={e => onChange(parseFloat(e.target.value) || 0)}
-          />
+          {spec.input === 'time' ? (
+            <input
+              className="target-field"
+              type="time"
+              value={def?.value ?? ''}
+              onChange={e => onChange(e.target.value)}
+            />
+          ) : (
+            <input
+              className="target-field"
+              type="number"
+              step={spec.step}
+              min={0}
+              value={def?.value ?? ''}
+              onChange={e => onChange(parseFloat(e.target.value) || 0)}
+            />
+          )}
           <span className="target-unit">{spec.unit}</span>
         </div>
       </div>

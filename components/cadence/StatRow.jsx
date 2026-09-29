@@ -6,6 +6,7 @@ import {
   formatHoursColon,
   sparklinePath,
 } from './helpers'
+import TargetDot from './TargetDot'
 
 function MiniSpark({ values, color = 'var(--moss)' }) {
   const path = sparklinePath(values, 60, 20, 3)
@@ -159,6 +160,7 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {rhrDisplay != null ? rhrDisplay : '—'}
           <span className="unit">bpm</span>
+          {rhrDisplay != null && <TargetDot value={rhrDisplay} def={settings?.rhr} unit="bpm" />}
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(rhrDelta, 'lower')}`}>
@@ -175,6 +177,7 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {sleepDisplay || '—'}
           {sleepDisplay && <span className="unit">h</span>}
+          {avg7Hours != null && <TargetDot value={Math.round(avg7Hours * 60) / 60} def={settings?.hoursSlept} unit="h" />}
         </div>
         <div className="row">
           <span className={`delta ${sleepAtTarget ? 'flat' : deltaClass(avg7Hours != null && isFinite(sleepTarget) ? avg7Hours - sleepTarget : null, 'higher')}`}>
@@ -190,7 +193,10 @@ export default function StatRow({ logs, whoopData, settings }) {
 
       <div className="stat">
         <div className="label">Bedtime</div>
-        <div className="value">{bedtimeDisplay ?? '—'}</div>
+        <div className="value">
+          {bedtimeDisplay ?? '—'}
+          {bedtimeDisplay && <TargetDot value={bedtimeDisplay} def={settings?.bedtimeTarget} />}
+        </div>
         <div className="row">
           <span className="delta flat">
             {bedtimeDeltaMins != null
@@ -205,6 +211,7 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {hrvDisplay != null ? hrvDisplay : '—'}
           <span className="unit">ms</span>
+          {hrvDisplay != null && <TargetDot value={hrvDisplay} def={settings?.hrv} unit="ms" />}
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(hrvDelta, 'higher')}`}>
@@ -221,6 +228,7 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="value">
           {stepsDisplay != null ? stepsDisplay : '—'}
           {stepsDisplay != null && <span className="unit">steps</span>}
+          {stepsDisplay != null && <TargetDot value={stepsDisplay} def={settings?.dailySteps} unit="steps" />}
         </div>
         <div className="row">
           <span className={`delta ${deltaClass(stepsDelta, 'higher')}`}>

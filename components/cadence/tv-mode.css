@@ -338,6 +338,18 @@
   font-variant-numeric: tabular-nums;
   margin: 14px 0;
 }
+/* Target dot (FC-083) — the number stays Ink; only the dot carries colour. */
+.tv-page .stat-tile .value .target-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.tv-page .stat-tile .value .target-dot.on  { background: var(--moss); }
+.tv-page .stat-tile .value .target-dot.off { background: var(--clay-deep); }
+[data-theme="dark"] .tv-page .stat-tile .value .target-dot.off { background: var(--clay); }
 /* Empty state: tile has no data for this metric / period */
 .tv-page .stat-tile .value.empty {
   font-style: italic;

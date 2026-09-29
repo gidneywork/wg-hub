@@ -8,6 +8,8 @@ import {
   daysWindow,
   mergeWhoopForDate,
   kmByDateMap,
+  clockToMins,
+  minsToClock,
 } from '../helpers'
 
 // Relative time for Strava sync / connected timestamps.
@@ -32,6 +34,19 @@ export function timeAgo(iso) {
 //   default        — higher-is-better: actual ≥ target is on, otherwise pct = a/t
 export function targetState(actual, def) {
   if (actual == null || actual === '' || !def?.value) return null
+
+  // Clock-time target (bedtime, FC-083): "HH:MM", earlier is better. On at or
+  // before the target; amber up to 30 min later; off beyond. The bar empties
+  // at two hours late.
+  if (def.isTime) {
+    const a = clockToMins(String(actual))
+    const t = clockToMins(String(def.value))
+    if (a == null || t == null) return null
+    const late = a - t
+    const band = late <= 0 ? 'on' : late <= 30 ? 'amber' : 'off'
+    const pct = late <= 0 ? 100 : Math.max(0, 100 - (late / 120) * 100)
+    return { band, pct }
+  }
   const a = parseFloat(actual)
   const t = parseFloat(def.value)
   if (isNaN(a) || isNaN(t) || t === 0) return null
@@ -99,6 +114,15 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
     return vals.reduce((a, b) => a + b, 0) / vals.length
   }
 
+  // 7-day mean bedtime ("HH:MM"), logged first then WHOOP, across midnight.
+  const meanBedtime = () => {
+    const mins = last7
+      .map(d => clockToMins(mergeWhoopForDate(d, logs[d], whoopData)?.schedule?.bedtime))
+      .filter(v => v != null)
+    if (!mins.length) return null
+    return minsToClock(mins.reduce((a, b) => a + b, 0) / mins.length)
+  }
+
   return {
     weeklyKm:          weeklyKm > 0 ? weeklyKm : null,
     dailySteps:        meanFromLogs('body', 'steps'),
@@ -108,6 +132,7 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
     sleepScore:        meanFromMerged('sleep', 'sleepScore'),
     recoveryScore:     meanFromMerged('sleep', 'recoveryScore'),
     hoursSlept:        meanFromMerged('sleep', 'hoursSlept'),
+    bedtimeTarget:     meanBedtime(),
     dailyCalories:     meanFromLogs('nutrition', 'calories'),
     dailyProtein:      meanFromLogs('nutrition', 'protein'),
     dailyCarbs:        meanFromLogs('nutrition', 'carbs'),
@@ -192,6 +217,14 @@ export const TARGET_SPECS = {
       return `avg ${h}h ${m.toString().padStart(2, '0')}m`
     },
   },
+  bedtimeTarget: {
+    label: 'Bedtime target',
+    pill: { text: '↓ earlier is better', clayFlag: true },
+    unit: '',
+    input: 'time',
+    prefix: t => `Target: ${t} or earlier`,
+    actual: v => `avg ${v}`,
+  },
   dailyCalories: {
     label: 'Daily calories',
     pill: null,
@@ -222,7 +255,7 @@ export const SECTION_LAYOUT = [
   { label: 'Running',          rN: 'r-4', keys: ['weeklyKm'] },
   { label: 'Activity',         rN: 'r-5', keys: ['dailySteps'] },
   { label: 'Body metrics',     rN: 'r-6', keys: ['weightTarget', 'hrv', 'rhr'] },
-  { label: 'Sleep & recovery', rN: 'r-7', keys: ['sleepScore', 'recoveryScore', 'hoursSlept'] },
+  { label: 'Sleep & recovery', rN: 'r-7', keys: ['sleepScore', 'recoveryScore', 'hoursSlept', 'bedtimeTarget'] },
   { label: 'Nutrition',        rN: 'r-8', keys: ['dailyCalories', 'dailyProtein', 'dailyCarbs'] },
 ]
 
@@ -240,6 +273,13 @@ export function diffTargets(prev, next) {
   Object.keys(next || {}).forEach(key => {
     const spec = TARGET_SPECS[key]
     if (!spec) return
+    if (spec.input === 'time') {
+      // Clock-time target: compare the "HH:MM" strings as they are.
+      const o = prev?.[key]?.value, n = next?.[key]?.value
+      if (!o || !n || o === n) return
+      changes.push({ key, oldValue: o, newValue: n, unit: '', label: spec.label })
+      return
+    }
     const oldVal = parseFloat(prev?.[key]?.value)
     const newVal = parseFloat(next?.[key]?.value)
     if (!isFinite(oldVal) || !isFinite(newVal)) return
