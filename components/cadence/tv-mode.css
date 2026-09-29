@@ -114,7 +114,7 @@
   margin-bottom: 56px;
 }
 .tv-page .top > .brand      { justify-self: start; }
-.tv-page .top > .tv-range   { justify-self: center; margin-top: 6px; }
+.tv-page .top > .tv-range-group { justify-self: center; margin-top: 6px; }
 .tv-page .top > .clock-area { justify-self: end; }
 
 /* Wordmark */
@@ -213,6 +213,37 @@
   from { width: 0%; }
   to   { width: 100%; }
 }
+/* Locked: no rotation, so no progress bar */
+.tv-page .tv-range.locked button.active::after { display: none; }
+
+/* Picker + lock toggle sit together in the centre column */
+.tv-page .tv-range-group {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.tv-page .tv-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--t-theme) var(--ease),
+    border-color var(--t-theme) var(--ease),
+    color var(--t-theme) var(--ease);
+}
+.tv-page .tv-lock:hover { color: var(--text); border-color: var(--border-strong); }
+.tv-page .tv-lock[aria-pressed="true"] {
+  background: var(--moss-soft);
+  color: var(--moss-deep);
+}
+[data-theme="dark"] .tv-page .tv-lock[aria-pressed="true"] { color: var(--moss); }
+.tv-page .tv-lock svg { width: 16px; height: 16px; }
 
 /* -----------------------------------------------------------------
    CLOCK + THEME TOGGLE
@@ -674,7 +705,7 @@
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
   }
-  .tv-page .top > .tv-range {
+  .tv-page .top > .tv-range-group {
     grid-column: 1 / -1;
     order: 2;
     justify-self: start;
@@ -694,7 +725,7 @@
   }
   .tv-page .top > .brand,
   .tv-page .top > .clock-area,
-  .tv-page .top > .tv-range    { justify-self: start; }
+  .tv-page .top > .tv-range-group { justify-self: start; }
   .tv-page .stat-grid          { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .tv-page .bottom-grid        { grid-template-columns: 1fr; }
   .tv-page .clock .time        { font-size: 64px; }

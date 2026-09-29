@@ -119,6 +119,28 @@ function priorPeriodDays(rangeKey) {
   })
 }
 
+// ─── Lock state (per device) ──────────────────────────────────────────────────
+// The TV is its own device, so the lock and the locked timescale live in this
+// browser's localStorage. Every access is guarded: a blocked, empty or corrupt
+// store falls back to unlocked on Today.
+const TV_VIEW_KEY = 'cadence.tv.view'
+
+function readTvView() {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(TV_VIEW_KEY) || 'null')
+    if (v && typeof v === 'object' && v.locked === true && RANGES.includes(v.range)) {
+      return { locked: true, range: v.range }
+    }
+  } catch { /* unavailable or corrupt — fall back */ }
+  return { locked: false, range: 'Today' }
+}
+
+function writeTvView(view) {
+  try {
+    window.localStorage.setItem(TV_VIEW_KEY, JSON.stringify(view))
+  } catch { /* unavailable — the lock still works for this session */ }
+}
+
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
 function avgOf(days, accessor, logs, whoopData) {
@@ -239,7 +261,10 @@ function TrainingPill({ name, meta, pipClass, isPrimary }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TVMode({ logs, settings, plan, activities, whoopData, setView }) {
-  const [range, setRange]               = useState('Today')
+  // Opens on Today unless a locked timescale was saved on this device.
+  const [initialView]                   = useState(() => readTvView())
+  const [range, setRange]               = useState(initialView.range)
+  const [locked, setLocked]             = useState(initialView.locked)
   const [progressKey, setProgressKey]   = useState(0)
   const [dataChanging, setDataChanging] = useState(false)
   const [clockTime, setClockTime]       = useState('')
@@ -303,7 +328,9 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   // each time range state changes, so a manual click naturally resets the cycle.
   // The breathing transition (setDataChanging) mirrors the changeRange path so
   // both triggers feel identical to the viewer.
+  // Locked: no timer is scheduled, so the view holds on the current timescale.
   useEffect(() => {
+    if (locked) return
     const id = setTimeout(() => {
       const nextRange = RANGES[(RANGES.indexOf(range) + 1) % RANGES.length]
       setProgressKey(k => k + 1)
@@ -314,7 +341,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
       }, 280)
     }, 20000)
     return () => clearTimeout(id)
-  }, [range])
+  }, [range, locked])
 
   // ── ESC key → exit ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -342,6 +369,19 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
       setDataChanging(false)
     }, 280)
   }
+
+  // ── Lock toggle ──────────────────────────────────────────────────────────────
+  // Unlocking restarts the 20 s rotation from the current timescale (the
+  // progress bar restarts with it).
+  function toggleLock() {
+    const next = !locked
+    setLocked(next)
+    if (!next) setProgressKey(k => k + 1)
+  }
+
+  // Persist whatever is on screen, so a timescale picked while locked (or a
+  // rotation step that lands as the lock is pressed) is what gets restored.
+  useEffect(() => { writeTvView({ locked, range }) }, [locked, range])
 
   // ── Period day arrays ────────────────────────────────────────────────────────
   // dayKey is a dependency so the windows roll over at midnight.
@@ -586,7 +626,8 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
             </div>
           </div>
 
-          <div className="tv-range r r-1" role="tablist">
+          <div className="tv-range-group r r-1">
+          <div className={`tv-range${locked ? ' locked' : ''}`} role="tablist">
             {RANGES.map(r => (
               <button
                 key={r === range ? `${r}-${progressKey}` : r}
@@ -599,6 +640,22 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
                 {r}
               </button>
             ))}
+          </div>
+          <button
+            type="button"
+            className="tv-lock"
+            onClick={toggleLock}
+            aria-pressed={locked}
+            aria-label={locked ? 'Unlock view' : 'Lock view'}
+            title={locked ? 'Unlock view' : 'Lock view'}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              {locked
+                ? <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                : <path d="M8 11V7a4 4 0 0 1 7.75-1.4" />}
+            </svg>
+          </button>
           </div>
 
           <div className="clock-area r r-2">
