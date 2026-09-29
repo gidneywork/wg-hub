@@ -3,6 +3,7 @@ import { getValidWhoopToken } from '../../../../lib/whoop'
 import { ingestWindow } from '../../../../lib/whoop-ingest'
 import { resolveUserByWhoopUser } from '../../../../lib/auth-server'
 import { recordWhoopFailure, recordWhoopSync, failureFromError } from '../../../../lib/whoop-status'
+import { runAfterResponse, claimWebhookEvent } from '../../../../lib/webhook-events'
 
 // POST /api/whoop/webhook
 //
@@ -17,6 +18,11 @@ import { recordWhoopFailure, recordWhoopSync, failureFromError } from '../../../
 // v2 event set: recovery.updated/deleted, sleep.updated/deleted,
 // workout.updated/deleted. There is NO cycle.updated in v2 — cycle data flows
 // in via the recovery/sleep re-ingest and via manual backfill.
+//
+// FC-080 c1b: signature and replay checks run before the ack (cheap, no
+// network). A valid recovery/sleep update is then acked 200 at once and
+// processed after the response; retried deliveries are dropped by the
+// de-dupe ledger on (type, id, trace_id).
 export async function POST(request) {
   const raw       = await request.text()
   const signature = request.headers.get('x-whoop-signature')
@@ -54,29 +60,42 @@ export async function POST(request) {
   // are acknowledged and ignored (Strava owns workouts; delete semantics are
   // out of scope for WH-001b).
   if (type === 'recovery.updated' || type === 'sleep.updated') {
-    // Map the WHOOP user to a Cadence user (FC-075a). No match → drop and log;
-    // never fall back to a default user. (Will's connection gains whoop_user_id
-    // on his next WHOOP reconnect; manual backfill covers the gap meanwhile.)
-    const userId = await resolveUserByWhoopUser(payload?.user_id)
-    if (!userId) {
-      console.warn(`WHOOP webhook: no user for whoop user_id ${payload?.user_id} — event dropped`)
-      return new Response('ok (no user)', { status: 200 })
-    }
-    try {
-      const token = await getValidWhoopToken(userId)
-      if (token) {
-        await ingestWindow(token, userId, 7)
-        await recordWhoopSync(userId)
-      }
-    } catch (err) {
-      // Acknowledge receipt regardless — returning non-2xx would only trigger
-      // WHOOP retry storms. But never silently (FC-080): the failure goes to
-      // audit_log and the Settings card's error state.
-      console.error('WHOOP webhook re-ingest failed')
-      await recordWhoopFailure(userId, { ...failureFromError(err), source: 'webhook' })
-      return new Response('ok (ingest failed, logged)', { status: 200 })
-    }
+    await runAfterResponse(() => processWhoopEvent(payload))
   }
 
   return new Response('ok', { status: 200 })
+}
+
+async function processWhoopEvent(payload) {
+  // Map the WHOOP user to a Cadence user (FC-075a). No match → drop and log;
+  // never fall back to a default user.
+  const userId = await resolveUserByWhoopUser(payload?.user_id)
+  if (!userId) {
+    console.warn(`WHOOP webhook: no user for whoop user_id ${payload?.user_id} — event dropped`)
+    return
+  }
+
+  // De-dupe on (type, id, trace_id). WHOOP re-sends recovery.updated for the
+  // same id when a score changes, each with a new trace_id — so without a
+  // trace_id there is no safe key, and the event is processed (G1).
+  if (payload?.trace_id) {
+    const first = await claimWebhookEvent('whoop', `${payload.type}:${payload.id}:${payload.trace_id}`, userId)
+    if (!first) {
+      console.log(`WHOOP webhook: duplicate ${payload.type} ${payload.trace_id} — dropped`)
+      return
+    }
+  }
+
+  try {
+    const token = await getValidWhoopToken(userId)
+    if (token) {
+      await ingestWindow(token, userId, 7)
+      await recordWhoopSync(userId)
+    }
+  } catch (err) {
+    // Already acked — never silently (FC-080): the failure goes to audit_log
+    // and the Settings card's error state.
+    console.error('WHOOP webhook re-ingest failed')
+    await recordWhoopFailure(userId, { ...failureFromError(err), source: 'webhook' })
+  }
 }
