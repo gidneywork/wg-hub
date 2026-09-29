@@ -3437,6 +3437,40 @@ html::-webkit-scrollbar-track { background: transparent; }
   color: var(--text-faint);
 }
 
+/* Highlighted nutrients (FC-085) — read-only field cards. The number stays
+   Ink; the FC-083 dot carries the state (moss on target, clay below target
+   or above a limit). */
+[data-cadence] .daily-page .nutrient-card .nutrient-value {
+  display: flex;
+  align-items: baseline;
+  margin-top: 10px;
+}
+[data-cadence] .daily-page .nutrient-card .nutrient-value .num {
+  font-family: var(--display);
+  font-weight: 380;
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+[data-cadence] .daily-page .nutrient-card .nutrient-value .unit {
+  font-family: var(--sans);
+  font-size: var(--type-14);
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+[data-cadence] .daily-page .nutrient-card .target-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 8px; align-self: center;
+}
+[data-cadence] .daily-page .nutrient-card .target-dot.on  { background: var(--moss); }
+[data-cadence] .daily-page .nutrient-card .target-dot.off { background: var(--clay-deep); }
+[data-theme="dark"] [data-cadence] .daily-page .nutrient-card .target-dot.off { background: var(--clay); }
+[data-cadence] .daily-page .nutrients-note {
+  margin-top: 10px;
+  font-size: var(--type-13);
+  color: var(--text-muted);
+}
+
 /* Sleep schedule ----------------------------------------------------- */
 [data-cadence] .daily-page .schedule-card {
   background: var(--bg-card);

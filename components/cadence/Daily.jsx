@@ -8,6 +8,7 @@ import BodySection from './daily/BodySection'
 import SleepRecoverySection from './daily/SleepRecoverySection'
 import SleepScheduleSection from './daily/SleepScheduleSection'
 import NutritionSection from './daily/NutritionSection'
+import HighlightedNutrientsSection from './daily/HighlightedNutrientsSection'
 import LiftsSection from './daily/LiftsSection'
 import FeelingsSection from './daily/FeelingsSection'
 import DayFooter from './daily/DayFooter'
@@ -216,6 +217,11 @@ export default function Daily({
         recentlySaved={recentlySaved}
         saveState={saveState}
         baseRowIndex={8}
+      />
+
+      <HighlightedNutrientsSection
+        date={date}
+        cronometerData={cronometerData}
       />
 
       <LiftsSection
