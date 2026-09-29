@@ -11,6 +11,7 @@ import {
   getKmForDate,
 } from './helpers'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
+import { matchSessionsToActivities } from '../../lib/session-match'
 import { db } from '../../lib/db'
 import { filterTodosForDate } from '../../lib/todos'
 import { getCalorieTargetMode, evaluateCalorieDelta } from '../../lib/calories'
@@ -248,12 +249,25 @@ function NutRow({ label, fillClass, fillPct, targetPct, targetLabel, total, unit
 }
 
 // TrainingPill — one session row in the Today panel.
-function TrainingPill({ name, meta, pipClass, isPrimary }) {
+// `done`: true / false shows the tick indicator; null (unmatchable session
+// type, e.g. rest) shows none. Indicator only — TV Mode stays read-only.
+function TrainingPill({ name, meta, pipClass, isPrimary, done = null }) {
   return (
     <div className={`training-pill${isPrimary ? ' primary' : ''}`}>
       <span className={`pip ${pipClass}`} />
       <span className="name">{name}</span>
       {meta && <span className="meta">{meta}</span>}
+      {done != null && (
+        <svg
+          className={`tick${done ? ' done' : ''}`}
+          viewBox="0 0 20 20"
+          role="img"
+          aria-label={done ? 'Done' : 'Not done yet'}
+        >
+          <rect className="tick-box" x="1.5" y="1.5" width="17" height="17" rx="3" />
+          {done && <path className="tick-mark" d="M5.5 10.5l3 3 6-7" />}
+        </svg>
+      )}
     </div>
   )
 }
@@ -602,6 +616,11 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   const todayName = WEEKDAYS[todayDate.getDay()]
   const todayIdx  = todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1
   const todaySessions = getCurrentWeek(plan, todayDate)?.[todayIdx]?.sessions || []
+  // Ticks — same activities state (and the same UTC dating) as the km panel.
+  const todayDone = useMemo(
+    () => matchSessionsToActivities(todaySessions, activities, dayKey),
+    [todaySessions, activities, dayKey]
+  )
 
   // T3: first run → primary; else first session → primary; no sessions → no primary
   const primaryIdx = (() => {
@@ -816,6 +835,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
                       meta={null}
                       pipClass={coarseForType(s.type)}
                       isPrimary={i === primaryIdx}
+                      done={todayDone[i]}
                     />
                   )
                 })

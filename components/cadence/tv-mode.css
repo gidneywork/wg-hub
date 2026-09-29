@@ -586,6 +586,31 @@
   color: var(--text);
   flex: 1;
 }
+
+/* Session tick — indicator only (FC-082). Empty: outline; done: moss fill
+   with a check in the page background colour. */
+.tv-page .training-pill .tick {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.tv-page .training-pill .tick .tick-box {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+.tv-page .training-pill .tick.done .tick-box {
+  fill: var(--moss);
+  stroke: var(--moss);
+}
+.tv-page .training-pill .tick .tick-mark {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .tv-page .training-pill .meta {
   font-family: var(--mono);
   font-size: 10px;
