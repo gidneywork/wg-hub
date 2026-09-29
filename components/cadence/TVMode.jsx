@@ -5,6 +5,8 @@ import './tv-mode.css'
 import {
   localIso,
   mergeWhoopForDate,
+  mergeNutritionForDate,
+  nutritionTargetsForDate,
   sparklinePath,
   formatHoursColon,
   kmByDateMap,
@@ -277,7 +279,7 @@ function TrainingPill({ name, meta, pipClass, isPrimary, done = null }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function TVMode({ logs, settings, plan, activities, whoopData, setView, onRefresh }) {
+export default function TVMode({ logs, settings, plan, activities, whoopData, cronometerData, setView, onRefresh }) {
   // Opens on Today unless a locked timescale was saved on this device.
   const [initialView]                   = useState(() => readTvView())
   const [range, setRange]               = useState(initialView.range)
@@ -315,7 +317,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     [tvTodos, tvCompletions, tvToday]
   )
 
-  const tvTodayIntake = parseFloat(logs?.[tvToday]?.nutrition?.calories)
+  const tvTodayIntake = mergeNutritionForDate(tvToday, logs?.[tvToday], cronometerData).calories
   const tvInVal = isFinite(tvTodayIntake) && tvTodayIntake > 0 ? tvTodayIntake : null
   const tvTodayActs = (activities || []).filter(a => (a.start_date || '').split('T')[0] === tvToday)
   const tvOutSum = tvTodayActs.reduce((s, a) => s + (parseFloat(a.data?.calories) || 0), 0)
@@ -596,17 +598,26 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
   }, [days, logs, activities, stravaKmMap])
 
   // ── Nutrition data ───────────────────────────────────────────────────────────
-  const { nutTotals, nutLoggedDays } = useMemo(() => {
+  // Manual entry first, Cronometer as fallback (FC-084). Targets: the average
+  // of each logged day's target (Cronometer's, else Cadence's settings).
+  const { nutTotals, nutLoggedDays, nutTargets } = useMemo(() => {
     let calories = 0, protein = 0, carbs = 0, loggedDays = 0
+    const tSum = { calories: 0, protein: 0, carbs: 0 }, tCount = { calories: 0, protein: 0, carbs: 0 }
     for (const d of days) {
-      const n = logs?.[d]?.nutrition
-      const cal = parseFloat(n?.calories) || 0
-      const pro = parseFloat(n?.protein)  || 0
-      const crb = parseFloat(n?.carbs)    || 0
-      if (cal || pro || crb) { loggedDays++; calories += cal; protein += pro; carbs += crb }
+      const n = mergeNutritionForDate(d, logs?.[d], cronometerData)
+      const cal = n.calories || 0, pro = n.protein || 0, crb = n.carbs || 0
+      if (cal || pro || crb) {
+        loggedDays++; calories += cal; protein += pro; carbs += crb
+        const t = nutritionTargetsForDate(d, cronometerData, settings)
+        for (const k of ['calories', 'protein', 'carbs']) if (t[k] != null) { tSum[k] += t[k]; tCount[k]++ }
+      }
     }
-    return { nutTotals: { calories, protein, carbs }, nutLoggedDays: loggedDays }
-  }, [days, logs])
+    const avgT = k => (tCount[k] ? tSum[k] / tCount[k] : NaN)
+    return {
+      nutTotals: { calories, protein, carbs }, nutLoggedDays: loggedDays,
+      nutTargets: { calories: avgT('calories'), protein: avgT('protein'), carbs: avgT('carbs') },
+    }
+  }, [days, logs, cronometerData, settings])
 
   const nutDailyAvg = nutLoggedDays > 0 ? {
     calories: Math.round(nutTotals.calories / nutLoggedDays),
@@ -614,9 +625,10 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, se
     carbs:    Math.round(nutTotals.carbs    / nutLoggedDays),
   } : null
 
-  const calTarget  = parseFloat(settings?.dailyCalories?.value)
-  const protTarget = parseFloat(settings?.dailyProtein?.value)
-  const carbTarget = parseFloat(settings?.dailyCarbs?.value)
+  // With no logged days in the period, fall back to Cadence's settings targets.
+  const calTarget  = Number.isFinite(nutTargets.calories) ? nutTargets.calories : parseFloat(settings?.dailyCalories?.value)
+  const protTarget = Number.isFinite(nutTargets.protein)  ? nutTargets.protein  : parseFloat(settings?.dailyProtein?.value)
+  const carbTarget = Number.isFinite(nutTargets.carbs)    ? nutTargets.carbs    : parseFloat(settings?.dailyCarbs?.value)
 
   const calPct  = nutDailyAvg && isFinite(calTarget)  ? Math.round(nutDailyAvg.calories / calTarget  * 100) : null
   const protPct = nutDailyAvg && isFinite(protTarget) ? Math.round(nutDailyAvg.protein  / protTarget * 100) : null

@@ -63,6 +63,44 @@ export function mergeWhoopForDate(date, log, whoopData) {
   }
 }
 
+// ── Nutrition: manual entry first, Cronometer as fallback (FC-084) ─────────
+// Field by field: a value typed in Daily Data always wins; otherwise the
+// Cronometer sync's value for that date. Cadence's "Carbs" reads Cronometer's
+// NET carbs (the figure its targets use); total carbs stays stored only.
+// `source` says where each value came from ('log' | 'cronometer' | null).
+const NUTRITION_FROM_CRONOMETER = { calories: 'calories', protein: 'protein', carbs: 'net_carbs', fat: 'fat', fibre: 'fibre' }
+export function mergeNutritionForDate(date, log, cronometerData) {
+  const n = log?.nutrition || {}
+  const c = cronometerData?.[date] || null
+  const out = { source: {} }
+  for (const [key, cKey] of Object.entries(NUTRITION_FROM_CRONOMETER)) {
+    const manual = parseFloat(n[key])
+    if (n[key] != null && n[key] !== '' && Number.isFinite(manual)) {
+      out[key] = manual; out.source[key] = 'log'
+    } else if (c && c[cKey] != null && Number.isFinite(Number(c[cKey]))) {
+      out[key] = Number(c[cKey]); out.source[key] = 'cronometer'
+    } else {
+      out[key] = null; out.source[key] = null
+    }
+  }
+  return out
+}
+
+// Targets for a date: Cronometer's (from the sync) where present, else
+// Cadence's settings. Fat has no Cadence setting, so it is Cronometer only.
+export function nutritionTargetsForDate(date, cronometerData, settings) {
+  const c = cronometerData?.[date] || null
+  const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null }
+  const pick = (cv, sv) => (cv != null && Number.isFinite(Number(cv)) ? Number(cv) : num(sv))
+  return {
+    calories: pick(c?.target_calories,  settings?.dailyCalories?.value),
+    protein:  pick(c?.target_protein,   settings?.dailyProtein?.value),
+    carbs:    pick(c?.target_net_carbs, settings?.dailyCarbs?.value),
+    fat:      pick(c?.target_fat,       null),
+    source:   c?.targets_fetched_at ? 'cronometer' : 'settings',
+  }
+}
+
 export function kmByDateMap(activities) {
   const map = {}
   ;(activities || []).forEach(a => {

@@ -7,6 +7,7 @@ import {
   localIso,
   daysWindow,
   mergeWhoopForDate,
+  mergeNutritionForDate,
   kmByDateMap,
   getKmForDate,
   startOfWeek,
@@ -468,8 +469,8 @@ function SleepRecoveryChart({ logs, whoopData, days, prevDays }) {
 }
 
 // ─── Chart: Calories · daily balance + weight ───────────────────────
-function CaloriesWeightChart({ logs, activities, days, prevDays, settings }) {
-  const calsIn = days.map(d => parseFloat(logs?.[d]?.nutrition?.calories))
+function CaloriesWeightChart({ logs, cronometerData, activities, days, prevDays, settings }) {
+  const calsIn = days.map(d => mergeNutritionForDate(d, logs?.[d], cronometerData).calories ?? NaN)
   const calsOut = days.map(d => {
     const acts = (activities || []).filter(a => (a.start_date || '').split('T')[0] === d)
     const total = acts.reduce((s, a) => s + (parseFloat(a.data?.calories) || 0), 0)
@@ -670,10 +671,11 @@ function AdherenceChart({ plan, activities }) {
 }
 
 // ─── Chart: Daily nutrition · macros ────────────────────────────────
-function NutritionChart({ logs, days }) {
-  const cals = days.map(d => parseFloat(logs?.[d]?.nutrition?.calories))
-  const protein = days.map(d => parseFloat(logs?.[d]?.nutrition?.protein))
-  const carbs = days.map(d => parseFloat(logs?.[d]?.nutrition?.carbs))
+function NutritionChart({ logs, cronometerData, days }) {
+  const merged = days.map(d => mergeNutritionForDate(d, logs?.[d], cronometerData))
+  const cals = merged.map(n => n.calories ?? NaN)
+  const protein = merged.map(n => n.protein ?? NaN)
+  const carbs = merged.map(n => n.carbs ?? NaN)
 
   const avgCal = mean(cals)
   const avgP = mean(protein)
@@ -834,7 +836,7 @@ function LiftsVolumeChart({ logs }) {
 }
 
 // ─── Section wrapper ────────────────────────────────────────────────
-export default function Trends({ logs, whoopData, activities, settings, plan }) {
+export default function Trends({ logs, whoopData, cronometerData, activities, settings, plan }) {
   const [period, setPeriod] = useState('30D')
   const n = periodDays(period)
   const days = daysWindow(n)
@@ -866,9 +868,9 @@ export default function Trends({ logs, whoopData, activities, settings, plan }) 
         <HrvRhrChart            logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
         <WeeklyKmChart          logs={logs} activities={activities} settings={settings} />
         <SleepRecoveryChart     logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
-        <CaloriesWeightChart    logs={logs} activities={activities} days={days} prevDays={prevDays} settings={settings} />
+        <CaloriesWeightChart    logs={logs} cronometerData={cronometerData} activities={activities} days={days} prevDays={prevDays} settings={settings} />
         <AdherenceChart         plan={plan} activities={activities} />
-        <NutritionChart         logs={logs} days={days} />
+        <NutritionChart         logs={logs} cronometerData={cronometerData} days={days} />
         <StepsCaloriesOutChart  logs={logs} whoopData={whoopData} days={days} prevDays={prevDays} />
         <LiftsVolumeChart       logs={logs} />
       </div>

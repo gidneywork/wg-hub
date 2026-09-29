@@ -1,6 +1,6 @@
 'use client'
 
-import { todayStr } from './helpers'
+import { todayStr, mergeNutritionForDate } from './helpers'
 import { getCurrentWeek, coarseForType } from '../../lib/plan'
 import { evaluateCalorieDelta, getCalorieTargetMode } from '../../lib/calories'
 
@@ -51,13 +51,13 @@ function ScheduledCard({ plan }) {
   )
 }
 
-function FuelCard({ logs, activities, settings }) {
+function FuelCard({ logs, cronometerData, activities, settings }) {
   const today = todayStr()
   const yst = yesterdayStr()
 
   // Use today if it has any fuel data; fall back to yesterday.
   const todayLog = logs?.[today]
-  const todayCalsIn = parseFloat(todayLog?.nutrition?.calories)
+  const todayCalsIn = mergeNutritionForDate(today, todayLog, cronometerData).calories
   const todayActs = (activities || []).filter(a => (a.start_date || '').split('T')[0] === today)
   const todayHasData = (isFinite(todayCalsIn) && todayCalsIn > 0) || todayActs.some(a => parseFloat(a.data?.calories) > 0)
 
@@ -65,7 +65,7 @@ function FuelCard({ logs, activities, settings }) {
   const isLive = dateKey === today
 
   const log = logs?.[dateKey]
-  const calsIn = parseFloat(log?.nutrition?.calories)
+  const calsIn = mergeNutritionForDate(dateKey, log, cronometerData).calories
   const inValid = isFinite(calsIn) && calsIn > 0
 
   const dateActs = (activities || []).filter(a => (a.start_date || '').split('T')[0] === dateKey)
@@ -155,7 +155,7 @@ function JournalCard({ logs, onOpenDate }) {
   )
 }
 
-export default function TodayCards({ plan, logs, activities, settings, setView, onOpenDate }) {
+export default function TodayCards({ plan, logs, cronometerData, activities, settings, setView, onOpenDate }) {
   return (
     <section className="section r r-6">
       <div className="section-head">
@@ -166,7 +166,7 @@ export default function TodayCards({ plan, logs, activities, settings, setView, 
       </div>
       <div className="today-grid">
         <ScheduledCard plan={plan} />
-        <FuelCard logs={logs} activities={activities} settings={settings} />
+        <FuelCard logs={logs} cronometerData={cronometerData} activities={activities} settings={settings} />
         <JournalCard logs={logs} onOpenDate={onOpenDate} />
       </div>
     </section>

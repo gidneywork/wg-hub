@@ -6,6 +6,7 @@ import {
   daysWindow,
   startOfWeek,
   mergeWhoopForDate,
+  mergeNutritionForDate,
   kmByDateMap,
   getKmForDate,
   mean,
@@ -671,7 +672,7 @@ function StatTile({ label, val, unit, ctx }) {
 // ─── ANNOTATION FORM BLANK STATE ─────────────────────────────────────────────
 const BLANK_FORM = { kind: '', title: '', note: '', start_date: '', end_date: '' }
 
-export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {}, plan = null, userProfile = null }) {
+export default function Charts({ logs = {}, settings = {}, activities = [], whoopData = {}, cronometerData = {}, plan = null, userProfile = null }) {
   const [activeTab, setActiveTab] = useState('running')
   const [range,     setRange    ] = useState('6m')
   const [compare,   setCompare  ] = useState('target')
@@ -813,20 +814,17 @@ export default function Charts({ logs = {}, settings = {}, activities = [], whoo
       recovery: bm((m)      => m?.sleep?.recoveryScore),
       strain:   bm((_, w)   => w?.day_strain),
       hoursSlept: bm((m)    => m?.sleep?.hoursSlept),
-      calsIn:   bm((_, __, d) => {
-        const v = logs[d]?.nutrition?.calories
-        return v !== '' && v != null ? parseFloat(v) : null
-      }),
+      calsIn:   bm((_, __, d) => mergeNutritionForDate(d, logs[d], cronometerData).calories),
       calsBurned: bm((_, w, d) => burnedForDate(w, d) ?? null),
       calsBalance: bm((_, w, d) => {
-        const intake = logs[d]?.nutrition?.calories
-        if (intake === '' || intake == null) return null
+        const intake = mergeNutritionForDate(d, logs[d], cronometerData).calories
+        if (intake == null) return null
         const burned = burnedForDate(w, d)
         if (burned == null) return null
-        return parseFloat(intake) - burned
+        return intake - burned
       }),
     }
-  }, [logs, whoopData, rangeDays, userProfile])
+  }, [logs, whoopData, cronometerData, rangeDays, userProfile])
 
   // ── Hero config driven by activeTab ─────────────────────────────
   const heroConfig = useMemo(() => {

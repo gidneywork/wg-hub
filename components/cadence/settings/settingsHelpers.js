@@ -7,6 +7,7 @@ import {
   startOfWeek,
   daysWindow,
   mergeWhoopForDate,
+  mergeNutritionForDate,
   kmByDateMap,
   clockToMins,
   minsToClock,
@@ -73,7 +74,7 @@ export function targetState(actual, def) {
 // WGHub already keeps in state. weeklyKm sums the current Monday-week
 // from Strava activities; body/sleep metrics are rolling-7-day means
 // over merged Whoop + log data; nutrition is a 7-day mean from logs.
-export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
+export function currentValues({ logs = {}, whoopData = {}, activities = [], cronometerData = {} }) {
   const today = new Date()
   const todayStr = localIso(today)
 
@@ -114,6 +115,13 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
     return vals.reduce((a, b) => a + b, 0) / vals.length
   }
 
+  // 7-day nutrition means: manual entry first, Cronometer as fallback (FC-084).
+  const meanNutrition = (key) => {
+    const vals = last7.map(d => mergeNutritionForDate(d, logs[d], cronometerData)[key]).filter(v => v != null && v > 0)
+    if (!vals.length) return null
+    return vals.reduce((a, b) => a + b, 0) / vals.length
+  }
+
   // 7-day mean bedtime ("HH:MM"), logged first then WHOOP, across midnight.
   const meanBedtime = () => {
     const mins = last7
@@ -133,9 +141,9 @@ export function currentValues({ logs = {}, whoopData = {}, activities = [] }) {
     recoveryScore:     meanFromMerged('sleep', 'recoveryScore'),
     hoursSlept:        meanFromMerged('sleep', 'hoursSlept'),
     bedtimeTarget:     meanBedtime(),
-    dailyCalories:     meanFromLogs('nutrition', 'calories'),
-    dailyProtein:      meanFromLogs('nutrition', 'protein'),
-    dailyCarbs:        meanFromLogs('nutrition', 'carbs'),
+    dailyCalories:     meanNutrition('calories'),
+    dailyProtein:      meanNutrition('protein'),
+    dailyCarbs:        meanNutrition('carbs'),
   }
 }
 

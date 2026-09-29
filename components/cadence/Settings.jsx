@@ -36,6 +36,7 @@ export default function Settings({
   onStravaConnectionChange,
   logs,
   whoopData,
+  cronometerData,
   activities,
   userProfile,
   saveUserProfile,
@@ -51,8 +52,8 @@ export default function Settings({
   // Live values for each target row — sums + rolling means over the same
   // data the dashboard reads. Recomputed when any source changes.
   const currents = useMemo(
-    () => currentValues({ logs, whoopData, activities }),
-    [logs, whoopData, activities]
+    () => currentValues({ logs, whoopData, activities, cronometerData }),
+    [logs, whoopData, activities, cronometerData]
   )
 
   const setTarget = (key, v) => {
@@ -150,6 +151,7 @@ export default function Settings({
                 mode={local.calorieTargetMode ?? null}
                 onChange={m => setLocal(prev => ({ ...prev, calorieTargetMode: m }))}
                 logs={logs}
+                cronometerData={cronometerData}
                 activities={activities}
               />
             )

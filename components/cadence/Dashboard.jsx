@@ -20,7 +20,7 @@ import Recent from './Recent'
  * outer element — the mockup applies .r-2 / .r-3 to the inner columns
  * so the text and the chart enter on slightly different beats.
  */
-export default function Dashboard({ logs, settings, activities, whoopData, plan, setView, onOpenDate, userName = 'You' }) {
+export default function Dashboard({ logs, settings, activities, whoopData, cronometerData, plan, setView, onOpenDate, userName = 'You' }) {
   const now = new Date()
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 19 ? 'Good afternoon' : 'Good evening'
@@ -45,13 +45,13 @@ export default function Dashboard({ logs, settings, activities, whoopData, plan,
 
       <WeekGrid plan={plan} />
 
-      <TodayCards plan={plan} logs={logs} activities={activities} settings={settings} setView={setView} onOpenDate={onOpenDate} />
+      <TodayCards plan={plan} logs={logs} cronometerData={cronometerData} activities={activities} settings={settings} setView={setView} onOpenDate={onOpenDate} />
 
       <TodosTile setView={setView} />
 
       <PersonalBests activities={activities} />
 
-      <Trends logs={logs} whoopData={whoopData} activities={activities} settings={settings} plan={plan} />
+      <Trends logs={logs} whoopData={whoopData} cronometerData={cronometerData} activities={activities} settings={settings} plan={plan} />
 
       <ThisWeeksLifts logs={logs} />
 

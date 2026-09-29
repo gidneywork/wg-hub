@@ -33,6 +33,7 @@ export default function Daily({
   saveLog,
   settings,
   whoopData,
+  cronometerData,
   activities,
   stravaConnection,
   onStravaConnectionChange,
@@ -207,7 +208,9 @@ export default function Daily({
       />
 
       <NutritionSection
+        date={date}
         form={form}
+        cronometerData={cronometerData}
         settings={settings}
         onField={onField}
         recentlySaved={recentlySaved}

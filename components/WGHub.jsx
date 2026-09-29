@@ -192,6 +192,7 @@ export default function WGHub({ onSignOut }) {
   const [stravaConnection, setStravaConnection] = useState(null)
   const [activities, setActivities] = useState([])
   const [whoopData,  setWhoopData ] = useState({})
+  const [cronometerData, setCronometerData] = useState({})
   const [ready,    setReady   ] = useState(false)
   const [userProfile,      setUserProfile     ] = useState(null)
   const [assistantConfig,  setAssistantConfig ] = useState(null)
@@ -205,7 +206,7 @@ export default function WGHub({ onSignOut }) {
 
     ;(async () => {
       try {
-        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD, profileData, configData] = await Promise.all([
+        const [logsData, settingsData, planData, stravaConn, activitiesData, whoopD, profileData, configData, cronD] = await Promise.all([
           db.loadLogs(),
           db.loadSettings(),
           db.loadPlan(),
@@ -214,6 +215,7 @@ export default function WGHub({ onSignOut }) {
           db.loadWhoopData(),
           db.loadUserProfile(),
           db.loadAssistantConfig(),
+          db.loadCronometerData(),
         ])
         setLogs(logsData || {})
         // Defaults underneath, so a target added later (e.g. bedtimeTarget,
@@ -223,6 +225,7 @@ export default function WGHub({ onSignOut }) {
         setStravaConnection(stravaConn)
         setActivities(activitiesData || [])
         setWhoopData(whoopD || {})
+        setCronometerData(cronD || {})
         if (configData) setAssistantConfig(configData)
         if (profileData) {
           setUserProfile(profileData)
@@ -251,7 +254,11 @@ export default function WGHub({ onSignOut }) {
       db.loadWhoopData().then(setWhoopData)
     })
 
-    return () => { unsubActivities(); unsubLogs(); unsubWhoop() }
+    const unsubCronometer = db.subscribeToCronometer(() => {
+      db.loadCronometerData().then(setCronometerData)
+    })
+
+    return () => { unsubActivities(); unsubLogs(); unsubWhoop(); unsubCronometer() }
   }, [])
 
   const saveLog                = async (date, data) => { await db.saveLog(date, data);          setLogs(p => ({...p, [date]: data})) }
@@ -323,10 +330,11 @@ export default function WGHub({ onSignOut }) {
   // calls this every 5 min and when the tab becomes visible. The loaders
   // return an empty result on error, so an empty result never replaces data.
   const refreshLiveData = async () => {
-    const [a, l, w] = await Promise.all([db.loadActivities(), db.loadLogs(), db.loadWhoopData()])
+    const [a, l, w, c] = await Promise.all([db.loadActivities(), db.loadLogs(), db.loadWhoopData(), db.loadCronometerData()])
     if (a?.length) setActivities(a)
     if (l && Object.keys(l).length) setLogs(l)
     if (w && Object.keys(w).length) setWhoopData(w)
+    if (c && Object.keys(c).length) setCronometerData(c)
   }
 
   // TV mode bypasses DashboardShell entirely — no sidebar, dark-by-default
@@ -338,6 +346,7 @@ export default function WGHub({ onSignOut }) {
         plan={plan}
         activities={activities}
         whoopData={whoopData}
+        cronometerData={cronometerData}
         setView={setView}
         onRefresh={refreshLiveData}
       />
@@ -349,9 +358,9 @@ export default function WGHub({ onSignOut }) {
       {!ready ? (
         <div style={{padding:'40px 0',fontFamily:'var(--mono)',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-quiet)'}}>Loading…</div>
       ) : view === 'dashboard' ? (
-        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} setView={setView} onOpenDate={d => { setLogDate(d); setView('log') }} userName={userProfile?.identity?.displayName ?? 'You'}/>
+        <CadenceDashboard logs={logs} settings={settings} activities={activities} whoopData={whoopData} cronometerData={cronometerData} plan={plan} setView={setView} onOpenDate={d => { setLogDate(d); setView('log') }} userName={userProfile?.identity?.displayName ?? 'You'}/>
       ) : view === 'charts' ? (
-        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} plan={plan} userProfile={userProfile}/>
+        <CadenceCharts logs={logs} settings={settings} activities={activities} whoopData={whoopData} cronometerData={cronometerData} plan={plan} userProfile={userProfile}/>
       ) : view === 'history' ? (
         <CadenceHistory activities={activities} stravaConnection={stravaConnection} logs={logs}/>
       ) : view === 'journal' ? (
@@ -366,6 +375,7 @@ export default function WGHub({ onSignOut }) {
           saveLog={saveLog}
           settings={settings}
           whoopData={whoopData}
+          cronometerData={cronometerData}
           activities={activities}
           stravaConnection={stravaConnection}
           onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
@@ -382,6 +392,7 @@ export default function WGHub({ onSignOut }) {
           onStravaConnectionChange={async()=>{ const c=await db.loadStravaConnection(); setStravaConnection(c); }}
           logs={logs}
           whoopData={whoopData}
+          cronometerData={cronometerData}
           activities={activities}
           userProfile={userProfile}
           saveUserProfile={saveUserProfileFn}

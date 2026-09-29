@@ -1,6 +1,7 @@
 'use client'
 
 import { evaluateCalorieDelta } from '../../../lib/calories'
+import { mergeNutritionForDate } from '../helpers'
 
 const MODES = [
   { key: 'deficit',  label: 'Deficit'  },
@@ -15,10 +16,10 @@ function formatStatusLine(mode, status, delta) {
   return `Today: ${Math.abs(delta).toLocaleString('en-GB')} kcal ${delta < 0 ? 'deficit' : 'surplus'}`
 }
 
-export default function CalorieModeSection({ mode, onChange, logs, activities }) {
+export default function CalorieModeSection({ mode, onChange, logs, cronometerData, activities }) {
   const today = new Date().toLocaleDateString('en-CA')
   const log = logs?.[today]
-  const calsIn = parseFloat(log?.nutrition?.calories)
+  const calsIn = mergeNutritionForDate(today, log, cronometerData).calories ?? NaN
   const inVal = isFinite(calsIn) && calsIn > 0 ? calsIn : null
   const todayActs = (activities || []).filter(a => (a.start_date || '').split('T')[0] === today)
   const calsOut = todayActs.reduce((s, a) => s + (parseFloat(a.data?.calories) || 0), 0)
