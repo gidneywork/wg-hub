@@ -214,6 +214,14 @@ export function formatHoursColon(hoursDecimal) {
   return `${h}:${m.toString().padStart(2, '0')}`
 }
 
+// Whole minutes as "h:mm" (e.g. 25 → "0:25", 70 → "1:10"), for sleep-length
+// changes shown in the same format as the hours value. Sign dropped.
+export function formatMinsColon(mins) {
+  if (mins == null || !Number.isFinite(Number(mins))) return null
+  const m = Math.abs(Math.round(Number(mins)))
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+}
+
 export function mean(values) {
   const clean = values.map(v => parseFloat(v)).filter(v => !isNaN(v))
   if (!clean.length) return null

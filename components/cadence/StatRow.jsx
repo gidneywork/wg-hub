@@ -4,6 +4,7 @@ import {
   daysWindow,
   mergeWhoopForDate,
   formatHoursColon,
+  formatMinsColon,
   sparklinePath,
 } from './helpers'
 import TargetText from './TargetText'
@@ -109,7 +110,7 @@ export default function StatRow({ logs, whoopData, settings }) {
   const avg7Hours      = rollingAvg(win7Hours)
   const avg7PriorHours = rollingAvg(win7PriorHours)
   const sleepDisplay   = avg7Hours != null ? formatHoursColon(avg7Hours) : null
-  // 7-day trend in minutes, like the other tiles (FC-086 F4); the target
+  // 7-day trend (h:mm, like the value), like the other tiles (FC-086 F4); the target
   // reading is the target text under the value.
   const sleepDeltaMins = avg7Hours != null && avg7PriorHours != null
     ? Math.round((avg7Hours - avg7PriorHours) * 60)
@@ -190,7 +191,7 @@ export default function StatRow({ logs, whoopData, settings }) {
         <div className="row">
           <span className={`delta ${deltaClass(sleepDeltaMins, 'higher')}`}>
             {sleepDeltaMins != null
-              ? <>{arrow(sleepDeltaMins)} {Math.abs(sleepDeltaMins)}m · 7d avg</>
+              ? <>{arrow(sleepDeltaMins)} {formatMinsColon(sleepDeltaMins)} h · 7d avg</>
               : 'no baseline'}
           </span>
           <MiniSpark values={win7Hours} />

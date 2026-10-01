@@ -10,6 +10,7 @@ import {
   formatLitres,
   sparklinePath,
   formatHoursColon,
+  formatMinsColon,
   kmByDateMap,
   getKmForDate,
 } from './helpers'
@@ -548,7 +549,7 @@ export default function TVMode({ logs, settings, plan, activities, whoopData, cr
   const hoursStatus = (() => {
     if (avgHours == null) return { text: 'no data', cls: 'no-data' }
     if (deltaHoursMins == null) return { text: '', cls: 'flat' }
-    return { text: trendText(arrow(deltaHoursMins), `${Math.abs(deltaHoursMins)}m`, isToday), cls: deltaHoursMins < 0 ? 'down' : '' }
+    return { text: trendText(arrow(deltaHoursMins), `${formatMinsColon(deltaHoursMins)} h`, isToday), cls: deltaHoursMins < 0 ? 'down' : '' }
   })()
 
   // ── Stat tile: Bedtime ───────────────────────────────────────────────────────
