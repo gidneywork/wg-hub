@@ -1,7 +1,7 @@
 'use client'
 
-import { useId } from 'react'
-import { ENGAGEMENT_OPTIONS, STATUS_LABELS } from '../../lib/clipping'
+import { useId, useState } from 'react'
+import { CLIP_PROVIDERS, ENGAGEMENT_OPTIONS, STATUS_LABELS } from '../../lib/clipping'
 
 /**
  * One page's card for the selected day (FC-090). Edits in place; every change
@@ -47,21 +47,88 @@ function EngagementControl({ value, onChange, labelId }) {
   )
 }
 
-export default function ClipPageCard({ page, row, target, status, carriedCampaign, onChange, className = '' }) {
+const filled = v => !!(v ?? '').trim()
+const OTHER = 'Other'
+
+// Provider chips: Whop / Clipit / Clipfy / Other. Tapping the selected chip
+// clears it. Other reveals a free-text input that saves to provider; a stored
+// value outside CLIP_PROVIDERS shows as Other with its text.
+function ProviderPicker({ value, otherOpen, setOtherOpen, onPick, labelId }) {
+  const v = value ?? ''
+  const otherSelected = otherOpen || (filled(v) && !CLIP_PROVIDERS.includes(v))
+  const options = [...CLIP_PROVIDERS, OTHER]
+  const selected = otherSelected ? OTHER : (CLIP_PROVIDERS.includes(v) ? v : null)
+
+  const choose = (opt) => {
+    if (opt === selected) { setOtherOpen(false); onPick(null); return }
+    if (opt === OTHER) { setOtherOpen(true); onPick(null); return }
+    setOtherOpen(false)
+    onPick(opt)
+  }
+
+  const onKeyDown = (e) => {
+    const i = options.indexOf(selected)
+    let next = null
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = options[Math.min(options.length - 1, i + 1)]
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = options[Math.max(0, i - 1)]
+    if (next == null || next === selected) return
+    e.preventDefault()
+    choose(next)
+    const group = e.currentTarget
+    requestAnimationFrame(() => group.querySelector('[aria-checked="true"]')?.focus())
+  }
+
+  return (
+    <>
+      <div className="clip-chips" role="radiogroup" aria-labelledby={labelId} onKeyDown={onKeyDown}>
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={selected === opt}
+            tabIndex={selected === opt || (selected == null && opt === options[0]) ? 0 : -1}
+            className={selected === opt ? 'on' : ''}
+            onClick={() => choose(opt)}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      {otherSelected && (
+        <input
+          type="text"
+          className="clip-text"
+          aria-label="Other provider"
+          maxLength={40}
+          autoComplete="off"
+          value={v}
+          onChange={e => { setOtherOpen(true); onPick(e.target.value) }}
+        />
+      )}
+    </>
+  )
+}
+
+export default function ClipPageCard({ page, row, target, status, dateKey, carriedCampaign, onChange, className = '' }) {
   const uid = useId()
   const posts = row?.posts || 0
   const mins = row?.engagement_mins || 0
   const pct = target > 0 ? Math.min(100, (posts / target) * 100) : 100
-  const isClip = page.monetisation === 'whop'
-  const kindLabel = page.kind === 'clip' ? (isClip ? 'Clip · Whop' : 'Clip') : 'Themed'
+  const isClip = page.kind === 'clip'
+  const kindLabel = isClip ? 'Clip page' : 'Themed'
 
-  // Ticking with no campaign text carries the last one forward in the same
-  // patch. Unticking never clears the text.
-  const onWhopTick = (e) => {
-    const checked = e.target.checked
-    const empty = !(row?.whop_campaign ?? '').trim()
-    if (checked && empty && carriedCampaign) onChange({ whop_linked: true, whop_campaign: carriedCampaign })
-    else onChange({ whop_linked: checked })
+  // "Other" stays open for the day it was opened on, even before any text.
+  const [otherFor, setOtherFor] = useState(null)
+  const otherOpen = otherFor === dateKey
+  const setOtherOpen = open => setOtherFor(open ? dateKey : null)
+
+  // Picking a provider while the campaign is empty carries the last campaign
+  // forward in the same patch. Clearing the provider never clears the text.
+  const pickProvider = (value) => {
+    const patch = { provider: value }
+    if (filled(value) && !filled(row?.campaign) && carriedCampaign) patch.campaign = carriedCampaign
+    onChange(patch)
   }
 
   const onViews = (e) => {
@@ -103,25 +170,26 @@ export default function ClipPageCard({ page, row, target, status, carriedCampaig
       </div>
 
       {isClip && (
-        <label className="clip-check">
-          <input type="checkbox" checked={!!row?.whop_linked} onChange={onWhopTick} />
-          <span className="box" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-          </span>
-          <span>Whop campaign</span>
-        </label>
-      )}
-      {isClip && (
-        <input
-          type="text"
-          className="clip-campaign"
-          aria-label="Whop campaign summary"
-          maxLength={120}
-          autoComplete="off"
-          value={row?.whop_campaign ?? ''}
-          placeholder={carriedCampaign || 'Campaign name or summary'}
-          onChange={e => onChange({ whop_campaign: e.target.value })}
-        />
+        <div className="clip-field">
+          <div className="clip-label" id={`${uid}-prov`}>Provider</div>
+          <ProviderPicker
+            value={row?.provider}
+            otherOpen={otherOpen}
+            setOtherOpen={setOtherOpen}
+            onPick={pickProvider}
+            labelId={`${uid}-prov`}
+          />
+          <input
+            type="text"
+            className="clip-text"
+            aria-label="Campaign summary"
+            maxLength={120}
+            autoComplete="off"
+            value={row?.campaign ?? ''}
+            placeholder={carriedCampaign || 'Campaign name or summary'}
+            onChange={e => onChange({ campaign: e.target.value })}
+          />
+        </div>
       )}
 
       <label className="clip-views">

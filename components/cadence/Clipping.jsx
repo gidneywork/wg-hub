@@ -78,8 +78,8 @@ function Stat({ label, value, of, format }) {
   )
 }
 
-const blankRow = (pageId, date) => ({ page_id: pageId, log_date: date, posts: 0, engagement_mins: 0, whop_linked: false, whop_campaign: null, views: null })
-const toPayload = r => ({ page_id: r.page_id, log_date: r.log_date, posts: r.posts, engagement_mins: r.engagement_mins, whop_linked: r.whop_linked, whop_campaign: r.whop_campaign ?? null, views: r.views })
+const blankRow = (pageId, date) => ({ page_id: pageId, log_date: date, posts: 0, engagement_mins: 0, provider: null, campaign: null, views: null })
+const toPayload = r => ({ page_id: r.page_id, log_date: r.log_date, posts: r.posts, engagement_mins: r.engagement_mins, provider: r.provider ?? null, campaign: r.campaign ?? null, views: r.views })
 
 export default function Clipping() {
   const [load, setLoad]               = useState('loading')   // loading | ready | empty | error
@@ -258,6 +258,7 @@ export default function Clipping() {
               page={p}
               row={row}
               target={targetFor(phase, selectedDay, p.slug)}
+              dateKey={selectedDate}
               carriedCampaign={lastCampaign(rows, p.id, selectedDate)}
               status={pageDayStatus(phase, p, selectedDate, row, todayKey)}
               onChange={patch => updateRow(p, patch)}
