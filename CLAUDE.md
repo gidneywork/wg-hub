@@ -41,7 +41,7 @@ These are ratified in the Project Bible's Decision Archive (§11) and the v2.1 a
 ### Architectural
 
 - **Single user.** Cadence has one user — Will. Do not add multi-user caveats, branching logic for "other users," or anti-pattern hedges. Phase 7 will handle multi-user; not now.
-- **Permissive RLS.** Single-user posture. RLS exists but is permissive. Do not propose tightening unless explicitly part of Phase 7 hardening.
+- **RLS.** New tables ship at the B3 standard (`user_id = auth.uid()`, four named policies, `to authenticated`). Legacy tables remain permissive (`using (true)`) until B3. Do not tighten legacy tables outside B3.
 - **Plan shape is `{ weeks, meta }`.** Every plan consumer goes through `getCurrentWeek`. Do not propose reverting to bare arrays, even "just for this one component."
 - **Single-week plans repeat indefinitely.** Special case in `getCurrentWeek` and `getPlanPosition`. Multi-week plans keep date-bounded behaviour.
 - **Inline expand-to-edit for to-dos.** `CadenceDialog` is for confirmations only, never for editing. Editing surfaces expand in place. Hotfix-3e taught this; do not unlearn it.
