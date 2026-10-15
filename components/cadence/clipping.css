@@ -380,6 +380,7 @@
 /* Views input — 16px so iOS does not zoom on focus */
 [data-cadence] .clipping .clip-views { display: block; }
 [data-cadence] .clipping .clip-views input,
+[data-cadence] .clipping .clip-campaign,
 [data-cadence] .clipping .clip-checkin textarea {
   width: 100%;
   font-family: var(--sans);
@@ -392,7 +393,14 @@
   transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
 }
 [data-cadence] .clipping .clip-views input { min-height: 44px; font-variant-numeric: tabular-nums; }
+/* Whop campaign summary — sits directly under its checkbox. A carried-forward
+   value shows as an ordinary placeholder. */
+[data-cadence] .clipping .clip-campaign { min-height: 44px; margin-top: calc(-1 * var(--space-3)); }
+[data-cadence] .clipping .clip-campaign::placeholder,
+[data-cadence] .clipping .clip-views input::placeholder,
+[data-cadence] .clipping .clip-checkin textarea::placeholder { color: var(--text-quiet); opacity: 1; }
 [data-cadence] .clipping .clip-views input:focus,
+[data-cadence] .clipping .clip-campaign:focus,
 [data-cadence] .clipping .clip-checkin textarea:focus {
   outline: none;
   border-color: var(--moss);

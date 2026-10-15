@@ -47,13 +47,22 @@ function EngagementControl({ value, onChange, labelId }) {
   )
 }
 
-export default function ClipPageCard({ page, row, target, status, onChange, className = '' }) {
+export default function ClipPageCard({ page, row, target, status, carriedCampaign, onChange, className = '' }) {
   const uid = useId()
   const posts = row?.posts || 0
   const mins = row?.engagement_mins || 0
   const pct = target > 0 ? Math.min(100, (posts / target) * 100) : 100
   const isClip = page.monetisation === 'whop'
   const kindLabel = page.kind === 'clip' ? (isClip ? 'Clip · Whop' : 'Clip') : 'Themed'
+
+  // Ticking with no campaign text carries the last one forward in the same
+  // patch. Unticking never clears the text.
+  const onWhopTick = (e) => {
+    const checked = e.target.checked
+    const empty = !(row?.whop_campaign ?? '').trim()
+    if (checked && empty && carriedCampaign) onChange({ whop_linked: true, whop_campaign: carriedCampaign })
+    else onChange({ whop_linked: checked })
+  }
 
   const onViews = (e) => {
     const digits = e.target.value.replace(/\D/g, '')
@@ -95,12 +104,24 @@ export default function ClipPageCard({ page, row, target, status, onChange, clas
 
       {isClip && (
         <label className="clip-check">
-          <input type="checkbox" checked={!!row?.whop_linked} onChange={e => onChange({ whop_linked: e.target.checked })} />
+          <input type="checkbox" checked={!!row?.whop_linked} onChange={onWhopTick} />
           <span className="box" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
           </span>
-          <span>Whop link on every post</span>
+          <span>Whop campaign</span>
         </label>
+      )}
+      {isClip && (
+        <input
+          type="text"
+          className="clip-campaign"
+          aria-label="Whop campaign summary"
+          maxLength={120}
+          autoComplete="off"
+          value={row?.whop_campaign ?? ''}
+          placeholder={carriedCampaign || 'Campaign name or summary'}
+          onChange={e => onChange({ whop_campaign: e.target.value })}
+        />
       )}
 
       <label className="clip-views">
