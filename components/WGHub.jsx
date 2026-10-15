@@ -20,6 +20,7 @@ import CadencePlanner from './cadence/Planner'
 import CadenceJournal from './cadence/Journal'
 import CadenceTraining from './cadence/Training'
 import CadenceBiomarkers from './cadence/Biomarkers'
+import CadenceClipping from './cadence/Clipping'
 import { getDefaultPlan, normalisePlan } from '../lib/plan'
 import { apiFetch, startConnect } from '../lib/api'
 
@@ -412,6 +413,8 @@ export default function WGHub({ onSignOut }) {
         <CadenceTraining plan={plan} savePlan={savePlan} settings={settings} getDefaultPlan={getDefaultPlan} activities={activities} />
       ) : view === 'biomarkers' ? (
         <CadenceBiomarkers />
+      ) : view === 'clipping' ? (
+        <CadenceClipping />
       ) : isLegacy ? (
         <div data-legacy="true">
           <style>{CSS_VARS}</style>

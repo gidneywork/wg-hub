@@ -1,0 +1,577 @@
+/* =====================================================================
+   CLIPPING — setup-week tracker (FC-090)
+   Mobile-first at 375px (content 327px inside main's 24px gutters at
+   ≤900px), widening at 640 / 900 / 1100. Tokens only.
+
+   Status colours (ratified):
+     hit       --moss-soft fill, 1.5px inset --moss ring, ink number
+     progress  1.5px inset --sand ring, ink number
+     short     --clay-soft fill; pill text --clay-deep (--clay in dark)
+     missed    --clay fill, dash
+     todo      --bg-elevated fill, --text-quiet
+   Scoreboard numbers stay Ink (CADENCE.md rule 5).
+   Sand is the pillar accent: eyebrow pips and the in-progress meter.
+   ===================================================================== */
+
+[data-cadence] .clipping {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-cadence] .clipping .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+[data-cadence] .clipping .clip-pip {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sand);
+  flex: none;
+}
+
+[data-cadence] .clipping .clip-quiet {
+  padding: var(--space-9) 0;
+  font-family: var(--mono);
+  font-size: var(--type-11);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-quiet);
+}
+[data-cadence] .clipping .clip-quiet-card {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: var(--type-14);
+  color: var(--text-muted);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+[data-cadence] .clipping .clip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+[data-cadence] .clipping .clip-head .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-quiet);
+  margin-bottom: 10px;
+}
+[data-cadence] .clipping .clip-head h1 {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: var(--type-36);
+  letter-spacing: var(--tracking-h1);
+  font-variation-settings: "opsz" 144, "SOFT" 55;
+  line-height: 1;
+  color: var(--text);
+}
+[data-cadence] .clipping .clip-head h1 .dot { color: var(--moss); }
+[data-cadence] .clipping .clip-stamp {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+/* ── Stats: 2×2 at mobile, 4 across from 900px ─────────────────────── */
+[data-cadence] .clipping .clip-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+[data-cadence] .clipping .clip-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: var(--space-3) var(--space-4);
+  min-width: 0;
+}
+[data-cadence] .clipping .clip-stat-num {
+  font-family: var(--display);
+  font-weight: 360;
+  font-size: var(--type-28);
+  letter-spacing: var(--tracking-h2);
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+}
+[data-cadence] .clipping .clip-stat-num .of { color: var(--text-quiet); font-size: var(--type-17); }
+[data-cadence] .clipping .clip-stat-label {
+  margin-top: var(--space-1);
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+
+/* ── Day strip: 7 × 44.1px at 327px (gap 3px) ──────────────────────── */
+[data-cadence] .clipping .clip-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+[data-cadence] .clipping .clip-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 84px;
+  padding: var(--space-2) 2px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  transition: box-shadow var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-day .wd,
+[data-cadence] .clipping .clip-day .dn,
+[data-cadence] .clipping .clip-day .tg {
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-quiet);
+  line-height: 1.2;
+}
+[data-cadence] .clipping .clip-day .tg { text-transform: none; }
+[data-cadence] .clipping .clip-day .dm {
+  font-family: var(--display);
+  font-size: var(--type-17);
+  line-height: 1.1;
+  color: var(--text);
+}
+[data-cadence] .clipping .clip-day .bar {
+  display: flex;
+  gap: 1px;
+  width: 80%;
+  margin-top: auto;
+}
+[data-cadence] .clipping .clip-day .bar i {
+  flex: 1;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--border);
+  transition: background var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-day .bar i.on { background: var(--moss); }
+/* Today: moss pip at the top edge */
+[data-cadence] .clipping .clip-day.is-today::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--moss);
+}
+[data-cadence] .clipping .clip-day.is-today .wd { color: var(--moss-deep); }
+/* Selected: 1.5px inset ink ring (--text is bone in dark) */
+[data-cadence] .clipping .clip-day.is-selected { box-shadow: inset 0 0 0 1.5px var(--text); }
+[data-cadence] .clipping .clip-day:focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+
+/* ── Page cards: 1 col, 2 from 640px, 3 from 1100px ───────────────── */
+[data-cadence] .clipping .clip-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+[data-cadence] .clipping .clip-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  min-width: 0;
+}
+[data-cadence] .clipping .clip-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+[data-cadence] .clipping .clip-card-name {
+  font-family: var(--display);
+  font-size: var(--type-20);
+  letter-spacing: -0.018em;
+  line-height: 1.1;
+  color: var(--text);
+}
+[data-cadence] .clipping .clip-card-kind {
+  margin-top: var(--space-1);
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-quiet);
+}
+
+[data-cadence] .clipping .clip-label {
+  font-family: var(--mono);
+  font-size: var(--type-10);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+  margin-bottom: var(--space-2);
+}
+[data-cadence] .clipping .clip-hint {
+  display: block;
+  font-size: var(--type-12);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+/* Status pill (soft-fill, planner-status-pill shape) */
+[data-cadence] .clipping .clip-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-meta);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-pill.is-hit      { background: var(--moss-soft); color: var(--moss-deep); }
+[data-cadence] .clipping .clip-pill.is-progress { box-shadow: inset 0 0 0 1.5px var(--sand); color: var(--text); }
+[data-cadence] .clipping .clip-pill.is-short    { background: var(--clay-soft); color: var(--clay-deep); }
+[data-cadence] .clipping .clip-pill.is-missed   { box-shadow: inset 0 0 0 1.5px var(--clay); color: var(--clay-deep); }
+[data-cadence] .clipping .clip-pill.is-todo     { background: var(--bg-elevated); color: var(--text-quiet); }
+[data-theme="dark"] [data-cadence] .clipping .clip-pill.is-short,
+[data-theme="dark"] [data-cadence] .clipping .clip-pill.is-missed { color: var(--clay); }
+[data-theme="dark"] [data-cadence] .clipping .clip-pill.is-hit { color: var(--moss); }
+
+/* Posts stepper: [44] value [44] */
+[data-cadence] .clipping .clip-stepper {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: var(--space-2);
+}
+[data-cadence] .clipping .clip-stepper button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-stepper button svg { width: 18px; height: 18px; }
+[data-cadence] .clipping .clip-stepper button:hover:not(:disabled) { border-color: var(--border-strong); }
+[data-cadence] .clipping .clip-stepper button:active:not(:disabled) { background: var(--bg-elevated); }
+[data-cadence] .clipping .clip-stepper button:disabled { color: var(--text-faint); cursor: default; }
+[data-cadence] .clipping .clip-stepper-value {
+  text-align: center;
+  font-family: var(--display);
+  line-height: 1;
+}
+[data-cadence] .clipping .clip-stepper-value .n { font-size: var(--type-28); color: var(--text); }
+[data-cadence] .clipping .clip-stepper-value .of { font-size: var(--type-17); color: var(--text-quiet); }
+
+[data-cadence] .clipping .clip-meter {
+  height: 4px;
+  margin-top: var(--space-3);
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+[data-cadence] .clipping .clip-meter span {
+  display: block;
+  height: 100%;
+  background: var(--sand);
+  border-radius: 2px;
+  transition: width var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-meter span.met { background: var(--moss); }
+
+/* Engagement radiogroup: 4 × ~71.7px × 44px at 293px */
+[data-cadence] .clipping .clip-seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+}
+[data-cadence] .clipping .clip-seg button {
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: var(--type-13);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-seg button.on {
+  background: var(--bg-paper);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+[data-cadence] .clipping .clip-seg button:focus-visible { outline: 2px solid var(--moss); outline-offset: 1px; }
+
+/* Checkbox rows (Whop link, checklist): 44px tap height */
+[data-cadence] .clipping .clip-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: 11px 0;
+  font-size: var(--type-14);
+  line-height: 1.4;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+[data-cadence] .clipping .clip-check input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+[data-cadence] .clipping .clip-check .box {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-paper);
+  color: transparent;
+  transition: background var(--t-ui) var(--ease), border-color var(--t-ui) var(--ease), color var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-check .box svg { width: 14px; height: 14px; }
+[data-cadence] .clipping .clip-check input:checked + .box {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: var(--on-moss);
+}
+[data-cadence] .clipping .clip-check input:focus-visible + .box { outline: 2px solid var(--moss); outline-offset: 2px; }
+
+/* Views input — 16px so iOS does not zoom on focus */
+[data-cadence] .clipping .clip-views { display: block; }
+[data-cadence] .clipping .clip-views input,
+[data-cadence] .clipping .clip-checkin textarea {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-views input { min-height: 44px; font-variant-numeric: tabular-nums; }
+[data-cadence] .clipping .clip-views input:focus,
+[data-cadence] .clipping .clip-checkin textarea:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-glow);
+}
+
+/* ── Checklist + check-in ───────────────────────────────────────────── */
+[data-cadence] .clipping .clip-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+[data-cadence] .clipping .clip-pair .card { padding: var(--space-4); min-width: 0; }
+[data-cadence] .clipping .clip-tasks ul { list-style: none; margin: 0; padding: 0; }
+[data-cadence] .clipping .clip-tasks li + li { border-top: 1px dashed var(--border); }
+[data-cadence] .clipping .clip-checkin textarea {
+  margin-top: var(--space-2);
+  resize: vertical;
+  line-height: 1.5;
+}
+[data-cadence] .clipping .clip-checkin .clip-hint { margin-top: 0; }
+
+/* ── Scoreboard: 60px labels + 7 × ~31.4px at 301px ────────────────── */
+[data-cadence] .clipping .clip-board { padding: var(--space-3); }
+[data-cadence] .clipping .clip-board-table {
+  width: calc(100% + 6px);
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 3px;
+  margin: 0 -3px;
+}
+[data-cadence] .clipping .clip-board-table thead th:first-child,
+[data-cadence] .clipping .clip-board-table tbody th { width: 60px; }
+[data-cadence] .clipping .clip-board-table thead th {
+  font-weight: 400;
+  text-align: center;
+  padding-bottom: 2px;
+}
+[data-cadence] .clipping .clip-board-table thead th .d,
+[data-cadence] .clipping .clip-board-table thead th .n {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  letter-spacing: 0.04em;
+  color: var(--text-quiet);
+  line-height: 1.3;
+}
+[data-cadence] .clipping .clip-board-table thead th .n { font-size: var(--type-11); }
+[data-cadence] .clipping .clip-board-table thead th.is-today .d { color: var(--moss-deep); }
+[data-cadence] .clipping .clip-board-table thead th.is-selected .d,
+[data-cadence] .clipping .clip-board-table thead th.is-selected .n { color: var(--text); }
+[data-cadence] .clipping .clip-board-table tbody th {
+  text-align: left;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: var(--type-11);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-cadence] .clipping .clip-board-table td { padding: 0; }
+[data-cadence] .clipping .clip-cell {
+  display: block;
+  width: 100%;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: var(--type-12);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+[data-cadence] .clipping .clip-cell:focus-visible { outline: 2px solid var(--moss); outline-offset: 1px; }
+
+/* Shared status fills for scoreboard cells and legend swatches */
+[data-cadence] .clipping .is-hit:where(.clip-cell, .swatch)      { background: var(--moss-soft); box-shadow: inset 0 0 0 1.5px var(--moss); }
+[data-cadence] .clipping .is-progress:where(.clip-cell, .swatch) { background: transparent; box-shadow: inset 0 0 0 1.5px var(--sand); }
+[data-cadence] .clipping .is-short:where(.clip-cell, .swatch)    { background: var(--clay-soft); }
+[data-cadence] .clipping .is-missed:where(.clip-cell, .swatch)   { background: var(--clay); }
+[data-cadence] .clipping .is-todo:where(.clip-cell, .swatch)     { background: var(--bg-elevated); color: var(--text-quiet); }
+[data-cadence] .clipping .clip-cell.is-missed { color: var(--text); }
+
+[data-cadence] .clipping .clip-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+[data-cadence] .clipping .clip-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: var(--type-9);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-quiet);
+}
+[data-cadence] .clipping .clip-legend .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+[data-cadence] .clipping .clip-footnote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--type-12);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Rules ──────────────────────────────────────────────────────────── */
+[data-cadence] .clipping .clip-rules { padding: var(--space-4); }
+[data-cadence] .clipping .clip-ramp {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+[data-cadence] .clipping .clip-ramp li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--type-13);
+  color: var(--text-soft);
+}
+[data-cadence] .clipping .clip-ramp .tg {
+  font-family: var(--mono);
+  font-size: var(--type-12);
+  color: var(--text);
+  white-space: nowrap;
+}
+[data-cadence] .clipping .clip-rule-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+[data-cadence] .clipping .clip-rule-groups h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: var(--type-17);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0 0 var(--space-2);
+}
+[data-cadence] .clipping .clip-rule-groups ul {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--type-13);
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+[data-cadence] .clipping .clip-rule-groups li + li { margin-top: var(--space-1); }
+
+/* ── Wider screens ──────────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  [data-cadence] .clipping .clip-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-cadence] .clipping .clip-board { padding: var(--space-5); }
+  [data-cadence] .clipping .clip-board-table thead th:first-child,
+  [data-cadence] .clipping .clip-board-table tbody th { width: 90px; }
+  [data-cadence] .clipping .clip-cell { height: 40px; }
+}
+@media (min-width: 900px) {
+  [data-cadence] .clipping { gap: var(--space-5); }
+  [data-cadence] .clipping .clip-head h1 { font-size: var(--type-44); }
+  [data-cadence] .clipping .clip-stats { grid-template-columns: repeat(4, 1fr); }
+  [data-cadence] .clipping .clip-pair { grid-template-columns: 1fr 1fr; }
+  [data-cadence] .clipping .clip-rule-groups { grid-template-columns: repeat(3, 1fr); }
+  [data-cadence] .clipping .clip-day { min-height: 92px; }
+  [data-cadence] .clipping .clip-day .dm { font-size: var(--type-20); }
+}
+@media (min-width: 1100px) {
+  [data-cadence] .clipping .clip-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-cadence] .clipping * { transition: none !important; }
+}

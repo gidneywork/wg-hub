@@ -24,6 +24,12 @@ const NAV_HEALTH = [
   ) },
 ]
 
+const NAV_WEALTH = [
+  { view: 'clipping', label: 'Clipping', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10.5 9.5v5l4-2.5z"/></svg>
+  ) },
+]
+
 const NAV_PRODUCTIVITY = [
   { view: 'planner', label: 'Planner', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -151,6 +157,7 @@ export default function Sidebar({ view, setView, userName = 'You', userMeta = 'P
       <NavGroup eyebrow="Today"        items={NAV_TODAY}        view={view} setView={setView} />
       <NavGroup eyebrow="Fitness"      items={NAV_FITNESS}      view={view} setView={setView} collapsible storageKey="cadence-nav-fitness"      defaultOpen />
       <NavGroup eyebrow="Health"       items={NAV_HEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-health"       defaultOpen />
+      <NavGroup eyebrow="Wealth"       items={NAV_WEALTH}       view={view} setView={setView} collapsible storageKey="cadence-nav-wealth"       defaultOpen />
       <NavGroup eyebrow="Productivity" items={NAV_PRODUCTIVITY} view={view} setView={setView} collapsible storageKey="cadence-nav-productivity" defaultOpen />
       <NavGroup eyebrow="Analyse"      items={NAV_ANALYSE}      view={view} setView={setView} collapsible storageKey="cadence-nav-analyse"      defaultOpen />
       <NavGroup eyebrow="Assistant"    items={NAV_ASSISTANT}    view={view} setView={setView} collapsible storageKey="cadence-nav-assistant"    defaultOpen />
