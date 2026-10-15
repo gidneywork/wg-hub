@@ -572,7 +572,7 @@
   [data-cadence] .clipping .clip-head h1 { font-size: var(--type-44); }
   [data-cadence] .clipping .clip-stats { grid-template-columns: repeat(4, 1fr); }
   [data-cadence] .clipping .clip-pair { grid-template-columns: 1fr 1fr; }
-  [data-cadence] .clipping .clip-rule-groups { grid-template-columns: repeat(3, 1fr); }
+  [data-cadence] .clipping .clip-rule-groups { grid-template-columns: repeat(2, 1fr); }
   [data-cadence] .clipping .clip-day { min-height: 92px; }
   [data-cadence] .clipping .clip-day .dm { font-size: var(--type-20); }
 }
