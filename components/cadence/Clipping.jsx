@@ -7,7 +7,7 @@ import {
   londonDateKey, dayOfMonth, weekdayShort, formatRange,
   phaseDates, phaseLength, getPhaseDay, clampDay, clampDate, pickPhase,
   targetFor, rowKey, getRow, pageDayStatus, dayHitCount, streak, weekTotals,
-  formatMins, shouldReplay, tasksFor, lastCampaign, RAMP, RULES, CHECKIN_HINT,
+  formatMins, shouldReplay, tasksFor, lastCampaign, RAMP, rulesFor, CHECKIN_HINT,
 } from '../../lib/clipping'
 import useClipSync, { readClipOutbox, clearClipOutbox } from './useClipSync'
 import ClipPageCard from './ClipPageCard'
@@ -314,7 +314,7 @@ export default function Clipping() {
           ))}
         </ul>
         <div className="clip-rule-groups">
-          {RULES.map(g => (
+          {rulesFor(pages).map(g => (
             <div key={g.title}>
               <h3>{g.title}</h3>
               <ul>{g.items.map(item => <li key={item}>{item}</li>)}</ul>
